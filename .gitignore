@@ -1,0 +1,13 @@
+/backend/node_modules/
+/frontend/node_modules/
+
+backend/.env
+frontend/.env
+
+frontend/mindmate/.dart_tool/
+frontend/mindmate/build/
+frontend/mindmate/.packages
+frontend/mindmate/.flutter-plugins
+frontend/mindmate/.flutter-plugins-dependencies
+frontend/mindmate/.flutter-plugins
+frontend/mindmate/.metadata
