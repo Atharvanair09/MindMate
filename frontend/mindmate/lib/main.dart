@@ -4,6 +4,7 @@ import 'core/state/user_provider.dart';
 import 'presentation/pages/home_page.dart';
 import 'presentation/pages/mood_check_in_page.dart';
 import 'presentation/pages/insights_page.dart';
+import 'presentation/pages/login_page.dart';
 
 void main() {
   runApp(
@@ -31,7 +32,8 @@ class MindMateApp extends StatelessWidget {
       ),
       initialRoute: '/',
       routes: {
-        '/': (context) => const HomePage(),
+        '/': (context) => const LoginPage(),
+        '/home': (context) => const HomePage(),
         '/mood-check-in': (context) => const MoodCheckInPage(),
         '/insights': (context) => const InsightsPage(),
       },
