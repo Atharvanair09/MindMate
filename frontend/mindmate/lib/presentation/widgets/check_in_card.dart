@@ -63,7 +63,7 @@ class CheckInCard extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () => Navigator.pushNamed(context, '/mood-check-in'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4B39EF),
                   foregroundColor: Colors.white,

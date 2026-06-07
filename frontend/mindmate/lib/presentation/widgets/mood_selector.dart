@@ -20,13 +20,29 @@ class MoodSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "How are you feeling right now?",
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.darkText,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "How are you feeling?",
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.darkText,
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pushNamed(context, '/mood-check-in'),
+              child: Text(
+                "Full Check-in",
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.primaryPurple,
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         Consumer<UserProvider>(

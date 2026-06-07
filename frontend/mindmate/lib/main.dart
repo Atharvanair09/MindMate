@@ -1,24 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'core/state/user_provider.dart';
 import 'presentation/pages/home_page.dart';
+import 'presentation/pages/login_page.dart';
 import 'presentation/pages/mood_check_in_page.dart';
 import 'presentation/pages/insights_page.dart';
-import 'presentation/pages/login_page.dart';
+import 'data/repositories/auth_repository.dart';
+import 'presentation/viewmodels/auth_viewmodel.dart';
+import 'core/state/user_provider.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  final authRepository = AuthRepository();
+  final bool hasSession = await authRepository.hasValidSession();
+
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthViewModel(repository: authRepository)),
         ChangeNotifierProvider(create: (_) => UserProvider()),
       ],
-      child: const MindMateApp(),
+      child: MindMateApp(hasSession: hasSession),
     ),
   );
 }
 
 class MindMateApp extends StatelessWidget {
-  const MindMateApp({super.key});
+  final bool hasSession;
+  
+  const MindMateApp({super.key, required this.hasSession});
 
   @override
   Widget build(BuildContext context) {
@@ -28,11 +38,12 @@ class MindMateApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         primarySwatch: Colors.indigo,
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4B39EF)),
         scaffoldBackgroundColor: const Color(0xFFF9F9FF),
       ),
-      initialRoute: '/',
+      initialRoute: hasSession ? '/home' : '/login',
       routes: {
-        '/': (context) => const LoginPage(),
+        '/login': (context) => const LoginPage(),
         '/home': (context) => const HomePage(),
         '/mood-check-in': (context) => const MoodCheckInPage(),
         '/insights': (context) => const InsightsPage(),

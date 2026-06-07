@@ -26,7 +26,7 @@ class MindMateBottomNav extends StatelessWidget {
           
           switch (index) {
             case 0:
-              Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+              Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
               break;
             case 1:
               // Navigator.pushNamed(context, '/journal');
