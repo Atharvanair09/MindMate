@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  final String baseUrl = 'http://192.168.1.8:3000/api/auth'; // Adjust for web/iOS if needed
+  final String baseUrl = 'https://mindmate-9jyw.onrender.com/api/auth';
 
   Future<void> sendOtp(String email) async {
     final response = await http.post(
