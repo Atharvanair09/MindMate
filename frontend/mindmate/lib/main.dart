@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'presentation/pages/home_page.dart';
 import 'presentation/pages/login_page.dart';
+import 'presentation/pages/profile_setup_page.dart';
 import 'presentation/pages/mood_check_in_page.dart';
 import 'presentation/pages/insights_page.dart';
+import 'presentation/pages/profile_page.dart';
 import 'data/repositories/auth_repository.dart';
 import 'presentation/viewmodels/auth_viewmodel.dart';
 import 'core/state/user_provider.dart';
@@ -44,9 +46,11 @@ class MindMateApp extends StatelessWidget {
       initialRoute: hasSession ? '/home' : '/login',
       routes: {
         '/login': (context) => const LoginPage(),
+        '/profile-setup': (context) => const ProfileSetupPage(),
         '/home': (context) => const HomePage(),
         '/mood-check-in': (context) => const MoodCheckInPage(),
         '/insights': (context) => const InsightsPage(),
+        '/profile-page': (context) => const ProfilePage(),
       },
     );
   }

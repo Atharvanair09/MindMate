@@ -326,7 +326,7 @@ class _LoginPageState extends State<LoginPage> {
           onPressed: () async {
             await viewModel.completeAuth();
             if (viewModel.errorMessage == null && context.mounted) {
-              Navigator.pushReplacementNamed(context, '/home');
+              Navigator.pushReplacementNamed(context, '/profile-setup');
             }
           },
         ),

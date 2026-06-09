@@ -78,7 +78,7 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
 
   <!-- Preheader -->
   <div style="display:none;max-height:0;overflow:hidden;font-size:1px;color:#f0faf4;">
-    Your one-time sign-in code is ready. Expires in 20 minutes.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+    Your one-time sign-in code is ready. Expires in 5 minutes.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
   </div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0faf4;">
@@ -162,81 +162,8 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
                   <td align="center" style="padding-bottom:28px;">
                     <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:14px;color:#555555;line-height:1.7;text-align:center;max-width:340px;">
                       Please verify you're really you by entering this 6-digit code when you sign in. Just a heads up, this code will expire
-                      in <strong>20 minutes</strong> for security reasons.
+                      in <strong>5 minutes</strong> for security reasons.
                     </p>
-                  </td>
-                </tr>
-
-                <!-- Divider -->
-                <tr>
-                  <td style="border-top:1px solid #eeeeee;padding-bottom:24px;font-size:0;">&nbsp;</td>
-                </tr>
-
-                <!-- Location notice heading -->
-                <tr>
-                  <td align="center" style="padding-bottom:22px;">
-                    <h2 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:17px;font-weight:bold;color:#111111;text-align:center;line-height:1.5;">
-                      We noticed you signed in from a<br/>new location or device
-                    </h2>
-                  </td>
-                </tr>
-
-                <!-- Three info columns: Device, Location, Date -->
-                <tr>
-                  <td style="padding-bottom:24px;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-
-                        <!-- Device -->
-                        <td align="center" width="33%" valign="top" style="padding:0 4px;">
-                          <!-- Monitor icon SVG -->
-                          <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto 8px auto;">
-                            <rect x="4" y="6" width="28" height="18" rx="2" stroke="#111" stroke-width="2" fill="none"/>
-                            <line x1="12" y1="30" x2="24" y2="30" stroke="#111" stroke-width="2" stroke-linecap="round"/>
-                            <line x1="18" y1="24" x2="18" y2="30" stroke="#111" stroke-width="2"/>
-                            <rect x="7" y="9" width="22" height="12" rx="1" fill="#d6f5e3"/>
-                          </svg>
-                          <p style="margin:0 0 4px 0;font-family:Georgia,'Times New Roman',serif;font-size:13px;font-weight:bold;color:#111111;">Device:</p>
-                          <!-- *** REPLACE {{DEVICE}} *** -->
-                          <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:12px;color:#555555;line-height:1.5;">
-                            {{BROWSER}}<br/>{{OS}}
-                          </p>
-                        </td>
-
-                        <!-- Location -->
-                        <td align="center" width="33%" valign="top" style="padding:0 4px;">
-                          <!-- Map pin icon SVG -->
-                          <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto 8px auto;">
-                            <path d="M18 4C13.03 4 9 8.03 9 13c0 7 9 19 9 19s9-12 9-19c0-4.97-4.03-9-9-9z" stroke="#111" stroke-width="2" fill="#d6f5e3"/>
-                            <circle cx="18" cy="13" r="3.5" stroke="#111" stroke-width="1.5" fill="white"/>
-                          </svg>
-                          <p style="margin:0 0 4px 0;font-family:Georgia,'Times New Roman',serif;font-size:13px;font-weight:bold;color:#111111;">Location:</p>
-                          <!-- *** REPLACE {{LOCATION}} *** -->
-                          <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:12px;color:#555555;line-height:1.5;">
-                            {{CITY}}<br/>{{STATE_ZIP}}
-                          </p>
-                        </td>
-
-                        <!-- Date -->
-                        <td align="center" width="33%" valign="top" style="padding:0 4px;">
-                          <!-- Calendar icon SVG -->
-                          <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto 8px auto;">
-                            <rect x="4" y="7" width="28" height="24" rx="2" stroke="#111" stroke-width="2" fill="#d6f5e3"/>
-                            <rect x="4" y="7" width="28" height="8" rx="2" fill="#3dba7b" stroke="#111" stroke-width="2"/>
-                            <line x1="12" y1="4" x2="12" y2="10" stroke="#111" stroke-width="2" stroke-linecap="round"/>
-                            <line x1="24" y1="4" x2="24" y2="10" stroke="#111" stroke-width="2" stroke-linecap="round"/>
-                            <circle cx="18" cy="22" r="2.5" fill="#3dba7b"/>
-                            <path d="M16 22 L17.5 24 L21 20" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                          </svg>
-                          <p style="margin:0 0 4px 0;font-family:Georgia,'Times New Roman',serif;font-size:13px;font-weight:bold;color:#111111;">Date</p>
-                          <!-- *** REPLACE {{DATE_TIME}} *** -->
-                          <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:12px;color:#555555;line-height:1.5;">
-                            {{DATE_TIME}}
-                          </p>
-                        </td>
-
-                      </tr>
-                    </table>
                   </td>
                 </tr>
 

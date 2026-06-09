@@ -38,7 +38,7 @@ class MindMateBottomNav extends StatelessWidget {
               Navigator.pushNamed(context, '/insights');
               break;
             case 4:
-              // Navigator.pushNamed(context, '/profile');
+              Navigator.pushNamed(context, '/profile-page');
               break;
           }
         },
