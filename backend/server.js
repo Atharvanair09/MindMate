@@ -11,6 +11,7 @@ const User = require('./models/User');
 const Otp = require('./models/Otp');
 
 const app = express();
+app.set("trust proxy",1);
 app.use(cors());
 app.use(express.json());
 
@@ -327,14 +328,9 @@ app.post('/api/auth/verify-otp', async (req, res) => {
     if (!record || record.otp !== otp) {
       return res.status(401).json({ error: 'Invalid or expired OTP' });
     }
-    
+        
     // Delete OTP immediately after verification
     await Otp.deleteOne({ email });
-    
-    // NOTE: For privacy, we DO NOT return a JWT here. 
-    // We just return success. The frontend will then generate UUID/Phrase and call /register.
-    // If we wanted to support existing users via email, we would need to look them up.
-    // However, since we don't store email, they must recover via phrase on a new device.
     res.json({ message: 'Verified successfully' });
   } catch (error) {
     console.error('Error verifying OTP:', error);
