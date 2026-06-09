@@ -10,6 +10,9 @@ const crypto = require('crypto');
 const User = require('./models/User');
 const Otp = require('./models/Otp');
 
+const dns = require("dns");
+dns.setDefaultResultOrder("ipv4first");
+
 const app = express();
 app.set("trust proxy",1);
 app.use(cors());
@@ -75,7 +78,7 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
     await Otp.findOneAndUpdate(
       { email },
       { otp, createdAt: new Date() }, // Update createdAt to reset TTL
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
     
     // Send email
