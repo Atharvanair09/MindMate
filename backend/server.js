@@ -4,7 +4,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const rateLimit = require('express-rate-limit');
-const { Resend } = require('resend');
+const brevo = require('@getbrevo/brevo');
 const crypto = require('crypto');
 
 const User = require('./models/User');
@@ -26,8 +26,11 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Configure Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Configure Brevo
+let defaultClient = brevo.ApiClient.instance;
+let apiKey = defaultClient.authentications['api-key'];
+apiKey.apiKey = process.env.BREVO_API_KEY || process.env.RESEND_API_KEY; // fallback if user hasn't updated .env yet
+let apiInstance = new brevo.TransactionalEmailsApi();
 
 // Rate limiter for OTP requests: max 3 requests per 5 minutes
 const otpLimiter = rateLimit({
@@ -54,12 +57,12 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
     );
     
     // Send email
-    const mailOptions = {
-      from: 'MindMate Security <onboarding@resend.dev>',
-      to: email,
-      subject: 'Your Verification Code',
-      text: `Your verification code is: ${otp}. It will expire in 5 minutes.`,
-      html: `<b><!DOCTYPE html>
+    let sendSmtpEmail = new brevo.SendSmtpEmail();
+    sendSmtpEmail.subject = 'Your Verification Code';
+    sendSmtpEmail.textContent = `Your verification code is: ${otp}. It will expire in 5 minutes.`;
+    sendSmtpEmail.sender = { name: 'MindMate Security', email: 'noreply@mindmate.app' };
+    sendSmtpEmail.to = [{ email: email }];
+    sendSmtpEmail.htmlContent = `<b><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
@@ -137,7 +140,7 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
                 <tr>
                   <td align="center" style="padding-bottom:18px;">
                     <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:bold;color:#111111;">
-                      Your one-time code is ${otp}
+                      Your one-time code is
                     </h1>
                   </td>
                 </tr>
@@ -150,7 +153,7 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
                         <td align="center" style="padding:12px 48px;">
                           <!-- *** REPLACE {{OTP_CODE}} with your dynamic value *** -->
                           <span style="font-family:'Courier New',Courier,monospace;font-size:28px;font-weight:bold;color:#111111;letter-spacing:6px;">
-                            {{OTP_CODE}}
+                            ${otp}
                           </span>
                         </td>
                       </tr>
@@ -275,17 +278,16 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
   </table>
 
 </body>
-</html></p>`
-    };
-    
-    const { data, error } = await resend.emails.send(mailOptions);
-    if (error) {
-      console.error('Resend Error:', error);
-      throw new Error(error.message);
+</html></p>`;
+
+    try {
+      await apiInstance.sendTransacEmail(sendSmtpEmail);
+      console.log(`OTP sent to ${email}`);
+      res.json({ message: 'OTP sent successfully' });
+    } catch (error) {
+      console.error('Brevo Error:', error);
+      throw new Error(error.message || 'Failed to send email via Brevo');
     }
-    console.log(`OTP sent to ${email}`);
-    
-    res.json({ message: 'OTP sent successfully' });
   } catch (error) {
     console.error('Error sending OTP:', error);
     res.status(500).json({ error: 'Failed to send OTP' });

@@ -18,7 +18,6 @@ class AuthRepository {
   Future<bool> hasValidSession() async {
     final token = await _secureStorage.read(key: _jwtKey);
     return token != null && token.isNotEmpty;
-    // Note: In production, you would also decode the JWT to check expiry
   }
 
   Future<void> sendOtp(String email) async {
