@@ -10,6 +10,16 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true // Since we use sha256 to deterministically find the user by their phrase
+  },
+  // Profile identity — set after profile setup, null until then
+  username: {
+    type: String,
+    default: null,
+    trim: true
+  },
+  avatarLabel: {
+    type: String,
+    default: null
   }
 }, { timestamps: true });
 

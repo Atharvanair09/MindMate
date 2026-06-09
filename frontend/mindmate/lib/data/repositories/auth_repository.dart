@@ -53,8 +53,34 @@ class AuthRepository {
     final hash = _hashPhrase(phrase);
     final result = await _authService.recoverAccount(hash);
 
-    await _secureStorage.write(key: _jwtKey, value: result['token']);
-    await _secureStorage.write(key: _uuidKey, value: result['uuid']);
+    await _secureStorage.write(key: _jwtKey, value: result['token']!);
+    await _secureStorage.write(key: _uuidKey, value: result['uuid']!);
+  }
+
+  /// Persists the user's chosen [username] and [avatarLabel] to MongoDB.
+  /// No-ops silently if no JWT is present (should not happen in normal flow).
+  Future<void> saveUserProfile(String username, String avatarLabel) async {
+    final token = await _secureStorage.read(key: _jwtKey);
+    if (token == null) return;
+    await _authService.saveProfile(token, username, avatarLabel);
+  }
+
+  /// Fetches the stored profile from MongoDB.
+  /// Returns `null` if the user hasn't completed profile setup yet.
+  Future<Map<String, String?>?> fetchUserProfile() async {
+    final token = await _secureStorage.read(key: _jwtKey);
+    if (token == null) return null;
+    try {
+      final profile = await _authService.fetchProfile(token);
+      // If both fields are null, profile hasn't been set up yet
+      if (profile['username'] == null && profile['avatarLabel'] == null) {
+        return null;
+      }
+      return profile;
+    } catch (_) {
+      // Network error — don't crash; caller will fall back to defaults
+      return null;
+    }
   }
 
   Future<void> logout() async {

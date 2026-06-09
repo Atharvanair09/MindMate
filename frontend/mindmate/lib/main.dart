@@ -16,11 +16,21 @@ void main() async {
   final authRepository = AuthRepository();
   final bool hasSession = await authRepository.hasValidSession();
 
+  // Pre-load the user's stored profile from MongoDB before rendering the app
+  // so the username and avatar are ready the moment home screen appears.
+  UserProvider? preloadedProvider;
+  if (hasSession) {
+    preloadedProvider = UserProvider();
+    await preloadedProvider.loadProfile(authRepository);
+  }
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthViewModel(repository: authRepository)),
-        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(
+          create: (_) => preloadedProvider ?? UserProvider(),
+        ),
       ],
       child: MindMateApp(hasSession: hasSession),
     ),

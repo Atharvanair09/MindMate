@@ -4,65 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../../core/constants/avatar_options.dart';
 import '../../core/state/user_provider.dart';
+import '../../data/repositories/auth_repository.dart';
 
-// ---------------------------------------------------------------------------
-// Default avatar data
-// ---------------------------------------------------------------------------
-class _AvatarOption {
-  final IconData icon;
-  final List<Color> gradient;
-  final String label;
-
-  const _AvatarOption({
-    required this.icon,
-    required this.gradient,
-    required this.label,
-  });
-}
-
-const List<_AvatarOption> _kDefaultAvatars = [
-  _AvatarOption(
-    icon: Icons.auto_awesome,
-    gradient: [Color(0xFF7B61FF), Color(0xFFB19DFF)],
-    label: 'Cosmic',
-  ),
-  _AvatarOption(
-    icon: Icons.forest_rounded,
-    gradient: [Color(0xFF06D6A0), Color(0xFF00B4D8)],
-    label: 'Nature',
-  ),
-  _AvatarOption(
-    icon: Icons.local_fire_department_rounded,
-    gradient: [Color(0xFFFF6B6B), Color(0xFFFFD166)],
-    label: 'Flame',
-  ),
-  _AvatarOption(
-    icon: Icons.bolt_rounded,
-    gradient: [Color(0xFFFFD166), Color(0xFFFF9F1C)],
-    label: 'Storm',
-  ),
-  _AvatarOption(
-    icon: Icons.water_drop_rounded,
-    gradient: [Color(0xFF00B4D8), Color(0xFF0077B6)],
-    label: 'Ocean',
-  ),
-  _AvatarOption(
-    icon: Icons.spa_rounded,
-    gradient: [Color(0xFFEF476F), Color(0xFFB5179E)],
-    label: 'Zen',
-  ),
-  _AvatarOption(
-    icon: Icons.star_rounded,
-    gradient: [Color(0xFFFFC300), Color(0xFFFF5733)],
-    label: 'Nova',
-  ),
-  _AvatarOption(
-    icon: Icons.nightlight_round,
-    gradient: [Color(0xFF2D3561), Color(0xFF7B61FF)],
-    label: 'Moon',
-  ),
-];
+// Avatar list is now in lib/core/constants/avatar_options.dart
 
 // ---------------------------------------------------------------------------
 // Blocked username words
@@ -242,11 +188,12 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
 
     setState(() => _isSaving = true);
 
-    final avatar = _kDefaultAvatars[_selectedAvatarIndex];
-    // Read provider and navigator BEFORE the async delay
+    final avatar = kDefaultAvatars[_selectedAvatarIndex];
+    // Read provider and navigator BEFORE any async gaps
     final userProvider = context.read<UserProvider>();
     final navigator = Navigator.of(context);
 
+    // 1. Update in-memory state immediately
     userProvider.updateProfile(
       username: username,
       avatarIcon: avatar.icon,
@@ -254,6 +201,15 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
       avatarLabel: avatar.label,
       customAvatarPath: _customImagePath,
     );
+
+    // 2. Persist to MongoDB (fire-and-forget; failure is non-blocking)
+    try {
+      final repo = AuthRepository();
+      await repo.saveUserProfile(username, avatar.label);
+    } catch (_) {
+      // Server unavailable — profile is still valid locally;
+      // will retry automatically on next profile setup open.
+    }
 
     await Future.delayed(const Duration(milliseconds: 400));
     if (mounted) {
@@ -350,7 +306,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
   // ── Avatar preview circle ──────────────────────────────────────────────────
 
   Widget _buildAvatarPreview() {
-    final avatar = _kDefaultAvatars[_selectedAvatarIndex];
+    final avatar = kDefaultAvatars[_selectedAvatarIndex];
     final hasPhoto = _customImagePath != null;
 
     return Stack(
@@ -621,7 +577,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
             crossAxisSpacing: 14,
             childAspectRatio: 0.78,
           ),
-          itemCount: _kDefaultAvatars.length,
+          itemCount: kDefaultAvatars.length,
           itemBuilder: (context, index) => _buildAvatarCell(index),
         ),
       ],
@@ -629,7 +585,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
   }
 
   Widget _buildAvatarCell(int index) {
-    final avatar = _kDefaultAvatars[index];
+    final avatar = kDefaultAvatars[index];
     final isSelected = _selectedAvatarIndex == index;
 
     return GestureDetector(

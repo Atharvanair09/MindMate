@@ -301,6 +301,65 @@ app.post('/api/auth/recover', async (req, res) => {
   }
 });
 
+// ─── JWT middleware ────────────────────────────────────────────────────────────
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // "Bearer <token>"
+  if (!token) return res.status(401).json({ error: 'Missing auth token' });
+
+  jwt.verify(token, JWT_SECRET, (err, payload) => {
+    if (err) return res.status(403).json({ error: 'Invalid or expired token' });
+    req.uuid = payload.uuid;
+    next();
+  });
+}
+
+// ─── PATCH /api/user/profile — save username + avatarLabel ────────────────────
+app.patch('/api/user/profile', authenticateToken, async (req, res) => {
+  try {
+    const { username, avatarLabel } = req.body;
+
+    if (!username || !avatarLabel) {
+      return res.status(400).json({ error: 'username and avatarLabel are required' });
+    }
+
+    // Basic server-side username validation
+    const trimmed = username.trim();
+    if (trimmed.length < 3 || trimmed.length > 24) {
+      return res.status(400).json({ error: 'Username must be 3–24 characters' });
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(trimmed)) {
+      return res.status(400).json({ error: 'Username may only contain letters, numbers and underscores' });
+    }
+
+    const user = await User.findOneAndUpdate(
+      { uuid: req.uuid },
+      { username: trimmed, avatarLabel },
+      { new: true }
+    );
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    res.json({ message: 'Profile saved', username: user.username, avatarLabel: user.avatarLabel });
+  } catch (error) {
+    console.error('Error saving profile:', error);
+    res.status(500).json({ error: 'Failed to save profile' });
+  }
+});
+
+// ─── GET /api/user/profile — fetch username + avatarLabel ─────────────────────
+app.get('/api/user/profile', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findOne({ uuid: req.uuid }, 'username avatarLabel');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    res.json({ username: user.username, avatarLabel: user.avatarLabel });
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
