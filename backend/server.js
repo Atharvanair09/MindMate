@@ -54,7 +54,7 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
     
     // Send email
     const emailData = {
-      sender: { name: 'MindMate Security', email: 'noreply@mindmate.app' },
+      sender: { name: 'MindMate Security', email: 'atharvanair09.ns@gmail.com' },
       to: [{ email: email }],
       subject: 'Your Verification Code',
       textContent: `Your verification code is: ${otp}. It will expire in 5 minutes.`,
