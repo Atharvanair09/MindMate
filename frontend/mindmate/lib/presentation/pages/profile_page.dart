@@ -60,77 +60,82 @@ class ProfilePage extends StatelessWidget {
       builder: (context, user, _) {
         return Column(
           children: [
-            // Avatar circle — shows custom photo or gradient icon
-            Container(
-              width: 140,
-              height: 140,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: user.hasCustomAvatar
-                    ? null
-                    : LinearGradient(
-                        colors: user.avatarGradient,
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+            // Avatar circle — tappable to change avatar
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, '/profile-setup'),
+              child: Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: user.hasCustomAvatar
+                          ? null
+                          : LinearGradient(
+                              colors: user.avatarGradient,
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: user.avatarGradient.first.withOpacity(0.4),
+                          blurRadius: 28,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: user.hasCustomAvatar
+                          ? Image.file(
+                              File(user.customAvatarPath!),
+                              fit: BoxFit.cover,
+                              width: 140,
+                              height: 140,
+                            )
+                          : Center(
+                              child: Icon(
+                                user.avatarIcon,
+                                size: 64,
+                                color: Colors.white,
+                              ),
+                            ),
+                    ),
+                  ),
+                  // Camera badge signals the avatar is editable
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF7B61FF), Color(0xFF9B84FF)],
                       ),
-                boxShadow: [
-                  BoxShadow(
-                    color: user.avatarGradient.first.withOpacity(0.4),
-                    blurRadius: 28,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 10),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF7B61FF).withOpacity(0.4),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.edit_rounded,
+                        size: 14, color: Colors.white),
                   ),
                 ],
               ),
-              child: ClipOval(
-                child: user.hasCustomAvatar
-                    ? Image.file(
-                        File(user.customAvatarPath!),
-                        fit: BoxFit.cover,
-                        width: 140,
-                        height: 140,
-                      )
-                    : Center(
-                        child: Icon(
-                          user.avatarIcon,
-                          size: 64,
-                          color: Colors.white,
-                        ),
-                      ),
-              ),
             ),
             const SizedBox(height: 20),
-            // Username row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  user.userName,
-                  style: GoogleFonts.poppins(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF1E1E1E),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.pushNamed(context, '/profile-setup');
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEEEBFF),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.refresh_rounded,
-                      size: 16,
-                      color: Color(0xFF7B61FF),
-                    ),
-                  ),
-                ),
-              ],
+            // Username — immutable, no edit button
+            Text(
+              user.userName.isNotEmpty ? user.userName : '—',
+              style: GoogleFonts.poppins(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF1E1E1E),
+              ),
             ),
             const SizedBox(height: 6),
             Text(
@@ -263,7 +268,7 @@ class ProfilePage extends StatelessWidget {
         children: [
           _buildSettingsTile(
             icon: Icons.face_retouching_natural_rounded,
-            title: 'My Identity & Avatar',
+            title: 'Change Avatar',
             onTap: (context) =>
                 Navigator.pushNamed(context, '/profile-setup'),
           ),

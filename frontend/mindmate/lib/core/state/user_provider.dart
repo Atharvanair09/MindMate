@@ -3,7 +3,8 @@ import '../../core/constants/avatar_options.dart';
 import '../../data/repositories/auth_repository.dart';
 
 class UserProvider extends ChangeNotifier {
-  // Username starts empty — populated from MongoDB on login via loadProfile()
+  // Username starts empty — populated from MongoDB on login via loadProfile().
+  // Once set, it is NEVER changed again (immutable by design).
   String _userName = '';
   int _wellnessScore = 72;
   String? _selectedMood;
@@ -27,6 +28,9 @@ class UserProvider extends ChangeNotifier {
   String get avatarLabel => _avatarLabel;
   String? get customAvatarPath => _customAvatarPath;
   bool get profileLoaded => _profileLoaded;
+
+  /// True when the user has a username assigned (profile setup completed).
+  bool get hasUsername => _userName.isNotEmpty;
 
   bool get hasCustomAvatar => _customAvatarPath != null;
 
@@ -53,7 +57,8 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  /// Called from ProfileSetupPage when the user confirms their identity.
+  /// Called from ProfileSetupPage on first-time setup — sets username + avatar.
+  /// Username is written once here and never changed afterwards.
   void updateProfile({
     required String username,
     required IconData avatarIcon,
@@ -70,8 +75,18 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateUserName(String newName) {
-    _userName = newName;
+  /// Called when the user updates their avatar only (after initial setup).
+  /// Username is intentionally NOT touched.
+  void updateAvatar({
+    required IconData avatarIcon,
+    required List<Color> avatarGradient,
+    required String avatarLabel,
+    String? customAvatarPath,
+  }) {
+    _avatarIcon = avatarIcon;
+    _avatarGradient = avatarGradient;
+    _avatarLabel = avatarLabel;
+    _customAvatarPath = customAvatarPath;
     notifyListeners();
   }
 

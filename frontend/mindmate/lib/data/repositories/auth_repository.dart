@@ -57,12 +57,19 @@ class AuthRepository {
     await _secureStorage.write(key: _uuidKey, value: result['uuid']!);
   }
 
-  /// Persists the user's chosen [username] and [avatarLabel] to MongoDB.
+  /// First-time profile setup: persists [username] (immutable) + [avatarLabel].
   /// No-ops silently if no JWT is present (should not happen in normal flow).
-  Future<void> saveUserProfile(String username, String avatarLabel) async {
+  Future<void> setupUserProfile(String username, String avatarLabel) async {
     final token = await _secureStorage.read(key: _jwtKey);
     if (token == null) return;
-    await _authService.saveProfile(token, username, avatarLabel);
+    await _authService.setupProfile(token, username, avatarLabel);
+  }
+
+  /// Updates avatar only — never modifies the username.
+  Future<void> updateUserAvatar(String avatarLabel) async {
+    final token = await _secureStorage.read(key: _jwtKey);
+    if (token == null) return;
+    await _authService.updateAvatar(token, avatarLabel);
   }
 
   /// Fetches the stored profile from MongoDB.

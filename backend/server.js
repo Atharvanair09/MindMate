@@ -314,8 +314,9 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// ─── PATCH /api/user/profile — save username + avatarLabel ────────────────────
-app.patch('/api/user/profile', authenticateToken, async (req, res) => {
+// ─── PATCH /api/user/profile/setup — first-time username + avatar setup ───────
+// Username is written ONLY if not already set (immutable after first save).
+app.patch('/api/user/profile/setup', authenticateToken, async (req, res) => {
   try {
     const { username, avatarLabel } = req.body;
 
@@ -332,18 +333,49 @@ app.patch('/api/user/profile', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Username may only contain letters, numbers and underscores' });
     }
 
+    const existing = await User.findOne({ uuid: req.uuid });
+    if (!existing) return res.status(404).json({ error: 'User not found' });
+
+    // Enforce immutability: only write username if it has never been set
+    const updateFields = { avatarLabel };
+    if (!existing.username) {
+      updateFields.username = trimmed;
+    }
+
     const user = await User.findOneAndUpdate(
       { uuid: req.uuid },
-      { username: trimmed, avatarLabel },
+      updateFields,
+      { new: true }
+    );
+
+    res.json({ message: 'Profile saved', username: user.username, avatarLabel: user.avatarLabel });
+  } catch (error) {
+    console.error('Error saving profile setup:', error);
+    res.status(500).json({ error: 'Failed to save profile' });
+  }
+});
+
+// ─── PATCH /api/user/profile/avatar — update avatar only (always allowed) ─────
+app.patch('/api/user/profile/avatar', authenticateToken, async (req, res) => {
+  try {
+    const { avatarLabel } = req.body;
+
+    if (!avatarLabel) {
+      return res.status(400).json({ error: 'avatarLabel is required' });
+    }
+
+    const user = await User.findOneAndUpdate(
+      { uuid: req.uuid },
+      { avatarLabel },
       { new: true }
     );
 
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    res.json({ message: 'Profile saved', username: user.username, avatarLabel: user.avatarLabel });
+    res.json({ message: 'Avatar updated', avatarLabel: user.avatarLabel });
   } catch (error) {
-    console.error('Error saving profile:', error);
-    res.status(500).json({ error: 'Failed to save profile' });
+    console.error('Error updating avatar:', error);
+    res.status(500).json({ error: 'Failed to update avatar' });
   }
 });
 

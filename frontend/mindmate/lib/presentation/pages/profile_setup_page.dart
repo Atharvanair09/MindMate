@@ -70,6 +70,9 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
   String? _usernameError;
   bool _isSaving = false;
 
+  /// True when the user already has a username — shows avatar-only edit mode.
+  bool _isReturningUser = false;
+
   late AnimationController _fadeController;
   late AnimationController _buttonController;
   late Animation<double> _fadeAnimation;
@@ -78,7 +81,26 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
   @override
   void initState() {
     super.initState();
-    _usernameController.text = _generateUsername();
+
+    // Detect returning user AFTER first frame so context is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final userProvider = context.read<UserProvider>();
+      if (userProvider.hasUsername) {
+        // Returning user: pre-select their current avatar, lock username
+        final currentLabel = userProvider.avatarLabel;
+        final idx = kDefaultAvatars.indexWhere((a) => a.label == currentLabel);
+        setState(() {
+          _isReturningUser = true;
+          _selectedAvatarIndex = idx >= 0 ? idx : 0;
+          // Keep existing username in the controller (read-only display)
+          _usernameController.text = userProvider.userName;
+        });
+      } else {
+        // First-time: generate a random username suggestion
+        _usernameController.text = _generateUsername();
+      }
+    });
 
     _fadeController = AnimationController(
       vsync: this,
@@ -180,8 +202,11 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
   // ── Confirm & save ─────────────────────────────────────────────────────────
 
   Future<void> _onConfirm() async {
-    final username = _usernameController.text.trim();
-    if (!_validateUsername(username)) return;
+    // First-time flow: also validate the username field
+    if (!_isReturningUser) {
+      final username = _usernameController.text.trim();
+      if (!_validateUsername(username)) return;
+    }
 
     await _buttonController.reverse();
     await _buttonController.forward();
@@ -189,26 +214,43 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
     setState(() => _isSaving = true);
 
     final avatar = kDefaultAvatars[_selectedAvatarIndex];
-    // Read provider and navigator BEFORE any async gaps
     final userProvider = context.read<UserProvider>();
     final navigator = Navigator.of(context);
 
-    // 1. Update in-memory state immediately
-    userProvider.updateProfile(
-      username: username,
-      avatarIcon: avatar.icon,
-      avatarGradient: avatar.gradient,
-      avatarLabel: avatar.label,
-      customAvatarPath: _customImagePath,
-    );
-
-    // 2. Persist to MongoDB (fire-and-forget; failure is non-blocking)
-    try {
-      final repo = AuthRepository();
-      await repo.saveUserProfile(username, avatar.label);
-    } catch (_) {
-      // Server unavailable — profile is still valid locally;
-      // will retry automatically on next profile setup open.
+    if (_isReturningUser) {
+      // ——— Avatar-only update ———
+      // 1. Update in-memory state (username unchanged)
+      userProvider.updateAvatar(
+        avatarIcon: avatar.icon,
+        avatarGradient: avatar.gradient,
+        avatarLabel: avatar.label,
+        customAvatarPath: _customImagePath,
+      );
+      // 2. Persist avatar to MongoDB
+      try {
+        final repo = AuthRepository();
+        await repo.updateUserAvatar(avatar.label);
+      } catch (_) {
+        // Non-blocking: avatar saved in-memory; will sync on next open
+      }
+    } else {
+      // ——— First-time full setup ———
+      final username = _usernameController.text.trim();
+      // 1. Update in-memory state
+      userProvider.updateProfile(
+        username: username,
+        avatarIcon: avatar.icon,
+        avatarGradient: avatar.gradient,
+        avatarLabel: avatar.label,
+        customAvatarPath: _customImagePath,
+      );
+      // 2. Persist username + avatar to MongoDB (username locked after this)
+      try {
+        final repo = AuthRepository();
+        await repo.setupUserProfile(username, avatar.label);
+      } catch (_) {
+        // Non-blocking: profile valid locally; syncs on next open
+      }
     }
 
     await Future.delayed(const Duration(milliseconds: 400));
@@ -238,10 +280,18 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
                       _buildAvatarPreview(),
                       const SizedBox(height: 16),
                       _buildUploadButton(),
-                      const SizedBox(height: 28),
-                      _buildUsernameField(),
-                      const SizedBox(height: 6),
-                      _buildSubtitle(),
+                      // Username field: only shown on first-time setup
+                      if (!_isReturningUser) ...[  
+                        const SizedBox(height: 28),
+                        _buildUsernameField(),
+                        const SizedBox(height: 6),
+                        _buildSubtitle(),
+                      ] else ...[  
+                        const SizedBox(height: 20),
+                        _buildLockedUsernameDisplay(),
+                        const SizedBox(height: 6),
+                        _buildSubtitle(),
+                      ],
                       const SizedBox(height: 32),
                       if (_customImagePath == null) _buildAvatarGrid(),
                       const SizedBox(height: 48),
@@ -288,7 +338,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
           ),
           Expanded(
             child: Text(
-              'Your Identity',
+              _isReturningUser ? 'Change Avatar' : 'Your Identity',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 20,
@@ -524,8 +574,38 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
 
   Widget _buildSubtitle() {
     return Text(
-      'This is you. Only you know it\'s you.',
+      _isReturningUser
+          ? 'Your alias is permanent. Only your avatar can change.'
+          : 'This is you. Only you know it\'s you.',
       style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[500]),
+    );
+  }
+
+  // ── Locked username display (returning users) ──────────────────────────────
+
+  Widget _buildLockedUsernameDisplay() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0EEFF),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF7B61FF).withOpacity(0.2)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.lock_rounded, size: 16, color: Color(0xFF7B61FF)),
+          const SizedBox(width: 10),
+          Text(
+            _usernameController.text,
+            style: GoogleFonts.poppins(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF7B61FF),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -722,7 +802,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'This is me, let\'s go',
+                              _isReturningUser ? 'Update Avatar' : 'This is me, let\'s go',
                               style: GoogleFonts.poppins(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -749,7 +829,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
                   size: 12, color: Color(0xFFB0A8C8)),
               const SizedBox(width: 5),
               Text(
-                'Your alias and avatar are stored only on your device',
+                'Your alias is permanent. Avatar updates are saved to your account.',
                 style: GoogleFonts.poppins(
                   fontSize: 10,
                   color: const Color(0xFFB0A8C8),

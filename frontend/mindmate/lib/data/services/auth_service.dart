@@ -68,12 +68,12 @@ class AuthService {
     }
   }
 
-  /// Saves the user's chosen username and avatar label to MongoDB.
+  /// First-time profile setup — saves username (immutable) + initial avatarLabel.
   /// [token] is the JWT bearer token.
-  Future<void> saveProfile(
+  Future<void> setupProfile(
       String token, String username, String avatarLabel) async {
     final response = await http.patch(
-      Uri.parse('$userUrl/profile'),
+      Uri.parse('$userUrl/profile/setup'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -84,6 +84,24 @@ class AuthService {
     if (response.statusCode != 200) {
       final error =
           jsonDecode(response.body)['error'] ?? 'Failed to save profile';
+      throw Exception(error);
+    }
+  }
+
+  /// Updates the avatar label only — username is never touched.
+  Future<void> updateAvatar(String token, String avatarLabel) async {
+    final response = await http.patch(
+      Uri.parse('$userUrl/profile/avatar'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'avatarLabel': avatarLabel}),
+    );
+
+    if (response.statusCode != 200) {
+      final error =
+          jsonDecode(response.body)['error'] ?? 'Failed to update avatar';
       throw Exception(error);
     }
   }
