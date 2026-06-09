@@ -4,7 +4,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const rateLimit = require('express-rate-limit');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const crypto = require('crypto');
 
 const User = require('./models/User');
@@ -26,36 +26,8 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Configure Nodemailer
-let transporter;
-async function initNodemailer() {
-  if (process.env.SMTP_HOST) {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT || 587,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      family: 4
-    });
-  } else {
-    // Fallback to Ethereal Email for testing if no SMTP config is provided
-    const testAccount = await nodemailer.createTestAccount();
-    transporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
-    console.log('No SMTP config provided. Using Ethereal Email for testing.');
-  }
-}
-initNodemailer();
+// Configure Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Rate limiter for OTP requests: max 3 requests per 5 minutes
 const otpLimiter = rateLimit({
@@ -83,7 +55,7 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
     
     // Send email
     const mailOptions = {
-      from: '"MindMate Security" <noreply@mindmate.app>',
+      from: 'MindMate Security <onboarding@resend.dev>',
       to: email,
       subject: 'Your Verification Code',
       text: `Your verification code is: ${otp}. It will expire in 5 minutes.`,
@@ -306,11 +278,12 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
 </html></p>`
     };
     
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`OTP sent to ${email}`);
-    if (info.messageId && !process.env.SMTP_HOST) {
-      console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+    const { data, error } = await resend.emails.send(mailOptions);
+    if (error) {
+      console.error('Resend Error:', error);
+      throw new Error(error.message);
     }
+    console.log(`OTP sent to ${email}`);
     
     res.json({ message: 'OTP sent successfully' });
   } catch (error) {
