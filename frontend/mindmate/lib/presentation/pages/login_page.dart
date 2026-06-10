@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
+import '../../core/state/user_provider.dart';
+import '../../data/repositories/auth_repository.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
 class LoginPage extends StatefulWidget {
@@ -324,9 +326,14 @@ class _LoginPageState extends State<LoginPage> {
           text: 'I have saved it safely',
           isLoading: viewModel.isLoading,
           onPressed: () async {
+            // Capture context-dependent objects before async gap
+            final userProvider = context.read<UserProvider>();
+            final navigator = Navigator.of(context);
             await viewModel.completeAuth();
-            if (viewModel.errorMessage == null && context.mounted) {
-              Navigator.pushReplacementNamed(context, '/profile-setup');
+            if (viewModel.errorMessage == null && mounted) {
+              // Reset any stale state; profile-setup will populate fresh data
+              userProvider.reset();
+              navigator.pushReplacementNamed('/profile-setup');
             }
           },
         ),
@@ -389,13 +396,30 @@ class _LoginPageState extends State<LoginPage> {
           isLoading: viewModel.isLoading,
           onPressed: () async {
             final phrase = _recoveryController.text.trim();
-            if (phrase.split(' ').length == 12) {
-              final success = await viewModel.recoverAccount(phrase);
-              if (success && context.mounted) {
-                Navigator.pushReplacementNamed(context, '/home');
-              }
-            } else {
+            if (phrase.split(' ').length != 12) {
               _showErrorSnackBar('Phrase must be exactly 12 words.');
+              return;
+            }
+
+            // Capture context-dependent objects before async gaps
+            final userProvider = context.read<UserProvider>();
+            final navigator = Navigator.of(context);
+            final repo = AuthRepository();
+
+            final success = await viewModel.recoverAccount(phrase);
+            if (!success || !mounted) return;
+
+            // ── Critical: load the recovered account's profile from MongoDB ──
+            // Without this, UserProvider keeps stale/default data and shows
+            // the wrong username and avatar after recovery.
+            userProvider.reset();
+            await userProvider.loadProfile(repo);
+
+            // Navigate: if profile is set up, go home; otherwise set up first
+            if (userProvider.hasUsername) {
+              navigator.pushNamedAndRemoveUntil('/home', (route) => false);
+            } else {
+              navigator.pushNamedAndRemoveUntil('/profile-setup', (route) => false);
             }
           },
         ),

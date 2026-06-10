@@ -188,31 +188,6 @@ class ProfilePage extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 10),
-            // Avatar style chip
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    user.avatarGradient.first.withOpacity(0.15),
-                    user.avatarGradient.last.withOpacity(0.15),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: user.avatarGradient.first.withOpacity(0.3),
-                ),
-              ),
-              child: Text(
-                '${user.avatarLabel} Avatar',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: user.avatarGradient.first,
-                ),
-              ),
-            ),
           ],
         );
       },

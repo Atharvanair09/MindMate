@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -80,14 +81,10 @@ class HomePage extends StatelessWidget {
               child: Row(
                 children: [
                   CircleAvatar(
-                    radius: 20,
+                    radius: 22,
                     backgroundColor: Colors.white,
-                    child: Padding(
-                      padding: const EdgeInsets.all(2.0),
-                      child: Image.network(
-                        'https://api.dicebear.com/7.x/adventurer/png?seed=Felix',
-                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 20),
-                      ),
+                    child: ClipOval(
+                      child: _buildAvatarImage(userState),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -123,6 +120,67 @@ class HomePage extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildAvatarImage(UserProvider userState) {
+    // 1. Priority: Locally picked image this session
+    if (userState.localAvatarPath != null) {
+      return Image.file(
+        File(userState.localAvatarPath!),
+        width: 44,
+        height: 44,
+        fit: BoxFit.cover,
+      );
+    }
+    
+    // 2. Secondary: Persisted custom image from backend (Data URL or HTTP)
+    final imageUrl = userState.avatarImageUrl;
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      if (imageUrl.startsWith('http')) {
+        return Image.network(
+          imageUrl,
+          width: 44,
+          height: 44,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _buildDefaultIcon(userState),
+        );
+      } else {
+        final bytes = userState.avatarImageBytes;
+        if (bytes != null) {
+          return Image.memory(
+            bytes,
+            width: 44,
+            height: 44,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _buildDefaultIcon(userState),
+          );
+        }
+      }
+    }
+
+    // 3. Fallback: Default avatar icon with gradient
+    return _buildDefaultIcon(userState);
+  }
+
+  Widget _buildDefaultIcon(UserProvider userState) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: userState.avatarGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          userState.avatarIcon,
+          size: 22,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 }

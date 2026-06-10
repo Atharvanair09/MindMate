@@ -49,7 +49,7 @@ class AuthService {
             'uuid': uuid,
             'recoveryPhraseHash': recoveryPhraseHash,
           }),
-        )
+        ) 
         .timeout(_defaultTimeout);
 
     if (response.statusCode == 200) {

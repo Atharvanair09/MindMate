@@ -895,11 +895,14 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
               const Icon(Icons.lock_outline,
                   size: 12, color: Color(0xFFB0A8C8)),
               const SizedBox(width: 5),
-              Text(
-                'Your alias is permanent. Avatar updates are saved to your account.',
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  color: const Color(0xFFB0A8C8),
+              Expanded(
+                child: Text(
+                  'Your alias is permanent. Avatar updates are saved to your account.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 9.5,
+                    color: const Color(0xFFB0A8C8),
+                  ),
                 ),
               ),
             ],
