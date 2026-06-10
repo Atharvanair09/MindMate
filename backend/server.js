@@ -15,7 +15,8 @@ dns.setDefaultResultOrder("ipv4first");
 const app = express();
 app.set("trust proxy",1);
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-mindmate';

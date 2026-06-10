@@ -5,12 +5,19 @@ class AuthService {
   final String baseUrl = 'https://mindmate-9jyw.onrender.com/api/auth';
   final String userUrl = 'https://mindmate-9jyw.onrender.com/api/user';
 
+  // Standard timeout for lightweight calls
+  static const _defaultTimeout = Duration(seconds: 30);
+  // Longer timeout for image upload calls (base64 payload can be large + Render cold-start)
+  static const _uploadTimeout = Duration(seconds: 60);
+
   Future<void> sendOtp(String email) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/send-otp'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email}),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/send-otp'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email}),
+        )
+        .timeout(_defaultTimeout);
 
     if (response.statusCode != 200) {
       final error = jsonDecode(response.body)['error'] ?? 'Failed to send OTP';
@@ -19,11 +26,13 @@ class AuthService {
   }
 
   Future<void> verifyOtp(String email, String otp) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/verify-otp'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'otp': otp}),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/verify-otp'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email, 'otp': otp}),
+        )
+        .timeout(_defaultTimeout);
 
     if (response.statusCode != 200) {
       final error = jsonDecode(response.body)['error'] ?? 'Invalid OTP';
@@ -32,14 +41,16 @@ class AuthService {
   }
 
   Future<String> register(String uuid, String recoveryPhraseHash) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'uuid': uuid,
-        'recoveryPhraseHash': recoveryPhraseHash,
-      }),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/register'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'uuid': uuid,
+            'recoveryPhraseHash': recoveryPhraseHash,
+          }),
+        )
+        .timeout(_defaultTimeout);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body)['token'];
@@ -50,11 +61,13 @@ class AuthService {
   }
 
   Future<Map<String, String>> recoverAccount(String recoveryPhraseHash) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/recover'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'recoveryPhraseHash': recoveryPhraseHash}),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/recover'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'recoveryPhraseHash': recoveryPhraseHash}),
+        )
+        .timeout(_defaultTimeout);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -70,7 +83,7 @@ class AuthService {
 
   /// First-time profile setup — saves username (immutable) + initial avatarLabel.
   /// Optionally sends [avatarImageUrl] (base64 data URL) to persist a custom photo.
-  /// [token] is the JWT bearer token.
+  /// Uses a longer timeout because the base64 payload can be large.
   Future<void> setupProfile(
     String token,
     String username,
@@ -85,25 +98,28 @@ class AuthService {
       body['avatarImageUrl'] = avatarImageUrl;
     }
 
-    final response = await http.patch(
-      Uri.parse('$userUrl/profile/setup'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(body),
-    );
+    final response = await http
+        .patch(
+          Uri.parse('$userUrl/profile/setup'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode(body),
+        )
+        .timeout(avatarImageUrl != null ? _uploadTimeout : _defaultTimeout);
 
     if (response.statusCode != 200) {
       final error =
           jsonDecode(response.body)['error'] ?? 'Failed to save profile';
-      throw Exception(error);
+      throw Exception('${response.statusCode}: $error');
     }
   }
 
   /// Updates the avatar label and optionally the custom photo URL.
   /// Pass [avatarImageUrl] as a base64 data URL to save a gallery image,
   /// or explicitly pass `null` to clear a previously stored custom photo.
+  /// Uses a longer timeout because the base64 payload can be large.
   Future<void> updateAvatar(
     String token,
     String avatarLabel, {
@@ -115,32 +131,36 @@ class AuthService {
       body['avatarImageUrl'] = avatarImageUrl;
     }
 
-    final response = await http.patch(
-      Uri.parse('$userUrl/profile/avatar'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(body),
-    );
+    final response = await http
+        .patch(
+          Uri.parse('$userUrl/profile/avatar'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode(body),
+        )
+        .timeout(avatarImageUrl != null ? _uploadTimeout : _defaultTimeout);
 
     if (response.statusCode != 200) {
       final error =
           jsonDecode(response.body)['error'] ?? 'Failed to update avatar';
-      throw Exception(error);
+      throw Exception('${response.statusCode}: $error');
     }
   }
 
   /// Fetches the stored username, avatarLabel, and avatarImageUrl for the
   /// authenticated user. Returns null values when not yet set.
   Future<Map<String, String?>> fetchProfile(String token) async {
-    final response = await http.get(
-      Uri.parse('$userUrl/profile'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+    final response = await http
+        .get(
+          Uri.parse('$userUrl/profile'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        )
+        .timeout(_defaultTimeout);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -152,7 +172,7 @@ class AuthService {
     } else {
       final error =
           jsonDecode(response.body)['error'] ?? 'Failed to fetch profile';
-      throw Exception(error);
+      throw Exception('${response.statusCode}: $error');
     }
   }
 }

@@ -218,6 +218,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
     // Capture context-dependent objects before any async gaps
     final userProvider = context.read<UserProvider>();
     final navigator = Navigator.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final repo = AuthRepository();
 
     await _buttonController.reverse();
@@ -229,22 +230,33 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
 
     if (_isReturningUser) {
       // ——— Avatar-only update ———
-      // 1. Persist to MongoDB (includes image upload if applicable)
       String? savedImageUrl;
+      String? uploadError;
       try {
         await repo.updateUserAvatar(
           avatar.label,
           imageFile: _customImagePath != null ? File(_customImagePath!) : null,
-          clearImage: _customImagePath == null,
+          clearImage: _customImagePath == null && _persistedImageBytes == null,
         );
         // Fetch back the saved URL so we can cache it in-memory
         final profile = await repo.fetchUserProfile();
         savedImageUrl = profile?['avatarImageUrl'];
-      } catch (_) {
-        // Non-blocking: avatar saved in-memory; will sync on next open
+      } catch (e) {
+        uploadError = e.toString().replaceAll('Exception: ', '');
         savedImageUrl = null;
       }
-      // 2. Update in-memory state (username unchanged)
+
+      if (uploadError != null && mounted) {
+        scaffoldMessenger.showSnackBar(SnackBar(
+          content: Text('Avatar saved locally, but upload failed: $uploadError',
+              style: GoogleFonts.poppins(fontSize: 12)),
+          backgroundColor: Colors.orange[700],
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+      }
+
+      // Update in-memory state (username unchanged)
       userProvider.updateAvatar(
         avatarIcon: avatar.icon,
         avatarGradient: avatar.gradient,
@@ -255,8 +267,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
     } else {
       // ——— First-time full setup ———
       final username = _usernameController.text.trim();
-      // 1. Persist username + avatar to MongoDB (username locked after this)
       String? savedImageUrl;
+      String? uploadError;
       try {
         await repo.setupUserProfile(
           username,
@@ -266,11 +278,22 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
         // Fetch back the saved URL so we can cache it in-memory
         final profile = await repo.fetchUserProfile();
         savedImageUrl = profile?['avatarImageUrl'];
-      } catch (_) {
-        // Non-blocking: profile valid locally; syncs on next open
+      } catch (e) {
+        uploadError = e.toString().replaceAll('Exception: ', '');
         savedImageUrl = null;
       }
-      // 2. Update in-memory state
+
+      if (uploadError != null && mounted) {
+        scaffoldMessenger.showSnackBar(SnackBar(
+          content: Text('Profile saved locally, but sync failed: $uploadError',
+              style: GoogleFonts.poppins(fontSize: 12)),
+          backgroundColor: Colors.orange[700],
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+      }
+
+      // Update in-memory state
       userProvider.updateProfile(
         username: username,
         avatarIcon: avatar.icon,
