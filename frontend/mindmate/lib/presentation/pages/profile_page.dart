@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/state/user_provider.dart';
+import '../../data/repositories/auth_repository.dart';
 import '../widgets/bottom_nav.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -46,7 +47,7 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 30),
             _buildSettingsList(),
             const SizedBox(height: 40),
-            _buildFooter(),
+            _buildFooter(context),
             const SizedBox(height: 100),
           ],
         ),
@@ -58,6 +59,35 @@ class ProfilePage extends StatelessWidget {
   Widget _buildProfileHeader() {
     return Consumer<UserProvider>(
       builder: (context, user, _) {
+        // Determine which avatar widget to show
+        Widget avatarChild;
+        if (user.localAvatarPath != null) {
+          // Freshly picked this session — use file
+          avatarChild = Image.file(
+            File(user.localAvatarPath!),
+            fit: BoxFit.cover,
+            width: 140,
+            height: 140,
+          );
+        } else if (user.avatarImageBytes != null) {
+          // Restored from MongoDB (base64 data URL)
+          avatarChild = Image.memory(
+            user.avatarImageBytes!,
+            fit: BoxFit.cover,
+            width: 140,
+            height: 140,
+          );
+        } else {
+          // Default icon avatar
+          avatarChild = Center(
+            child: Icon(
+              user.avatarIcon,
+              size: 64,
+              color: Colors.white,
+            ),
+          );
+        }
+
         return Column(
           children: [
             // Avatar circle — tappable to change avatar
@@ -87,22 +117,7 @@ class ProfilePage extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: ClipOval(
-                      child: user.hasCustomAvatar
-                          ? Image.file(
-                              File(user.customAvatarPath!),
-                              fit: BoxFit.cover,
-                              width: 140,
-                              height: 140,
-                            )
-                          : Center(
-                              child: Icon(
-                                user.avatarIcon,
-                                size: 64,
-                                color: Colors.white,
-                              ),
-                            ),
-                    ),
+                    child: ClipOval(child: avatarChild),
                   ),
                   // Camera badge signals the avatar is editable
                   Container(
@@ -354,11 +369,11 @@ class ProfilePage extends StatelessWidget {
     });
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(BuildContext context) {
     return Column(
       children: [
         TextButton(
-          onPressed: () {},
+          onPressed: () => _confirmLogout(context),
           child: Text(
             'Logout',
             style: GoogleFonts.poppins(
@@ -378,5 +393,69 @@ class ProfilePage extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  /// Shows a confirmation dialog, then clears credentials and navigates to login.
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        title: Text(
+          'Log out?',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            color: const Color(0xFF1E1E1E),
+          ),
+        ),
+        content: Text(
+          'You\'ll need your recovery phrase to log back in. Make sure you have it saved.',
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: Colors.grey[600],
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(
+                color: const Color(0xFF7B61FF),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'Log out',
+              style: GoogleFonts.poppins(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      // 1. Clear JWT + UUID from secure storage
+      await AuthRepository().logout();
+      // 2. Reset in-memory user state so a new login starts fresh
+      if (context.mounted) {
+        context.read<UserProvider>().reset();
+        // 3. Navigate to login and remove all previous routes
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/login',
+          (route) => false,
+        );
+      }
+    }
   }
 }

@@ -5,6 +5,7 @@ import 'presentation/pages/login_page.dart';
 import 'presentation/pages/profile_setup_page.dart';
 import 'presentation/pages/mood_check_in_page.dart';
 import 'presentation/pages/insights_page.dart';
+import 'presentation/pages/chat_page.dart';
 import 'presentation/pages/profile_page.dart';
 import 'data/repositories/auth_repository.dart';
 import 'presentation/viewmodels/auth_viewmodel.dart';
@@ -60,6 +61,7 @@ class MindMateApp extends StatelessWidget {
         '/home': (context) => const HomePage(),
         '/mood-check-in': (context) => const MoodCheckInPage(),
         '/insights': (context) => const InsightsPage(),
+        '/chat': (context) => const ChatPage(),
         '/profile-page': (context) => const ProfilePage(),
       },
     );

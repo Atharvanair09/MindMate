@@ -69,16 +69,29 @@ class AuthService {
   }
 
   /// First-time profile setup — saves username (immutable) + initial avatarLabel.
+  /// Optionally sends [avatarImageUrl] (base64 data URL) to persist a custom photo.
   /// [token] is the JWT bearer token.
   Future<void> setupProfile(
-      String token, String username, String avatarLabel) async {
+    String token,
+    String username,
+    String avatarLabel, {
+    String? avatarImageUrl,
+  }) async {
+    final body = <String, dynamic>{
+      'username': username,
+      'avatarLabel': avatarLabel,
+    };
+    if (avatarImageUrl != null) {
+      body['avatarImageUrl'] = avatarImageUrl;
+    }
+
     final response = await http.patch(
       Uri.parse('$userUrl/profile/setup'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-      body: jsonEncode({'username': username, 'avatarLabel': avatarLabel}),
+      body: jsonEncode(body),
     );
 
     if (response.statusCode != 200) {
@@ -88,15 +101,27 @@ class AuthService {
     }
   }
 
-  /// Updates the avatar label only — username is never touched.
-  Future<void> updateAvatar(String token, String avatarLabel) async {
+  /// Updates the avatar label and optionally the custom photo URL.
+  /// Pass [avatarImageUrl] as a base64 data URL to save a gallery image,
+  /// or explicitly pass `null` to clear a previously stored custom photo.
+  Future<void> updateAvatar(
+    String token,
+    String avatarLabel, {
+    String? avatarImageUrl,
+    bool clearImage = false,
+  }) async {
+    final body = <String, dynamic>{'avatarLabel': avatarLabel};
+    if (clearImage || avatarImageUrl != null) {
+      body['avatarImageUrl'] = avatarImageUrl;
+    }
+
     final response = await http.patch(
       Uri.parse('$userUrl/profile/avatar'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-      body: jsonEncode({'avatarLabel': avatarLabel}),
+      body: jsonEncode(body),
     );
 
     if (response.statusCode != 200) {
@@ -106,8 +131,8 @@ class AuthService {
     }
   }
 
-  /// Fetches the stored username and avatarLabel for the authenticated user.
-  /// Returns null values when the profile has not been set yet.
+  /// Fetches the stored username, avatarLabel, and avatarImageUrl for the
+  /// authenticated user. Returns null values when not yet set.
   Future<Map<String, String?>> fetchProfile(String token) async {
     final response = await http.get(
       Uri.parse('$userUrl/profile'),
@@ -122,6 +147,7 @@ class AuthService {
       return {
         'username': data['username'] as String?,
         'avatarLabel': data['avatarLabel'] as String?,
+        'avatarImageUrl': data['avatarImageUrl'] as String?,
       };
     } else {
       final error =

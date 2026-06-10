@@ -67,15 +67,6 @@ class HomePage extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: const MindMateBottomNav(currentIndex: 0),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Demonstrating dynamic name update
-          context.read<UserProvider>().updateUserName("BlueTiger46");
-        },
-        backgroundColor: AppColors.primaryPurple,
-        mini: true,
-        child: const Icon(Icons.refresh, color: Colors.white),
-      ),
     );
   }
 
@@ -102,7 +93,7 @@ class HomePage extends StatelessWidget {
                   const SizedBox(width: 12),
                   Flexible(
                     child: Text(
-                      "Hey, ${userState.userName} 👋",
+                      "Hey, ${userState.userName.isEmpty ? 'Friend' : userState.userName} 👋",
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
                         fontSize: 18,

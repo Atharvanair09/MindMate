@@ -318,7 +318,7 @@ function authenticateToken(req, res, next) {
 // Username is written ONLY if not already set (immutable after first save).
 app.patch('/api/user/profile/setup', authenticateToken, async (req, res) => {
   try {
-    const { username, avatarLabel } = req.body;
+    const { username, avatarLabel, avatarImageUrl } = req.body;
 
     if (!username || !avatarLabel) {
       return res.status(400).json({ error: 'username and avatarLabel are required' });
@@ -341,6 +341,10 @@ app.patch('/api/user/profile/setup', authenticateToken, async (req, res) => {
     if (!existing.username) {
       updateFields.username = trimmed;
     }
+    // Persist custom photo if provided; clear it if explicitly set to null
+    if (avatarImageUrl !== undefined) {
+      updateFields.avatarImageUrl = avatarImageUrl || null;
+    }
 
     const user = await User.findOneAndUpdate(
       { uuid: req.uuid },
@@ -348,7 +352,12 @@ app.patch('/api/user/profile/setup', authenticateToken, async (req, res) => {
       { new: true }
     );
 
-    res.json({ message: 'Profile saved', username: user.username, avatarLabel: user.avatarLabel });
+    res.json({
+      message: 'Profile saved',
+      username: user.username,
+      avatarLabel: user.avatarLabel,
+      avatarImageUrl: user.avatarImageUrl ?? null,
+    });
   } catch (error) {
     console.error('Error saving profile setup:', error);
     res.status(500).json({ error: 'Failed to save profile' });
@@ -356,36 +365,75 @@ app.patch('/api/user/profile/setup', authenticateToken, async (req, res) => {
 });
 
 // ─── PATCH /api/user/profile/avatar — update avatar only (always allowed) ─────
+// Accepts avatarLabel (required) and optional avatarImageUrl (base64 data URL or null).
 app.patch('/api/user/profile/avatar', authenticateToken, async (req, res) => {
   try {
-    const { avatarLabel } = req.body;
+    const { avatarLabel, avatarImageUrl } = req.body;
 
     if (!avatarLabel) {
       return res.status(400).json({ error: 'avatarLabel is required' });
     }
 
+    const updateFields = { avatarLabel };
+    // If avatarImageUrl is provided in the request body (even as null), persist it
+    if (avatarImageUrl !== undefined) {
+      updateFields.avatarImageUrl = avatarImageUrl || null;
+    }
+
     const user = await User.findOneAndUpdate(
       { uuid: req.uuid },
-      { avatarLabel },
+      updateFields,
       { new: true }
     );
 
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    res.json({ message: 'Avatar updated', avatarLabel: user.avatarLabel });
+    res.json({
+      message: 'Avatar updated',
+      avatarLabel: user.avatarLabel,
+      avatarImageUrl: user.avatarImageUrl ?? null,
+    });
   } catch (error) {
     console.error('Error updating avatar:', error);
     res.status(500).json({ error: 'Failed to update avatar' });
   }
 });
 
-// ─── GET /api/user/profile — fetch username + avatarLabel ─────────────────────
-app.get('/api/user/profile', authenticateToken, async (req, res) => {
+// ─── PATCH /api/user/profile/avatar-image — upload/clear custom photo ─────────
+// Body: { avatarImageUrl: '<base64 data URL>' } or { avatarImageUrl: null } to clear.
+app.patch('/api/user/profile/avatar-image', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findOne({ uuid: req.uuid }, 'username avatarLabel');
+    const { avatarImageUrl } = req.body;
+
+    const user = await User.findOneAndUpdate(
+      { uuid: req.uuid },
+      { avatarImageUrl: avatarImageUrl || null },
+      { new: true }
+    );
+
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    res.json({ username: user.username, avatarLabel: user.avatarLabel });
+    res.json({
+      message: 'Avatar image updated',
+      avatarImageUrl: user.avatarImageUrl ?? null,
+    });
+  } catch (error) {
+    console.error('Error updating avatar image:', error);
+    res.status(500).json({ error: 'Failed to update avatar image' });
+  }
+});
+
+// ─── GET /api/user/profile — fetch username + avatarLabel + avatarImageUrl ─────
+app.get('/api/user/profile', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findOne({ uuid: req.uuid }, 'username avatarLabel avatarImageUrl');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    res.json({
+      username: user.username,
+      avatarLabel: user.avatarLabel,
+      avatarImageUrl: user.avatarImageUrl ?? null,
+    });
   } catch (error) {
     console.error('Error fetching profile:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });

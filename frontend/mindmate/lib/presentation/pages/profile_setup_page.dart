@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -66,7 +67,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
   final ImagePicker _picker = ImagePicker();
 
   int _selectedAvatarIndex = 0;
-  String? _customImagePath; // set when user picks from gallery
+  String? _customImagePath; // set when user picks from gallery this session
+  Uint8List? _persistedImageBytes; // decoded bytes of the server-stored avatar
   String? _usernameError;
   bool _isSaving = false;
 
@@ -95,6 +97,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
           _selectedAvatarIndex = idx >= 0 ? idx : 0;
           // Keep existing username in the controller (read-only display)
           _usernameController.text = userProvider.userName;
+          // Pre-load persisted avatar bytes if available
+          _persistedImageBytes = userProvider.avatarImageBytes;
         });
       } else {
         // First-time: generate a random username suggestion
@@ -197,7 +201,10 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
     }
   }
 
-  void _clearCustomImage() => setState(() => _customImagePath = null);
+  void _clearCustomImage() => setState(() {
+    _customImagePath = null;
+    _persistedImageBytes = null; // also clears the server image preview
+  });
 
   // ── Confirm & save ─────────────────────────────────────────────────────────
 
@@ -208,49 +215,70 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
       if (!_validateUsername(username)) return;
     }
 
+    // Capture context-dependent objects before any async gaps
+    final userProvider = context.read<UserProvider>();
+    final navigator = Navigator.of(context);
+    final repo = AuthRepository();
+
     await _buttonController.reverse();
     await _buttonController.forward();
 
     setState(() => _isSaving = true);
 
     final avatar = kDefaultAvatars[_selectedAvatarIndex];
-    final userProvider = context.read<UserProvider>();
-    final navigator = Navigator.of(context);
 
     if (_isReturningUser) {
       // ——— Avatar-only update ———
-      // 1. Update in-memory state (username unchanged)
+      // 1. Persist to MongoDB (includes image upload if applicable)
+      String? savedImageUrl;
+      try {
+        await repo.updateUserAvatar(
+          avatar.label,
+          imageFile: _customImagePath != null ? File(_customImagePath!) : null,
+          clearImage: _customImagePath == null,
+        );
+        // Fetch back the saved URL so we can cache it in-memory
+        final profile = await repo.fetchUserProfile();
+        savedImageUrl = profile?['avatarImageUrl'];
+      } catch (_) {
+        // Non-blocking: avatar saved in-memory; will sync on next open
+        savedImageUrl = null;
+      }
+      // 2. Update in-memory state (username unchanged)
       userProvider.updateAvatar(
         avatarIcon: avatar.icon,
         avatarGradient: avatar.gradient,
         avatarLabel: avatar.label,
-        customAvatarPath: _customImagePath,
+        localImagePath: _customImagePath,
+        persistedImageUrl: savedImageUrl,
       );
-      // 2. Persist avatar to MongoDB
-      try {
-        final repo = AuthRepository();
-        await repo.updateUserAvatar(avatar.label);
-      } catch (_) {
-        // Non-blocking: avatar saved in-memory; will sync on next open
-      }
     } else {
       // ——— First-time full setup ———
       final username = _usernameController.text.trim();
-      // 1. Update in-memory state
+      // 1. Persist username + avatar to MongoDB (username locked after this)
+      String? savedImageUrl;
+      try {
+        await repo.setupUserProfile(
+          username,
+          avatar.label,
+          imageFile: _customImagePath != null ? File(_customImagePath!) : null,
+        );
+        // Fetch back the saved URL so we can cache it in-memory
+        final profile = await repo.fetchUserProfile();
+        savedImageUrl = profile?['avatarImageUrl'];
+      } catch (_) {
+        // Non-blocking: profile valid locally; syncs on next open
+        savedImageUrl = null;
+      }
+      // 2. Update in-memory state
       userProvider.updateProfile(
         username: username,
         avatarIcon: avatar.icon,
         avatarGradient: avatar.gradient,
         avatarLabel: avatar.label,
-        customAvatarPath: _customImagePath,
+        localImagePath: _customImagePath,
+        persistedImageUrl: savedImageUrl,
       );
-      // 2. Persist username + avatar to MongoDB (username locked after this)
-      try {
-        final repo = AuthRepository();
-        await repo.setupUserProfile(username, avatar.label);
-      } catch (_) {
-        // Non-blocking: profile valid locally; syncs on next open
-      }
     }
 
     await Future.delayed(const Duration(milliseconds: 400));
@@ -293,7 +321,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
                         _buildSubtitle(),
                       ],
                       const SizedBox(height: 32),
-                      if (_customImagePath == null) _buildAvatarGrid(),
+                      if (_customImagePath == null && _persistedImageBytes == null) _buildAvatarGrid(),
                       const SizedBox(height: 48),
                     ],
                   ),
@@ -357,7 +385,31 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
 
   Widget _buildAvatarPreview() {
     final avatar = kDefaultAvatars[_selectedAvatarIndex];
-    final hasPhoto = _customImagePath != null;
+    // Priority: newly picked local file > persisted server bytes > default icon
+    final bool hasLocalPhoto = _customImagePath != null;
+    final bool hasPersistedPhoto =
+        _persistedImageBytes != null && !hasLocalPhoto;
+    final bool hasPhoto = hasLocalPhoto || hasPersistedPhoto;
+
+    Widget photoChild;
+    if (hasLocalPhoto) {
+      photoChild = Image.file(
+        File(_customImagePath!),
+        fit: BoxFit.cover,
+        width: 130,
+        height: 130,
+      );
+    } else if (hasPersistedPhoto) {
+      photoChild = Image.memory(
+        _persistedImageBytes!,
+        fit: BoxFit.cover,
+        width: 130,
+        height: 130,
+      );
+    } else {
+      photoChild =
+          Center(child: Icon(avatar.icon, size: 60, color: Colors.white));
+    }
 
     return Stack(
       alignment: Alignment.bottomRight,
@@ -393,18 +445,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
                 ),
               ],
             ),
-            child: ClipOval(
-              child: hasPhoto
-                  ? Image.file(
-                      File(_customImagePath!),
-                      fit: BoxFit.cover,
-                      width: 130,
-                      height: 130,
-                    )
-                  : Center(
-                      child: Icon(avatar.icon, size: 60, color: Colors.white),
-                    ),
-            ),
+            child: ClipOval(child: photoChild),
           ),
         ),
         // Edit badge
@@ -437,7 +478,10 @@ class _ProfileSetupPageState extends State<ProfileSetupPage>
   // ── Upload / clear photo button ────────────────────────────────────────────
 
   Widget _buildUploadButton() {
-    if (_customImagePath != null) {
+    // Show change/remove row when there's any custom photo (local or persisted)
+    final bool hasAnyPhoto =
+        _customImagePath != null || _persistedImageBytes != null;
+    if (hasAnyPhoto) {
       // Show "Remove photo" option when a custom photo is active
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,

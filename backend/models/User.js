@@ -20,6 +20,11 @@ const userSchema = new mongoose.Schema({
   avatarLabel: {
     type: String,
     default: null
+  },
+  // Custom avatar photo stored as a base64 data URL (null when using a default icon avatar)
+  avatarImageUrl: {
+    type: String,
+    default: null
   }
 }, { timestamps: true });
 
