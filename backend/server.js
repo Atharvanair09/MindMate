@@ -441,6 +441,14 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// ─── External Routes ─────────────────────────────────────────────────────────
+const journalRoutes = require('./routes/journalRoutes');
+const chatRoutes = require('./routes/chatRoutes');
+
+app.use('/api/v1/journal', journalRoutes);
+app.use('/api/v1/chat', chatRoutes);
+
 app.listen(PORT, () => {
+
   console.log(`Server running on port ${PORT}`);
 });
