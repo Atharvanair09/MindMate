@@ -7,6 +7,7 @@ import 'presentation/pages/mood_check_in_page.dart';
 import 'presentation/pages/insights_page.dart';
 import 'presentation/pages/chat_page.dart';
 import 'presentation/pages/profile_page.dart';
+import 'presentation/pages/video_splash_page.dart';
 import 'data/repositories/auth_repository.dart';
 import 'presentation/viewmodels/auth_viewmodel.dart';
 import 'core/state/user_provider.dart';
@@ -54,8 +55,9 @@ class MindMateApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4B39EF)),
         scaffoldBackgroundColor: const Color(0xFFF9F9FF),
       ),
-      initialRoute: hasSession ? '/home' : '/login',
+      initialRoute: '/',
       routes: {
+        '/': (context) => VideoSplashPage(nextRoute: hasSession ? '/home' : '/login'),
         '/login': (context) => const LoginPage(),
         '/profile-setup': (context) => const ProfileSetupPage(),
         '/home': (context) => const HomePage(),

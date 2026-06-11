@@ -29,7 +29,7 @@ class MindMateBottomNav extends StatelessWidget {
               Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
               break;
             case 1:
-              // Navigator.pushNamed(context, '/journal');
+              Navigator.pushNamed(context, '/chat');
               break;
             case 2:
               Navigator.pushNamed(context, '/mood-check-in');
@@ -48,18 +48,26 @@ class MindMateBottomNav extends StatelessWidget {
             selectedIcon: Icon(Icons.home_filled, color: AppColors.primaryPurple),
             label: "Home",
           ),
-          NavigationDestination(icon: Icon(Icons.edit_note), label: "Journal"),
           NavigationDestination(
-            icon: Icon(Icons.sentiment_satisfied_alt),
-            selectedIcon: Icon(Icons.sentiment_satisfied_alt, color: AppColors.primaryPurple),
-            label: "Mood",
+            icon: Icon(Icons.chat_bubble_outline),
+            selectedIcon: Icon(Icons.chat_bubble, color: AppColors.primaryPurple),
+            label: "Chat",
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.edit_note_outlined),
+            selectedIcon: Icon(Icons.edit_note, color: AppColors.primaryPurple),
+            label: "Journal",
           ),
           NavigationDestination(
             icon: Icon(Icons.analytics_outlined),
             selectedIcon: Icon(Icons.analytics, color: AppColors.primaryPurple),
             label: "Insights",
           ),
-          NavigationDestination(icon: Icon(Icons.person_outline), label: "Profile"),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person, color: AppColors.primaryPurple),
+            label: "Profile",
+          ),
         ],
       ),
     );
