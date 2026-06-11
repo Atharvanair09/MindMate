@@ -1,11 +1,10 @@
-const Anthropic = require('@anthropic-ai/sdk');
+// Uses OpenRouter (OpenAI-compatible API) to access Claude models.
+// No Anthropic SDK needed — just a standard fetch to OpenRouter's endpoint.
 
-const apiKey = process.env.ANTHROPIC_API_KEY?.trim() || 'dummy_key';
-console.log('[AI-SVC] Anthropic API key loaded:', apiKey ? `${apiKey.substring(0, 12)}...` : 'MISSING');
+const OPENROUTER_API_KEY = (process.env.OPENROUTER_API_KEY || '').trim();
+console.log('[AI-SVC] OpenRouter API key loaded:', OPENROUTER_API_KEY ? `${OPENROUTER_API_KEY.substring(0, 12)}...` : 'MISSING');
 
-const anthropic = new Anthropic({
-  apiKey: apiKey,
-});
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 const SYSTEM_PROMPT = `You are MindMate — a warm, emotionally present companion for Indian college students, not a therapist and not a scripted chatbot.
 
@@ -29,9 +28,12 @@ async function getChatResponse(history, currentMessage, retryCount = 0) {
   console.log('[AI-SVC] History length:', history.length, '| Current message:', currentMessage?.substring(0, 80));
 
   try {
-    // Format messages for Claude
-    const messages = [];
-    
+    // Build OpenAI-compatible messages array
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT }
+    ];
+
+    // Add conversation history
     for (const msg of history) {
       messages.push({
         role: msg.role,
@@ -39,51 +41,72 @@ async function getChatResponse(history, currentMessage, retryCount = 0) {
       });
     }
 
+    // Add current user message
     messages.push({
       role: 'user',
       content: currentMessage
     });
 
-    console.log('[AI-SVC] Sending to Claude — messages count:', messages.length);
-    console.log('[AI-SVC] Messages array:', JSON.stringify(messages).substring(0, 500));
+    console.log('[AI-SVC] Sending to OpenRouter — messages count:', messages.length);
+    console.log('[AI-SVC] Messages preview:', JSON.stringify(messages.slice(-2)).substring(0, 500));
 
-    const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: messages,
-      temperature: 0.7,
+    const response = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': 'https://mindmate-app.com',
+        'X-Title': 'MindMate',
+      },
+      body: JSON.stringify({
+        model: 'anthropic/claude-sonnet-4',
+        messages: messages,
+        max_tokens: 1024,
+        temperature: 0.7,
+      }),
     });
 
-    console.log('[AI-SVC] ✅ Claude raw response received');
-    console.log('[AI-SVC] Response stop_reason:', response.stop_reason);
-    console.log('[AI-SVC] Response content type:', response.content?.[0]?.type);
+    console.log('[AI-SVC] OpenRouter HTTP status:', response.status);
 
-    const textOutput = response.content[0].text;
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error('[AI-SVC] ❌ OpenRouter error response:', errorBody);
+      throw new Error(`OpenRouter returned ${response.status}: ${errorBody}`);
+    }
+
+    const data = await response.json();
+    console.log('[AI-SVC] ✅ OpenRouter response received');
+
+    const textOutput = data.choices?.[0]?.message?.content;
     console.log('[AI-SVC] Raw text output:', textOutput?.substring(0, 500));
 
+    if (!textOutput) {
+      console.error('[AI-SVC] ❌ No content in response:', JSON.stringify(data).substring(0, 500));
+      throw new Error('Empty response from OpenRouter');
+    }
+
     try {
-      // Sometimes Claude wraps JSON in markdown block even when told not to
+      // Sometimes the model wraps JSON in markdown code blocks
       const cleanedText = textOutput.replace(/```json/g, '').replace(/```/g, '').trim();
       console.log('[AI-SVC] Cleaned text:', cleanedText?.substring(0, 500));
 
       const jsonResponse = JSON.parse(cleanedText);
       console.log('[AI-SVC] ✅ JSON parsed successfully');
       console.log('[AI-SVC] Parsed keys:', Object.keys(jsonResponse));
-      
+
       // Basic validation
       if (!jsonResponse.response || !jsonResponse.detected_emotion) {
         console.error('[AI-SVC] ❌ Invalid JSON structure — missing response or detected_emotion');
-        throw new Error('Invalid JSON structure returned from Claude');
+        throw new Error('Invalid JSON structure returned from model');
       }
-      
+
       console.log('[AI-SVC] ✅ Returning valid response — emotion:', jsonResponse.detected_emotion, '| risk:', jsonResponse.risk_flag);
       return jsonResponse;
     } catch (parseError) {
       console.error('[AI-SVC] ❌ JSON parse error:', parseError.message);
       console.error('[AI-SVC] Raw text that failed to parse:', textOutput);
       if (retryCount < 1) {
-        console.log('[AI-SVC] Retrying Claude API call (attempt 2)...');
+        console.log('[AI-SVC] Retrying API call (attempt 2)...');
         return getChatResponse(history, currentMessage, retryCount + 1);
       }
       console.error('[AI-SVC] ❌ Parse failure after retry — returning fallback');
@@ -91,9 +114,8 @@ async function getChatResponse(history, currentMessage, retryCount = 0) {
     }
 
   } catch (error) {
-    console.error('[AI-SVC] ❌ Claude API Error:', error.message);
+    console.error('[AI-SVC] ❌ API Error:', error.message);
     console.error('[AI-SVC] Error type:', error.constructor?.name);
-    console.error('[AI-SVC] Full error:', error);
     // Fallback response
     return {
       response: "I'm here, but having a little trouble right now — can you try sending that again?",
