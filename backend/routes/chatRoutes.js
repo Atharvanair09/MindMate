@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const chatService = require('../services/chat.service');
 const { hashUuid } = require('../utils/crypto');
+const authenticateToken = require('../middleware/authMiddleware');
 
 // Apply rate limiting for chat: 100 per day
 const rateLimit = require('express-rate-limit');
@@ -23,18 +24,22 @@ const ensureHashedUuid = (req, res, next) => {
  * POST /api/v1/chat/message
  * Input: { message: string, conversation_id: string }
  */
-router.post('/message', chatLimiter, ensureHashedUuid, async (req, res) => {
+router.post('/message', authenticateToken, chatLimiter, ensureHashedUuid, async (req, res) => {
   try {
     const { message, conversation_id } = req.body;
+    console.log('[CHAT] POST /message — uuid:', req.uuid, '| hashedUuid:', req.hashedUuid);
+    console.log('[CHAT] conversation_id:', conversation_id, '| message:', message?.substring(0, 80));
     
     if (!message || !conversation_id) {
+      console.log('[CHAT] ❌ Missing message or conversation_id');
       return res.status(400).json({ error: 'message and conversation_id are required' });
     }
 
     const result = await chatService.handleNewMessage(req.hashedUuid, conversation_id, message);
+    console.log('[CHAT] ✅ Response sent:', JSON.stringify(result).substring(0, 200));
     return res.json(result);
   } catch (error) {
-    console.error('Error handling chat message:', error);
+    console.error('[CHAT] ❌ Error handling chat message:', error);
     return res.status(500).json({ error: 'Internal server error processing chat message' });
   }
 });
@@ -42,7 +47,7 @@ router.post('/message', chatLimiter, ensureHashedUuid, async (req, res) => {
 /**
  * GET /api/v1/chat/history?conversation_id=X
  */
-router.get('/history', ensureHashedUuid, async (req, res) => {
+router.get('/history', authenticateToken, ensureHashedUuid, async (req, res) => {
   try {
     const { conversation_id } = req.query;
     
@@ -61,7 +66,7 @@ router.get('/history', ensureHashedUuid, async (req, res) => {
 /**
  * GET /api/v1/chat/conversations
  */
-router.get('/conversations', ensureHashedUuid, async (req, res) => {
+router.get('/conversations', authenticateToken, ensureHashedUuid, async (req, res) => {
   try {
     const conversations = await chatService.getConversations(req.hashedUuid);
     return res.json(conversations);

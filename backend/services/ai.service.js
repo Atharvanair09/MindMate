@@ -1,7 +1,10 @@
 const Anthropic = require('@anthropic-ai/sdk');
 
+const apiKey = process.env.ANTHROPIC_API_KEY?.trim() || 'dummy_key';
+console.log('[AI-SVC] Anthropic API key loaded:', apiKey ? `${apiKey.substring(0, 12)}...` : 'MISSING');
+
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || 'dummy_key', // Defaults to dummy for dev
+  apiKey: apiKey,
 });
 
 const SYSTEM_PROMPT = `You are MindMate — a warm, emotionally present companion for Indian college students, not a therapist and not a scripted chatbot.
@@ -22,58 +25,76 @@ For the 'response' field:
 - Never diagnose. If risk_flag is true, weave in (naturally, not alarmingly) that talking to someone they trust or a helpline could help.`;
 
 async function getChatResponse(history, currentMessage, retryCount = 0) {
+  console.log('[AI-SVC] getChatResponse called — retryCount:', retryCount);
+  console.log('[AI-SVC] History length:', history.length, '| Current message:', currentMessage?.substring(0, 80));
+
   try {
     // Format messages for Claude
-    // History should be an array of { role: 'user' | 'assistant', content: string }
     const messages = [];
     
-    // Add past history (limit to last 6-10 messages typically handled by caller)
     for (const msg of history) {
       messages.push({
         role: msg.role,
-        content: msg.message // This will be the decrypted "response" string, not the full JSON
+        content: msg.message
       });
     }
 
-    // Add current message
     messages.push({
       role: 'user',
       content: currentMessage
     });
 
+    console.log('[AI-SVC] Sending to Claude — messages count:', messages.length);
+    console.log('[AI-SVC] Messages array:', JSON.stringify(messages).substring(0, 500));
+
     const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022", // Use Claude 3.5 Sonnet
+      model: "claude-3-5-sonnet-20241022",
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
       messages: messages,
       temperature: 0.7,
     });
 
+    console.log('[AI-SVC] ✅ Claude raw response received');
+    console.log('[AI-SVC] Response stop_reason:', response.stop_reason);
+    console.log('[AI-SVC] Response content type:', response.content?.[0]?.type);
+
     const textOutput = response.content[0].text;
+    console.log('[AI-SVC] Raw text output:', textOutput?.substring(0, 500));
 
     try {
       // Sometimes Claude wraps JSON in markdown block even when told not to
       const cleanedText = textOutput.replace(/```json/g, '').replace(/```/g, '').trim();
+      console.log('[AI-SVC] Cleaned text:', cleanedText?.substring(0, 500));
+
       const jsonResponse = JSON.parse(cleanedText);
+      console.log('[AI-SVC] ✅ JSON parsed successfully');
+      console.log('[AI-SVC] Parsed keys:', Object.keys(jsonResponse));
       
       // Basic validation
       if (!jsonResponse.response || !jsonResponse.detected_emotion) {
+        console.error('[AI-SVC] ❌ Invalid JSON structure — missing response or detected_emotion');
         throw new Error('Invalid JSON structure returned from Claude');
       }
       
+      console.log('[AI-SVC] ✅ Returning valid response — emotion:', jsonResponse.detected_emotion, '| risk:', jsonResponse.risk_flag);
       return jsonResponse;
     } catch (parseError) {
-      console.error('Failed to parse Claude JSON response:', parseError, textOutput);
+      console.error('[AI-SVC] ❌ JSON parse error:', parseError.message);
+      console.error('[AI-SVC] Raw text that failed to parse:', textOutput);
       if (retryCount < 1) {
-        console.log('Retrying Claude API call due to parse error...');
+        console.log('[AI-SVC] Retrying Claude API call (attempt 2)...');
         return getChatResponse(history, currentMessage, retryCount + 1);
       }
+      console.error('[AI-SVC] ❌ Parse failure after retry — returning fallback');
       throw new Error('Parse failure after retry');
     }
 
   } catch (error) {
-    console.error('Claude API Error:', error);
-    // Fallback response as requested
+    console.error('[AI-SVC] ❌ Claude API Error:', error.message);
+    console.error('[AI-SVC] Error type:', error.constructor?.name);
+    console.error('[AI-SVC] Full error:', error);
+    // Fallback response
     return {
       response: "I'm here, but having a little trouble right now — can you try sending that again?",
       detected_emotion: "neutral",

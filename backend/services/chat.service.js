@@ -3,10 +3,18 @@ const { encrypt, decrypt } = require('../utils/crypto');
 const aiService = require('./ai.service');
 
 async function handleNewMessage(hashedUuid, conversationId, userMessage) {
+  console.log('[CHAT-SVC] handleNewMessage called');
+  console.log('[CHAT-SVC] hashedUuid:', hashedUuid);
+  console.log('[CHAT-SVC] conversationId:', conversationId);
+  console.log('[CHAT-SVC] userMessage:', userMessage?.substring(0, 80));
+
   // Find or create conversation
   let conversation = await Conversation.findOne({ hashedUuid, conversationId });
   if (!conversation) {
+    console.log('[CHAT-SVC] No existing conversation found — creating new one');
     conversation = new Conversation({ hashedUuid, conversationId, messages: [] });
+  } else {
+    console.log('[CHAT-SVC] Found existing conversation with', conversation.messages.length, 'messages');
   }
 
   // Get recent history for Claude (last 8 messages)
@@ -15,13 +23,17 @@ async function handleNewMessage(hashedUuid, conversationId, userMessage) {
     role: msg.role,
     message: decrypt(msg.message) || msg.message // fallback if decryption fails
   }));
+  console.log('[CHAT-SVC] Decrypted history length:', decryptedHistory.length);
 
   // Call Claude AI
+  console.log('[CHAT-SVC] Calling Claude AI...');
   const aiResponse = await aiService.getChatResponse(decryptedHistory, userMessage);
+  console.log('[CHAT-SVC] Claude AI response received:', JSON.stringify(aiResponse).substring(0, 300));
 
   // Encrypt the messages
   const encryptedUserMessage = encrypt(userMessage);
   const encryptedAiMessage = encrypt(aiResponse.response);
+  console.log('[CHAT-SVC] Encryption done — user:', !!encryptedUserMessage, '| ai:', !!encryptedAiMessage);
 
   // Add user message to DB
   conversation.messages.push({
@@ -43,13 +55,16 @@ async function handleNewMessage(hashedUuid, conversationId, userMessage) {
     timestamp: new Date()
   });
 
+  console.log('[CHAT-SVC] Saving conversation to DB...');
   await conversation.save();
+  console.log('[CHAT-SVC] ✅ Conversation saved');
 
   // Evaluate escalation logic
   let show_escalation = false;
   
   // Rule 1: 2+ risk flags in THIS conversation
   const riskCountInConv = conversation.messages.filter(msg => msg.risk_flag === true).length;
+  console.log('[CHAT-SVC] Risk flags in this conversation:', riskCountInConv);
   if (riskCountInConv >= 2) {
     show_escalation = true;
   } else {
@@ -57,8 +72,6 @@ async function handleNewMessage(hashedUuid, conversationId, userMessage) {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
-    // We do an aggregation or query to check this.
-    // For simplicity, find all risk messages for this user in last 7 days
     const recentConvs = await Conversation.find({ 
       hashedUuid, 
       "messages.timestamp": { $gte: sevenDaysAgo },
@@ -70,6 +83,7 @@ async function handleNewMessage(hashedUuid, conversationId, userMessage) {
       const risks = conv.messages.filter(m => m.risk_flag === true && m.timestamp >= sevenDaysAgo);
       totalRecentRisks += risks.length;
     });
+    console.log('[CHAT-SVC] Total risk flags in last 7 days:', totalRecentRisks);
 
     if (totalRecentRisks >= 3) {
       show_escalation = true;
@@ -81,11 +95,13 @@ async function handleNewMessage(hashedUuid, conversationId, userMessage) {
       show_escalation = aiResponse.show_escalation;
   }
 
-  return {
+  const result = {
     response: aiResponse.response,
     emotion_detected: aiResponse.detected_emotion || 'neutral',
     show_escalation
   };
+  console.log('[CHAT-SVC] ✅ Returning result:', JSON.stringify(result).substring(0, 200));
+  return result;
 }
 
 async function getHistory(hashedUuid, conversationId) {
