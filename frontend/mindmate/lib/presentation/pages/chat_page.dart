@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/state/user_provider.dart';
+import '../../data/repositories/chat_repository.dart';
 import '../widgets/bottom_nav.dart';
 
 class ChatPage extends StatefulWidget {
@@ -16,33 +17,110 @@ class _ChatPageState extends State<ChatPage> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<Map<String, dynamic>> _messages = [];
+  final ChatRepository _chatRepo = ChatRepository();
+
+  /// Unique conversation ID — persisted for the lifetime of this chat session.
+  /// A new one is generated each time the user opens a fresh chat.
+  late final String _conversationId;
+
+  /// True while waiting for the backend/Claude to respond.
+  bool _isLoading = false;
+
+  /// True while restoring history from the backend on first open.
+  bool _isLoadingHistory = true;
 
   bool get _hasMessages => _messages.isNotEmpty;
 
-  void _sendMessage() {
-    if (_controller.text.trim().isEmpty) return;
+  @override
+  void initState() {
+    super.initState();
+    _conversationId = _chatRepo.newConversationId();
+    _isLoadingHistory = false; // Fresh conversation — nothing to load
+  }
+
+  /// Sends a user message to the backend and handles the AI response.
+  Future<void> _sendMessage() async {
+    if (_controller.text.trim().isEmpty || _isLoading) return;
 
     final userText = _controller.text.trim();
     setState(() {
       _messages.add({'text': userText, 'isUser': true});
       _controller.clear();
+      _isLoading = true;
     });
 
     _scrollToBottom();
 
-    // Simulate AI response
-    Future.delayed(const Duration(milliseconds: 900), () {
-      if (mounted) {
-        setState(() {
-          _messages.add({
-            'text':
-                "I understand how you feel. Remember to take deep breaths and take it one step at a time. I'm here for you.",
-            'isUser': false,
-          });
+    try {
+      final result = await _chatRepo.sendMessage(
+        message: userText,
+        conversationId: _conversationId,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _messages.add({
+          'text': result['response'] as String? ??
+              "I'm here for you. Could you tell me more?",
+          'isUser': false,
         });
-        _scrollToBottom();
+        _isLoading = false;
+      });
+
+      _scrollToBottom();
+
+      // Check if the backend flagged escalation
+      final showEscalation = result['show_escalation'] as bool? ?? false;
+      if (showEscalation && mounted) {
+        _showEscalationDialog();
       }
-    });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add({
+          'text':
+              "I'm here, but having a little trouble right now — can you try sending that again?",
+          'isUser': false,
+        });
+        _isLoading = false;
+      });
+      _scrollToBottom();
+    }
+  }
+
+  /// Shows a gentle, non-alarming escalation dialog when risk flags accumulate.
+  void _showEscalationDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'We care about you',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        content: Text(
+          'It sounds like you might be going through a tough time. '
+          'Talking to someone you trust — a friend, family member, '
+          'or a helpline — can really help.\n\n'
+          'iCall: 9152987821\n'
+          'Vandrevala Foundation: 1860-2662-345',
+          style: GoogleFonts.poppins(fontSize: 14, height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              'I understand',
+              style: GoogleFonts.poppins(
+                color: const Color(0xFF4B39EF),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _scrollToBottom() {
@@ -73,7 +151,11 @@ class _ChatPageState extends State<ChatPage> {
           children: [
             _buildTopBar(),
             Expanded(
-              child: _hasMessages ? _buildMessageList() : _buildEmptyState(),
+              child: _isLoadingHistory
+                  ? const Center(child: CircularProgressIndicator())
+                  : _hasMessages
+                      ? _buildMessageList()
+                      : _buildEmptyState(),
             ),
             _buildInputBar(),
           ],
@@ -158,11 +240,61 @@ class _ChatPageState extends State<ChatPage> {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      itemCount: _messages.length,
+      // +1 for the typing indicator when loading
+      itemCount: _messages.length + (_isLoading ? 1 : 0),
       itemBuilder: (context, index) {
+        // Show typing indicator as the last item when waiting for AI
+        if (index == _messages.length && _isLoading) {
+          return _buildTypingIndicator();
+        }
         final msg = _messages[index];
         return _buildMessageBubble(msg['text'] as String, msg['isUser'] as bool);
       },
+    );
+  }
+
+  /// A subtle "..." typing indicator shown while Claude is responding.
+  Widget _buildTypingIndicator() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF2F2F7),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+            bottomLeft: Radius.circular(4),
+            bottomRight: Radius.circular(20),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (i) {
+            return TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.3, end: 1.0),
+              duration: Duration(milliseconds: 400 + (i * 200)),
+              curve: Curves.easeInOut,
+              builder: (context, value, child) {
+                return Opacity(
+                  opacity: value,
+                  child: child,
+                );
+              },
+              child: Container(
+                width: 8,
+                height: 8,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFAAAAAA),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            );
+          }),
+        ),
+      ),
     );
   }
 
@@ -218,12 +350,13 @@ class _ChatPageState extends State<ChatPage> {
                 keyboardType: TextInputType.multiline,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _sendMessage(),
+                enabled: !_isLoading,
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   color: const Color(0xFF1E1E1E),
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Ask Jarvis',
+                  hintText: _isLoading ? 'Thinking...' : 'Ask Jarvis',
                   hintStyle: GoogleFonts.poppins(
                     fontSize: 14,
                     color: const Color(0xFFAAAAAA),
@@ -247,11 +380,13 @@ class _ChatPageState extends State<ChatPage> {
               onTap: () {},
             ),
             const SizedBox(width: 4),
-            // Sparkle / AI icon
+            // Send / AI icon
             _inputIconButton(
               icon: Icons.arrow_forward_rounded,
-              onTap: _sendMessage,
-              color: const Color(0xFF4B39EF),
+              onTap: _isLoading ? () {} : _sendMessage,
+              color: _isLoading
+                  ? const Color(0xFFAAAAAA)
+                  : const Color(0xFF4B39EF),
             ),
             const SizedBox(width: 8),
           ],
