@@ -52,10 +52,8 @@ const ConversationSchema = new mongoose.Schema({
   }
 });
 
-// Update the updatedAt timestamp on save
-ConversationSchema.pre('save', function(next) {
+ConversationSchema.pre('save', async function() {
   this.updatedAt = new Date();
-  next();
 });
 
 module.exports = mongoose.model('Conversation', ConversationSchema);
