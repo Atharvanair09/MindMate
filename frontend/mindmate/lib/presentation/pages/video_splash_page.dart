@@ -98,12 +98,12 @@ class _VideoSplashPageState extends State<VideoSplashPage> {
           color: Colors.black,
           child: _initialized
               ? FittedBox(
-                  fit: BoxFit.cover,
-                  child: SizedBox(
-                    width: _controller.value.size.width,
-                    height: _controller.value.size.height,
-                    child: VideoPlayer(_controller),
-                  ),
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: _controller.value.size.width,
+                      height: _controller.value.size.height,
+                      child: VideoPlayer(_controller),
+                    ),
                 )
               : const SizedBox.shrink(),
         ),

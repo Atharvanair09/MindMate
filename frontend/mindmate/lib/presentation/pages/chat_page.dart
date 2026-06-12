@@ -21,7 +21,7 @@ class _ChatPageState extends State<ChatPage> {
 
   /// Unique conversation ID — persisted for the lifetime of this chat session.
   /// A new one is generated each time the user opens a fresh chat.
-  late final String _conversationId;
+  late String _conversationId;
 
   /// True while waiting for the backend/Claude to respond.
   bool _isLoading = false;
@@ -165,6 +165,145 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  Future<void> _loadHistory(String conversationId) async {
+    setState(() {
+      _isLoadingHistory = true;
+      _conversationId = conversationId;
+    });
+
+    try {
+      final history = await _chatRepo.getHistory(conversationId: conversationId);
+      if (!mounted) return;
+
+      setState(() {
+        _messages.clear();
+        for (final msg in history) {
+          _messages.add({
+            'text': msg['message'] as String,
+            'isUser': msg['role'] == 'user',
+          });
+        }
+        _isLoadingHistory = false;
+      });
+
+      _scrollToBottom();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingHistory = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load history: $e')),
+      );
+    }
+  }
+
+  void _showConversationsModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          maxChildSize: 0.9,
+          minChildSize: 0.4,
+          expand: false,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Past Conversations',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          setState(() {
+                            _conversationId = _chatRepo.newConversationId();
+                            _messages.clear();
+                            _isLoadingHistory = false;
+                          });
+                        },
+                        child: Text(
+                          'New Chat',
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFF4B39EF),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _chatRepo.getConversations(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (snapshot.hasError) {
+                        return Center(
+                          child: Text(
+                            'Failed to load conversations',
+                            style: GoogleFonts.poppins(),
+                          ),
+                        );
+                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return Center(
+                          child: Text(
+                            'No past conversations found.',
+                            style: GoogleFonts.poppins(),
+                          ),
+                        );
+                      }
+
+                      final convs = snapshot.data!;
+                      return ListView.builder(
+                        controller: scrollController,
+                        itemCount: convs.length,
+                        itemBuilder: (context, index) {
+                          final conv = convs[index];
+                          final preview = conv['preview'] as String? ?? 'Empty conversation';
+                          final id = conv['conversation_id'] as String;
+                          return ListTile(
+                            leading: const Icon(Icons.chat_bubble_outline, color: Color(0xFF4B39EF)),
+                            title: Text(
+                              preview,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.poppins(fontSize: 14),
+                            ),
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _loadHistory(id);
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildTopBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -173,7 +312,7 @@ class _ChatPageState extends State<ChatPage> {
         children: [
           // Chat bubble icon
           GestureDetector(
-            onTap: () {},
+            onTap: _showConversationsModal,
             child: const Icon(
               Icons.chat_bubble_outline_rounded,
               color: Color(0xFF4B39EF),

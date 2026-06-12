@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/colors.dart';
 import '../widgets/mood_check_in_widgets.dart';
 import '../widgets/bottom_nav.dart';
+import 'daily_diary_page.dart';
 
 class MoodCheckInPage extends StatefulWidget {
   const MoodCheckInPage({super.key});
@@ -122,29 +123,6 @@ class _MoodCheckInPageState extends State<MoodCheckInPage> {
                   isSelected: _selectedMood == mood['title'],
                   onTap: () => setState(() => _selectedMood = mood['title']),
                 )),
-            const SizedBox(height: 24),
-            Text(
-              "What's the reason?",
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1E1E1E),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              decoration: InputDecoration(
-                hintText: "Exams, sleep, friends...",
-                hintStyle: GoogleFonts.poppins(color: Colors.grey.shade400),
-                filled: true,
-                fillColor: const Color(0xFFF6F5FF),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
             Container(
               width: double.infinity,
               height: 56,
@@ -160,7 +138,14 @@ class _MoodCheckInPageState extends State<MoodCheckInPage> {
                 ],
               ),
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DailyDiaryPage(),
+                    ),
+                  );
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
