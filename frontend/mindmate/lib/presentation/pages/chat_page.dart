@@ -5,6 +5,7 @@ import '../../core/constants/colors.dart';
 import '../../core/state/user_provider.dart';
 import '../../data/repositories/chat_repository.dart';
 import '../widgets/bottom_nav.dart';
+import 'voice_call_screen.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -315,6 +316,19 @@ class _ChatPageState extends State<ChatPage> {
             onTap: _showConversationsModal,
             child: const Icon(
               Icons.chat_bubble_outline_rounded,
+              color: Color(0xFF4B39EF),
+              size: 26,
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const VoiceCallScreen()),
+              );
+            },
+            child: const Icon(
+              Icons.phone_in_talk,
               color: Color(0xFF4B39EF),
               size: 26,
             ),
