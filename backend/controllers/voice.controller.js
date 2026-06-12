@@ -1,4 +1,4 @@
-const fetch = require('node-fetch') || global.fetch; // Use global fetch if available (Node 18+)
+// Use global fetch (available in Node 18+)
 
 exports.getSessionToken = async (req, res) => {
     try {
