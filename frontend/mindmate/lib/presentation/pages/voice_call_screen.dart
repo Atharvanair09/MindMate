@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../../core/state/user_provider.dart';
@@ -134,12 +133,6 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> with SingleTickerProv
                           color: Colors.white70,
                           fontSize: 16,
                         ),
-                      ),
-                      // Dummy renderer for audio
-                      SizedBox(
-                        width: 0,
-                        height: 0,
-                        child: RTCVideoView(_voiceCallService.renderer),
                       ),
                     ],
                   ),

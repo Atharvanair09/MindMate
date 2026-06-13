@@ -441,7 +441,6 @@ app.get('/api/user/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// ─── External Routes ─────────────────────────────────────────────────────────
 const journalRoutes = require('./routes/journalRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const voiceRoutes = require('./routes/voice.routes');

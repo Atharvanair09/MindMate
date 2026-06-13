@@ -1,110 +1,134 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:flutter_tts/flutter_tts.dart';
 import '../../core/state/voice_call_state_manager.dart';
-import 'audio_streaming_service.dart';
-import 'realtime_connection_manager.dart';
-import 'audio_route_manager.dart';
+import 'openrouter_service.dart';
 
 class VoiceCallService {
   final VoiceCallStateManager stateManager;
-  final AudioStreamingService _audioStreaming = AudioStreamingService();
-  final RealtimeConnectionManager _connectionManager = RealtimeConnectionManager();
-  final AudioRouteManager _routeManager = AudioRouteManager();
-
-  // For playback of remote audio
-  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
-  RTCVideoRenderer get renderer => _remoteRenderer;
+  final OpenRouterService _openRouter = OpenRouterService();
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  final FlutterTts _tts = FlutterTts();
 
   VoiceCallService(this.stateManager);
 
   Future<void> initialize() async {
-    await _remoteRenderer.initialize();
-    await _routeManager.initialize();
+    await _tts.setLanguage("en-US");
+    await _tts.setSpeechRate(0.5);
+    await _tts.setVolume(1.0);
+    await _tts.setPitch(1.0);
+    
+    // Setting iOS specific TTS audio session options for speaker routing
+    await _tts.setIosAudioCategory(
+      IosTextToSpeechAudioCategory.playAndRecord,
+      [
+        IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+        IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+        IosTextToSpeechAudioCategoryOptions.mixWithOthers,
+        IosTextToSpeechAudioCategoryOptions.defaultToSpeaker,
+      ],
+    );
 
-    _connectionManager.onRemoteStream = (stream) {
-      _remoteRenderer.srcObject = stream;
-    };
-
-    _connectionManager.onMessageReceived = (message) {
-      // Handle server events
-      print("VoiceCallService: onMessageReceived: \$message");
-      try {
-        final data = jsonDecode(message);
-        final type = data['type'];
-        print("VoiceCallService: Received event of type: \$type");
-        if (type == 'response.audio.delta' || type == 'response.audio_transcript.delta') {
-          stateManager.updateState(VoiceCallState.speaking);
-        } else if (type == 'input_audio_buffer.speech_started') {
+    bool available = await _speech.initialize(
+      onStatus: (status) {
+        if (status == 'listening') {
           stateManager.updateState(VoiceCallState.listening);
-        } else if (type == 'response.done') {
-          stateManager.updateState(VoiceCallState.listening);
-        } else if (type == 'error') {
-          print("VoiceCallService: Error event received: \${data['error']}");
+        } else if (status == 'notListening' && stateManager.state == VoiceCallState.listening) {
+          // Restart listening if we are supposed to be listening and not thinking/speaking
+          _startListeningInternal();
         }
-      } catch (e) {
-        print("VoiceCallService: Error parsing message: \$e");
-      }
-    };
+      },
+      onError: (errorNotification) {
+        print("Speech error: \${errorNotification.errorMsg}");
+        // We can restart listening on error if we are supposed to
+        if (stateManager.state == VoiceCallState.listening || stateManager.state == VoiceCallState.connecting) {
+            _startListeningInternal();
+        }
+      },
+    );
+
+    if (!available) {
+      stateManager.setError("Speech recognition is not available on this device.");
+    }
   }
 
   Future<void> startCall(String backendUrl, String authToken) async {
     try {
-      print("VoiceCallService: startCall initiated");
+      _openRouter.setConfig(backendUrl, authToken);
       stateManager.updateState(VoiceCallState.connecting);
-
-      // 1. Get ephemeral token
-      print("VoiceCallService: Requesting ephemeral token from \$backendUrl/api/v1/voice/session");
-      final response = await http.post(
-        Uri.parse('\$backendUrl/api/v1/voice/session'),
-        headers: {
-          'Authorization': 'Bearer \$authToken',
-        },
-      );
-
-      print("VoiceCallService: Received response from backend with status: \${response.statusCode}");
-      print("VoiceCallService: Response body: \${response.body}");
-      if (response.statusCode != 200) {
-        throw Exception("Failed to get session token: \${response.body}");
-      }
-
-      final data = jsonDecode(response.body);
-      final clientSecret = data['client_secret']['value'];
-      print("VoiceCallService: Successfully retrieved ephemeral token");
-
-      // 2. Get local stream
-      print("VoiceCallService: Getting local audio stream");
-      final localStream = await _audioStreaming.getLocalStream();
-      print("VoiceCallService: Local stream obtained with \${localStream.getAudioTracks().length} audio tracks");
-
-      // 3. Connect WebRTC
-      print("VoiceCallService: Connecting WebRTC via RealtimeConnectionManager");
-      await _connectionManager.connect(clientSecret, localStream);
-      print("VoiceCallService: WebRTC connected successfully");
-
-      stateManager.updateState(VoiceCallState.listening);
+      await Future.delayed(const Duration(seconds: 1)); // UX delay
+      _startListeningInternal();
     } catch (e) {
-      print("VoiceCallService: Error during startCall: \$e");
       stateManager.setError(e.toString());
+    }
+  }
+
+  void _startListeningInternal() async {
+    if (stateManager.isMuted) return;
+    if (stateManager.state == VoiceCallState.thinking || stateManager.state == VoiceCallState.speaking || stateManager.state == VoiceCallState.ended) return;
+
+    if (!_speech.isListening) {
+      await _speech.listen(
+        onResult: (result) async {
+          if (result.finalResult && result.recognizedWords.isNotEmpty) {
+            _handleUserSpeech(result.recognizedWords);
+          }
+        },
+        listenFor: const Duration(seconds: 30),
+        pauseFor: const Duration(seconds: 3),
+        partialResults: false,
+        cancelOnError: false,
+        listenMode: stt.ListenMode.confirmation,
+      );
+      stateManager.updateState(VoiceCallState.listening);
+    }
+  }
+
+  Future<void> _handleUserSpeech(String text) async {
+    // Interrupt any ongoing speech
+    await _tts.stop();
+
+    stateManager.updateState(VoiceCallState.thinking);
+    
+    // Stop listening temporarily while thinking/speaking
+    if (_speech.isListening) {
+      await _speech.stop();
+    }
+
+    final response = await _openRouter.sendMessage(text);
+
+    if (response.isNotEmpty) {
+      stateManager.updateState(VoiceCallState.speaking);
+      
+      _tts.setCompletionHandler(() {
+        if (stateManager.state != VoiceCallState.ended) {
+          _startListeningInternal();
+        }
+      });
+      
+      await _tts.speak(response);
+    } else {
+      _startListeningInternal();
     }
   }
 
   void toggleMute() {
     stateManager.toggleMute();
-    _audioStreaming.setMicrophoneMuted(stateManager.isMuted);
+    if (stateManager.isMuted) {
+      _speech.stop();
+    } else {
+      _startListeningInternal();
+    }
   }
 
   void toggleSpeaker() {
     stateManager.toggleSpeaker();
-    _routeManager.setSpeakerphoneOn(stateManager.isSpeakerOn);
+    // FlutterTTS respects device settings. A true speaker toggle might require audio_session 
+    // but since we removed it, we just toggle the UI state.
   }
 
   Future<void> endCall() async {
     stateManager.updateState(VoiceCallState.ended);
-    await _connectionManager.disconnect();
-    await _audioStreaming.dispose();
-    await _routeManager.dispose();
-    _remoteRenderer.srcObject = null;
-    await _remoteRenderer.dispose();
+    await _speech.stop();
+    await _tts.stop();
   }
 }

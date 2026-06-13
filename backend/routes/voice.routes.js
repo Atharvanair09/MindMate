@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const voiceController = require('../controllers/voice.controller');
 
-// Generate ephemeral token for OpenAI Realtime API
-router.post('/session', voiceController.getSessionToken);
+// Proxy OpenRouter chat completions
+router.post('/chat', voiceController.chatCompletions);
 
 module.exports = router;

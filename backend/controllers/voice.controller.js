@@ -1,38 +1,40 @@
-// Use global fetch (available in Node 18+)
-
-exports.getSessionToken = async (req, res) => {
+exports.chatCompletions = async (req, res) => {
     try {
-        if (!process.env.OPENAI_API_KEY) {
-            return res.status(500).json({ error: "OPENAI_API_KEY is not configured." });
+        if (!process.env.OPENROUTER_API_KEY) {
+            return res.status(500).json({ error: "OPENROUTER_API_KEY is not configured." });
         }
 
-        const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
+        const { messages } = req.body;
+
+        if (!messages || !Array.isArray(messages)) {
+            return res.status(400).json({ error: "Messages array is required." });
+        }
+
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+                "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
                 "Content-Type": "application/json",
+                "HTTP-Referer": "https://mindmate.app",
+                "X-Title": "MindMate",
             },
             body: JSON.stringify({
-                "session": {
-                    "model": "gpt-4o-realtime-preview-2024-12-17",
-                    "voice": "shimmer", // A warm, compassionate voice
-                    "instructions": "You are a compassionate mental health support companion. Speak naturally, warmly, and conversationally. Keep responses concise and human-like. Ask thoughtful follow-up questions. Do not claim to be a licensed therapist. Encourage professional help when appropriate.",
-                }
+                "model": "openai/gpt-4.1-mini",
+                "messages": messages,
+                "temperature": 0.7
             }),
         });
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error("OpenAI Realtime API Error:", errorText);
-            return res.status(response.status).json({ error: "Failed to generate ephemeral token." });
+            console.error("OpenRouter API Error:", errorText);
+            return res.status(response.status).json({ error: "Failed to fetch response from OpenRouter." });
         }
 
         const data = await response.json();
-        
-        // Ensure CORS allows the Flutter app if needed, though server.js usually handles this
         res.json(data);
     } catch (error) {
-        console.error("Session token error:", error);
+        console.error("OpenRouter proxy error:", error);
         res.status(500).json({ error: "Internal Server Error" });
     }
 };
