@@ -18,8 +18,12 @@ class RealtimeConnectionManager {
     _peerConnection = await createPeerConnection(configuration);
 
     _peerConnection!.onTrack = (RTCTrackEvent event) {
+      print("RealtimeConnectionManager: onTrack event received");
       if (event.streams.isNotEmpty && onRemoteStream != null) {
+        print("RealtimeConnectionManager: Received remote stream with \${event.streams[0].getAudioTracks().length} audio tracks and \${event.streams[0].getVideoTracks().length} video tracks");
         onRemoteStream!(event.streams[0]);
+      } else {
+        print("RealtimeConnectionManager: Stream is empty or onRemoteStream is null");
       }
     };
 
@@ -35,9 +39,14 @@ class RealtimeConnectionManager {
     _dataChannel = await _peerConnection!.createDataChannel('oai-events', dataChannelDict);
     
     _dataChannel!.onMessage = (RTCDataChannelMessage message) {
+      print("RealtimeConnectionManager: Data channel message received: \${message.text}");
       if (onMessageReceived != null) {
         onMessageReceived!(message.text);
       }
+    };
+    
+    _dataChannel!.onDataChannelState = (RTCDataChannelState state) {
+      print("RealtimeConnectionManager: Data channel state changed to \$state");
     };
 
     // Create offer
@@ -49,6 +58,7 @@ class RealtimeConnectionManager {
     final model = "gpt-4o-realtime-preview-2024-12-17";
     final url = Uri.parse("\$baseUrl?model=\$model");
 
+    print("RealtimeConnectionManager: Sending SDP offer to OpenAI...");
     final response = await http.post(
       url,
       headers: {
@@ -57,6 +67,8 @@ class RealtimeConnectionManager {
       },
       body: offer.sdp,
     );
+
+    print("RealtimeConnectionManager: Received response from OpenAI with status code: \${response.statusCode}");
 
     if (response.statusCode == 201) {
       final answerSdp = response.body;
@@ -69,7 +81,10 @@ class RealtimeConnectionManager {
 
   void sendEvent(Map<String, dynamic> event) {
     if (_dataChannel != null && _dataChannel!.state == RTCDataChannelState.RTCDataChannelOpen) {
+      print("RealtimeConnectionManager: Sending event to data channel: \$event");
       _dataChannel!.send(RTCDataChannelMessage(jsonEncode(event)));
+    } else {
+      print("RealtimeConnectionManager: Cannot send event, data channel is null or not open. State: \${_dataChannel?.state}");
     }
   }
 
