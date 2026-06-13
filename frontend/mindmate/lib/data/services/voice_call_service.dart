@@ -63,6 +63,7 @@ class VoiceCallService {
       );
 
       print("VoiceCallService: Received response from backend with status: \${response.statusCode}");
+      print("VoiceCallService: Response body: \${response.body}");
       if (response.statusCode != 200) {
         throw Exception("Failed to get session token: \${response.body}");
       }

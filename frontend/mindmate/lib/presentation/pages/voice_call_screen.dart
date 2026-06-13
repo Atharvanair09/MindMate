@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../../core/state/user_provider.dart';
 import '../../core/state/voice_call_state_manager.dart';
@@ -26,6 +27,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> with SingleTickerProv
   @override
   void initState() {
     super.initState();
+    print("VoiceCallScreen: initState called");
     _stateManager = VoiceCallStateManager();
     _voiceCallService = VoiceCallService(_stateManager);
 
@@ -41,23 +43,47 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> with SingleTickerProv
   }
 
   Future<void> _initCall() async {
-    await _voiceCallService.initialize();
-    
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!_isDisposed) {
-        setState(() {
-          _secondsElapsed++;
-        });
+    try {
+      print("VoiceCallScreen: _initCall started");
+      
+      print("VoiceCallScreen: Requesting microphone permissions...");
+      final status = await Permission.microphone.request();
+      print("VoiceCallScreen: Microphone permission status: \$status");
+      
+      if (status != PermissionStatus.granted) {
+        print("VoiceCallScreen: Microphone permission denied");
+        // Show an error or handle permission denial
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Microphone permission is required for voice calls.')),
+          );
+        }
+        return;
       }
-    });
 
-    // In a real scenario, use secure storage or auth service token. 
-    // Using dummy token for now if backend doesn't enforce on voice route, 
-    // or the backend is configured to accept open requests for dev.
-    String token = "dummy_token"; 
-    String backendUrl = "https://mindmate-9jyw.onrender.com";
+      print("VoiceCallScreen: Initializing VoiceCallService...");
+      await _voiceCallService.initialize();
+      print("VoiceCallScreen: VoiceCallService initialized successfully");
+      
+      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!_isDisposed) {
+          setState(() {
+            _secondsElapsed++;
+          });
+        }
+      });
 
-    await _voiceCallService.startCall(backendUrl, token);
+      // In a real scenario, use secure storage or auth service token. 
+      // Using dummy token for now if backend doesn't enforce on voice route, 
+      // or the backend is configured to accept open requests for dev.
+      String token = "dummy_token"; 
+      String backendUrl = "https://mindmate-9jyw.onrender.com";
+
+      print("VoiceCallScreen: Calling startCall with backendUrl: \$backendUrl");
+      await _voiceCallService.startCall(backendUrl, token);
+    } catch (e) {
+      print("VoiceCallScreen: Exception caught in _initCall: \$e");
+    }
   }
 
   @override

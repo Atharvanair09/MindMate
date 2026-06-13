@@ -6,16 +6,18 @@ exports.getSessionToken = async (req, res) => {
             return res.status(500).json({ error: "OPENAI_API_KEY is not configured." });
         }
 
-        const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
+        const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                model: "gpt-4o-realtime-preview-2024-12-17",
-                voice: "shimmer", // A warm, compassionate voice
-                instructions: "You are a compassionate mental health support companion. Speak naturally, warmly, and conversationally. Keep responses concise and human-like. Ask thoughtful follow-up questions. Do not claim to be a licensed therapist. Encourage professional help when appropriate.",
+                "session": {
+                    "model": "gpt-4o-realtime-preview-2024-12-17",
+                    "voice": "shimmer", // A warm, compassionate voice
+                    "instructions": "You are a compassionate mental health support companion. Speak naturally, warmly, and conversationally. Keep responses concise and human-like. Ask thoughtful follow-up questions. Do not claim to be a licensed therapist. Encourage professional help when appropriate.",
+                }
             }),
         });
 
