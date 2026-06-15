@@ -322,9 +322,8 @@ class _ChatPageState extends State<ChatPage> {
           ),
           GestureDetector(
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const VoiceCallScreen()),
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Voice calling is temporarily disabled.')),
               );
             },
             child: const Icon(

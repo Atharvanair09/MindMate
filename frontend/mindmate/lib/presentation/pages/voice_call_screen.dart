@@ -134,6 +134,21 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> with SingleTickerProv
                           fontSize: 16,
                         ),
                       ),
+                      if (_stateManager.userSpokenText != null && _stateManager.userSpokenText!.isNotEmpty) ...[
+                        const SizedBox(height: 24),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                          child: Text(
+                            '"${_stateManager.userSpokenText}"',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

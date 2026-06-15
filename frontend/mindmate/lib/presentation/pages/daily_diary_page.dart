@@ -1,31 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/constants/colors.dart';
-
-class LinedPaperPainter extends CustomPainter {
-  final double lineHeight;
-  final Color lineColor;
-
-  LinedPaperPainter({required this.lineHeight, required this.lineColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = lineColor
-      ..strokeWidth = 1.0;
-
-    // Draw lines starting from the first line height
-    for (double i = lineHeight; i < size.height; i += lineHeight) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
-  }
-}
+import '../widgets/diary_grid/models/diary_page_data.dart';
+import '../widgets/diary_grid/models/diary_image_block.dart';
+import '../widgets/diary_grid/scrapbook_diary_editor.dart';
 
 class DailyDiaryPage extends StatefulWidget {
   const DailyDiaryPage({super.key});
@@ -35,41 +14,72 @@ class DailyDiaryPage extends StatefulWidget {
 }
 
 class _DailyDiaryPageState extends State<DailyDiaryPage> {
-  final TextEditingController _diaryController = TextEditingController();
-  int _wordCount = 0;
+  List<DiaryPageData> _pages = [DiaryPageData()];
+  int _currentPageIndex = 0;
+  late PageController _pageController;
+
+  bool _isLayoutMode = false;
+  String? _selectedImageId;
 
   @override
   void initState() {
     super.initState();
-    _diaryController.addListener(() {
-      final text = _diaryController.text.trim();
-      setState(() {
-        _wordCount = text.isEmpty ? 0 : text.split(RegExp(r'\s+')).length;
-      });
-    });
+    _pageController = PageController(
+      initialPage: 0,
+      viewportFraction: 1.0,
+    );
   }
 
   @override
   void dispose() {
-    _diaryController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
-  String _getFormattedDate() {
-    final now = DateTime.now();
-    final month = DateFormat('MMMM').format(now);
-    final day = now.day;
-    String suffix = 'th';
-    if (day % 10 == 1 && day != 11) suffix = 'st';
-    else if (day % 10 == 2 && day != 12) suffix = 'nd';
-    else if (day % 10 == 3 && day != 13) suffix = 'rd';
-    return "Today, $month $day$suffix";
+  void _addNewPage() {
+    setState(() {
+      _pages.add(DiaryPageData());
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _pageController.animateToPage(
+          _pages.length - 1,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      });
+    });
+  }
+
+  Future<void> _pickImageForCurrentPage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    
+    if (image != null) {
+      setState(() {
+        final newImage = DiaryImageBlock(
+          imagePath: image.path,
+          x: 2,
+          y: 2,
+          width: 6,
+          height: 6,
+        );
+        _pages[_currentPageIndex].images.add(newImage);
+        _isLayoutMode = true;
+        _selectedImageId = newImage.id;
+      });
+    }
+  }
+
+  int get _totalWordCount {
+    return _pages.fold(0, (sum, page) {
+      if (page.text.trim().isEmpty) return sum;
+      return sum + page.text.trim().split(RegExp(r'\s+')).length;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF9FF), // Very light purple/grey tint
+      backgroundColor: const Color(0xFFFAF9FF),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -78,206 +88,159 @@ class _DailyDiaryPageState extends State<DailyDiaryPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          "Daily Diary",
+          "Edit Page ${_currentPageIndex + 1}",
           style: GoogleFonts.poppins(
             color: const Color(0xFF4B39EF),
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.image_outlined, color: Color(0xFF4B39EF)),
+            onPressed: _pickImageForCurrentPage,
+            tooltip: "Add Image",
+          ),
+          if (_isLayoutMode)
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _isLayoutMode = false;
+                  _selectedImageId = null;
+                });
+              },
+              child: Text(
+                "Done",
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFF4B39EF),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          IconButton(
+            icon: const Icon(Icons.add_box_outlined, color: Color(0xFF4B39EF)),
+            onPressed: _addNewPage,
+            tooltip: "Add Page",
+          ),
+        ],
         centerTitle: false,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _getFormattedDate(),
-              style: GoogleFonts.poppins(
-                fontSize: 26,
-                color: Colors.black,
-                fontWeight: FontWeight.w300,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Diary Entry Card
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Text Area
-                  Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Stack(
-                      children: [
-                        // Faint lines background using CustomPaint
-                        Positioned.fill(
-                          child: CustomPaint(
-                            painter: LinedPaperPainter(
-                              lineHeight: 16 * 1.8, // Match font size * height
-                              lineColor: const Color(0xFFE5E0FF), // Faint purple line
-                            ),
-                          ),
-                        ),
-                        TextField(
-                          controller: _diaryController,
-                          maxLines: 12,
-                          minLines: 10,
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            color: const Color(0xFF1E1E1E),
-                            height: 1.8, // Line height
-                          ),
-                          decoration: InputDecoration(
-                            hintText: "How are you really doing? Write it out...",
-                            hintStyle: GoogleFonts.poppins(
-                              color: Colors.grey.shade400,
-                              fontSize: 16,
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.zero, // Important to align text with lines
-                          ),
-                        ),
-                      ],
+      body: Column(
+        children: [
+          // Pages Area
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentPageIndex = index;
+                  _isLayoutMode = false;
+                  _selectedImageId = null;
+                });
+              },
+              itemCount: _pages.length,
+              itemBuilder: (context, index) {
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  margin: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.grey.shade300,
+                      width: 2,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  
-                  // Bottom Actions of the Card
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16, right: 20, bottom: 16),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.image_outlined),
-                          color: const Color(0xFF4B39EF),
-                          onPressed: () {},
+                  child: Stack(
+                    children: [
+                      // Scrapbook Editor
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: ScrapbookDiaryEditor(
+                          pageData: _pages[index],
+                          isLayoutMode: _isLayoutMode,
+                          onLayoutModeChanged: (mode) {
+                            setState(() {
+                              _isLayoutMode = mode;
+                            });
+                          },
+                          selectedImageId: _selectedImageId,
+                          onImageSelected: (id) {
+                            setState(() {
+                              _selectedImageId = id;
+                            });
+                          },
+                          onPageChanged: (newPageData) {
+                            setState(() {
+                              _pages[index] = newPageData;
+                            });
+                          },
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.mic_none_outlined),
-                          color: const Color(0xFF4B39EF),
-                          onPressed: () {},
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.emoji_emotions_outlined),
-                          color: const Color(0xFF4B39EF),
-                          onPressed: () {},
-                        ),
-                        const Spacer(),
-                        Text(
-                          "$_wordCount words",
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.grey.shade500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                ],
-              ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-            
-            const SizedBox(height: 24),
-            
-            // Safe Space Quote Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3EDFF),
-                borderRadius: BorderRadius.circular(16),
-              ),
+          ),
+
+          // Bottom Bar for Page Navigation
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -4),
+                )
+              ],
+            ),
+            child: SafeArea(
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Small icon instead of network image to avoid 404s
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE5E0FF),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.spa_rounded,
-                      color: Color(0xFF4B39EF),
-                      size: 24,
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left),
+                    color: _currentPageIndex > 0 ? const Color(0xFF4B39EF) : Colors.grey,
+                    onPressed: _currentPageIndex > 0 ? () {
+                      _pageController.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    } : null,
+                  ),
+                  Text(
+                    "Page ${_currentPageIndex + 1} of ${_pages.length}  •  $_totalWordCount words",
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF4B39EF),
+                      fontSize: 12,
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      '"This is your safe space. There are no wrong words here."',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: const Color(0xFF4B39EF),
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right),
+                    color: _currentPageIndex < _pages.length - 1 ? const Color(0xFF4B39EF) : Colors.grey,
+                    onPressed: _currentPageIndex < _pages.length - 1 ? () {
+                      _pageController.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    } : null,
                   ),
                 ],
               ),
             ),
-            
-            const SizedBox(height: 32),
-            
-            // Save Button
-            Container(
-              width: double.infinity,
-              height: 56,
-              decoration: BoxDecoration(
-                color: const Color(0xFF7042C1), // A pleasant purple
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF7042C1).withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: ElevatedButton(
-                onPressed: () {
-                  // Save logic
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.save_rounded, color: Colors.white, size: 20),
-                    const SizedBox(width: 10),
-                    Text(
-                      "Save to my diary",
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 40),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

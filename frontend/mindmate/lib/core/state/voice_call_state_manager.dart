@@ -23,11 +23,19 @@ class VoiceCallStateManager extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
+  String? _userSpokenText;
+  String? get userSpokenText => _userSpokenText;
+
   void updateState(VoiceCallState newState) {
     if (_state != newState) {
       _state = newState;
       notifyListeners();
     }
+  }
+
+  void updateUserSpokenText(String text) {
+    _userSpokenText = text;
+    notifyListeners();
   }
 
   void setError(String message) {
