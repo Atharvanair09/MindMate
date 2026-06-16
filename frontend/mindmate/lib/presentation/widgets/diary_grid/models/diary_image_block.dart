@@ -33,4 +33,26 @@ class DiaryImageBlock {
       height: height ?? this.height,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'imagePath': imagePath,
+      'x': x,
+      'y': y,
+      'width': width,
+      'height': height,
+    };
+  }
+
+  factory DiaryImageBlock.fromJson(Map<String, dynamic> json) {
+    return DiaryImageBlock(
+      id: json['id'],
+      imagePath: json['imagePath'],
+      x: json['x'],
+      y: json['y'],
+      width: json['width'],
+      height: json['height'],
+    );
+  }
 }

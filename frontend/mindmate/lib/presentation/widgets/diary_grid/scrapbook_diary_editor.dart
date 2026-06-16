@@ -190,9 +190,112 @@ class _ScrapbookDiaryEditorState extends State<ScrapbookDiaryEditor> {
           final double cellHeight = constraints.maxHeight / widget.gridRows;
 
           // For the notebook lines
-          final double fontSize = 16.0;
+          final double fontSize = widget.pageData.fontSize;
           final double textHeight = 1.8;
           final double lineHeight = fontSize * textHeight;
+
+          // Calculate constraints for TextField to avoid overlapping images
+          int currentMaxY = 0;
+          int currentMaxX = 0;
+          int currentMinRight = widget.gridColumns;
+
+          bool changed = true;
+          while (changed) {
+            changed = false;
+            for (var img in widget.pageData.images) {
+              if (img.y <= currentMaxY) {
+                // If image is wide or in the middle, it pushes the text down
+                bool isWide = img.width > widget.gridColumns / 2;
+                bool isMiddle = img.x > 0 && (img.x + img.width) < widget.gridColumns;
+                
+                if (isWide || isMiddle) {
+                  int bottomY = img.y + img.height;
+                  if (bottomY > currentMaxY) {
+                    currentMaxY = bottomY;
+                    changed = true;
+                  }
+                }
+              }
+            }
+          }
+
+          // Calculate left/right constraints from images intersecting the start Y
+          for (var img in widget.pageData.images) {
+            if (img.y <= currentMaxY && img.y + img.height > currentMaxY) {
+               if (img.x == 0) {
+                 if (img.width > currentMaxX) {
+                   currentMaxX = img.width;
+                 }
+               } else if (img.x + img.width == widget.gridColumns) {
+                 if (img.x < currentMinRight) {
+                   currentMinRight = img.x;
+                 }
+               }
+            }
+          }
+
+          // If left and right constraints overlap or touch, space is blocked horizontally
+          if (currentMaxX >= currentMinRight) {
+             int newMaxY = currentMaxY;
+             for (var img in widget.pageData.images) {
+               if (img.y <= currentMaxY && img.y + img.height > currentMaxY) {
+                 if (img.y + img.height > newMaxY) {
+                   newMaxY = img.y + img.height;
+                 }
+               }
+             }
+             currentMaxY = newMaxY;
+             currentMaxX = 0;
+             currentMinRight = widget.gridColumns;
+          }
+
+          // Calculate bottom constraint to stop text when it hits an image below it
+          int currentMinBottomY = widget.gridRows;
+          for (var img in widget.pageData.images) {
+            if (img.y >= currentMaxY) {
+              int textStartX = currentMaxX;
+              int textEndX = currentMinRight;
+              int imgStartX = img.x;
+              int imgEndX = img.x + img.width;
+
+              if (textStartX < imgEndX && imgStartX < textEndX) {
+                 if (img.y < currentMinBottomY) {
+                    currentMinBottomY = img.y;
+                 }
+              }
+            }
+          }
+
+          double textTopOffset = 0.0;
+          double textLeftOffset = 0.0;
+          double textRightOffset = 0.0;
+          double textBottomOffset = 0.0;
+
+          if (currentMaxY > 0) {
+            double maxBottomPixel = currentMaxY * cellHeight;
+            int linesToSkip = (maxBottomPixel / lineHeight).ceil();
+            textTopOffset = linesToSkip * lineHeight;
+            if (textTopOffset > constraints.maxHeight) {
+              textTopOffset = constraints.maxHeight;
+            }
+          }
+          if (currentMaxX > 0) {
+            textLeftOffset = currentMaxX * cellWidth;
+          }
+          if (currentMinRight < widget.gridColumns) {
+            textRightOffset = (widget.gridColumns - currentMinRight) * cellWidth;
+          }
+          if (currentMinBottomY < widget.gridRows) {
+            double minBottomPixel = currentMinBottomY * cellHeight;
+            double availableHeight = minBottomPixel - textTopOffset;
+            if (availableHeight > 0) {
+                int maxLines = (availableHeight / lineHeight).floor();
+                double snappedHeight = maxLines * lineHeight;
+                textBottomOffset = constraints.maxHeight - (textTopOffset + snappedHeight);
+            } else {
+                textBottomOffset = constraints.maxHeight - textTopOffset;
+            }
+          }
 
           return Container(
             width: constraints.maxWidth,
@@ -219,7 +322,11 @@ class _ScrapbookDiaryEditorState extends State<ScrapbookDiaryEditor> {
                 ),
 
                 // Layer 2: Text Field
-                Positioned.fill(
+                Positioned(
+                  top: textTopOffset,
+                  left: textLeftOffset,
+                  right: textRightOffset,
+                  bottom: textBottomOffset,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: TextField(
@@ -227,7 +334,8 @@ class _ScrapbookDiaryEditorState extends State<ScrapbookDiaryEditor> {
                       focusNode: _textFocusNode,
                       maxLines: null,
                       expands: true,
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.getFont(
+                        widget.pageData.fontFamily,
                         fontSize: fontSize,
                         color: const Color(0xFF1E1E1E),
                         height: textHeight,
@@ -235,7 +343,8 @@ class _ScrapbookDiaryEditorState extends State<ScrapbookDiaryEditor> {
                       decoration: InputDecoration(
                         border: InputBorder.none,
                         hintText: "Dear diary...",
-                        hintStyle: GoogleFonts.poppins(
+                        hintStyle: GoogleFonts.getFont(
+                          widget.pageData.fontFamily,
                           color: Colors.grey.shade400,
                           fontSize: fontSize,
                         ),

@@ -7,10 +7,11 @@ import 'presentation/pages/mood_check_in_page.dart';
 import 'presentation/pages/insights_page.dart';
 import 'presentation/pages/chat_page.dart';
 import 'presentation/pages/profile_page.dart';
-import 'presentation/pages/video_splash_page.dart';
+import 'presentation/pages/animated_splash_page.dart';
 import 'data/repositories/auth_repository.dart';
 import 'presentation/viewmodels/auth_viewmodel.dart';
 import 'core/state/user_provider.dart';
+import 'core/state/diary_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +34,7 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => preloadedProvider ?? UserProvider(),
         ),
+        ChangeNotifierProvider(create: (_) => DiaryProvider()),
       ],
       child: MindMateApp(hasSession: hasSession),
     ),
@@ -57,7 +59,7 @@ class MindMateApp extends StatelessWidget {
       ),
       initialRoute: '/',
       routes: {
-        '/': (context) => VideoSplashPage(nextRoute: hasSession ? '/home' : '/login'),
+        '/': (context) => AnimatedSplashPage(nextRoute: hasSession ? '/home' : '/login'),
         '/login': (context) => const LoginPage(),
         '/profile-setup': (context) => const ProfileSetupPage(),
         '/home': (context) => const HomePage(),
