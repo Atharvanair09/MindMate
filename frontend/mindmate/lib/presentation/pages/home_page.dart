@@ -196,6 +196,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildDefaultIcon(UserProvider userState) {
+    if (userState.avatarLabel.startsWith('CyberAvatar')) {
+      final index = userState.avatarLabel.replaceAll('CyberAvatar', '');
+      return Image.asset(
+        'assets/avatars/avatar_$index.png',
+        width: 44,
+        height: 44,
+        fit: BoxFit.cover,
+      );
+    }
     return Container(
       width: 44,
       height: 44,

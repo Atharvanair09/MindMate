@@ -12,180 +12,405 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFBFAFF),
+      backgroundColor: const Color(0xFFF2F0E9), // Beige
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xFFF2F0E9),
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF4B39EF)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Profile',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF4B39EF),
+        centerTitle: false,
+        titleSpacing: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(3.0),
+          child: Container(
+            color: Colors.black,
+            height: 3.0,
           ),
         ),
-        centerTitle: true,
+        title: Row(
+          children: [
+            Text(
+              'MINDMATE',
+              style: GoogleFonts.spaceMono(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Color(0xFF4B39EF)),
+            icon: const Icon(Icons.info_outline, color: Colors.black),
             onPressed: () {},
           ),
-          const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 10),
-            _buildProfileHeader(),
-            const SizedBox(height: 30),
+            _buildCoreIdentityCard(context),
+            const SizedBox(height: 24),
+            Text(
+              'SYSTEM SETTINGS',
+              style: GoogleFonts.spaceMono(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildSettingsList(context),
+            const SizedBox(height: 24),
             _buildStatsRow(),
-            const SizedBox(height: 30),
-            _buildSettingsList(),
+            const SizedBox(height: 32),
+            _buildLogoutButton(context),
             const SizedBox(height: 40),
-            _buildFooter(context),
-            const SizedBox(height: 100),
           ],
         ),
       ),
-      bottomNavigationBar: const MindMateBottomNav(currentIndex: 4),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            height: 24,
+            width: double.infinity,
+            color: const Color(0xFFB81D13), // Red footer
+            alignment: Alignment.center,
+            child: Text(
+              'EMERGENCY HOTLINE: 988 // ALWAYS AVAILABLE',
+              style: GoogleFonts.spaceMono(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 1.0,
+              ),
+            ),
+          ),
+          const MindMateBottomNav(currentIndex: 4),
+        ],
+      ),
     );
   }
 
-  Widget _buildProfileHeader() {
+  Widget _buildCoreIdentityCard(BuildContext context) {
     return Consumer<UserProvider>(
       builder: (context, user, _) {
-        // Determine which avatar widget to show
+        // Determine avatar
         Widget avatarChild;
         if (user.localAvatarPath != null) {
-          // Freshly picked this session — use file
           avatarChild = Image.file(
             File(user.localAvatarPath!),
             fit: BoxFit.cover,
-            width: 140,
-            height: 140,
           );
         } else if (user.avatarImageBytes != null) {
-          // Restored from MongoDB (base64 data URL)
           avatarChild = Image.memory(
             user.avatarImageBytes!,
             fit: BoxFit.cover,
-            width: 140,
-            height: 140,
+          );
+        } else if (user.avatarLabel.startsWith('CyberAvatar')) {
+          final index = user.avatarLabel.replaceAll('CyberAvatar', '');
+          avatarChild = Image.asset(
+            'assets/avatars/avatar_$index.png',
+            fit: BoxFit.cover,
           );
         } else {
-          // Default icon avatar
           avatarChild = Center(
             child: Icon(
               user.avatarIcon,
-              size: 64,
+              size: 40,
               color: Colors.white,
             ),
           );
         }
 
-        return Column(
-          children: [
-            // Avatar circle — tappable to change avatar
-            GestureDetector(
-              onTap: () => Navigator.pushNamed(context, '/profile-setup'),
-              child: Stack(
-                alignment: Alignment.bottomRight,
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.black,
+            border: Border.all(color: Colors.black, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black,
+                offset: Offset(4, 4),
+                blurRadius: 0,
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    width: 140,
-                    height: 140,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: user.hasCustomAvatar
-                          ? null
-                          : LinearGradient(
-                              colors: user.avatarGradient,
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: user.avatarGradient.first.withOpacity(0.4),
-                          blurRadius: 28,
-                          spreadRadius: 2,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(child: avatarChild),
-                  ),
-                  // Camera badge signals the avatar is editable
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF7B61FF), Color(0xFF9B84FF)],
-                      ),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF7B61FF).withOpacity(0.4),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.edit_rounded,
-                        size: 14, color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Username — immutable, no edit button
-            Text(
-              user.userName.isNotEmpty ? user.userName : '—',
-              style: GoogleFonts.poppins(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF1E1E1E),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'This is you. Only you know it\'s you.',
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                color: Colors.grey[500],
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Level badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEEEBFF),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.stars_rounded,
-                    size: 16,
-                    color: Color(0xFF7B61FF),
-                  ),
-                  const SizedBox(width: 8),
                   Text(
-                    'Level 5 — Inner Peace Seeker',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF7B61FF),
+                    'CORE IDENTITY // UNIT 042',
+                    style: GoogleFonts.spaceMono(
+                      color: const Color(0xFFFDEB00),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Icon(Icons.qr_code_2, color: Colors.white, size: 20),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // Avatar
+              GestureDetector(
+                onTap: () => Navigator.pushNamed(context, '/profile-setup'),
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.white, width: 3),
+                  ),
+                  child: avatarChild,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Username
+              Stack(
+                children: [
+                  Text(
+                    user.userName.isNotEmpty ? user.userName.toUpperCase() : 'UNKNOWN',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF00E5FF),
+                    ),
+                  ),
+                  Positioned(
+                    left: 2,
+                    top: 2,
+                    child: Text(
+                      user.userName.isNotEmpty ? user.userName.toUpperCase() : 'UNKNOWN',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFFF003C),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 1,
+                    top: 1,
+                    child: Text(
+                      user.userName.isNotEmpty ? user.userName.toUpperCase() : 'UNKNOWN',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 4),
+              // Enrolled
+              Text(
+                'ENROLLED: SEPT 2024',
+                style: GoogleFonts.spaceMono(
+                  color: const Color(0xFFFDEB00),
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Footer
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SECURITY CLEARANCE',
+                        style: GoogleFonts.spaceMono(
+                          color: Colors.white54,
+                          fontSize: 8,
+                        ),
+                      ),
+                      Text(
+                        'LEVEL 03 - VETERAN',
+                        style: GoogleFonts.spaceMono(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    color: const Color(0xFFFDEB00),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    child: Text(
+                      'VERIFIED',
+                      style: GoogleFonts.spaceMono(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSettingsList(BuildContext context) {
+    return Column(
+      children: [
+        _buildSettingsTile(
+          title: 'PRIVACY (ON-DEVICE ONLY)',
+          subtitle: 'Encryption protocol: RSA-4096',
+          icon: Icons.lock_outline,
+        ),
+        const SizedBox(height: 8),
+        _buildSettingsTile(
+          title: 'DATA EXPORT (RAW)',
+          subtitle: 'Format: .JSON / .CSV',
+          icon: Icons.storage_rounded,
+        ),
+        const SizedBox(height: 8),
+        _buildSettingsTile(
+          title: 'RESET IDENTITY',
+          subtitle: 'Warning: IRREVERSIBLE ACTION',
+          icon: Icons.delete_outline,
+          isDestructive: true,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSettingsTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    bool isDestructive = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.black, width: 2),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.spaceMono(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isDestructive ? const Color(0xFFB81D13) : Colors.black,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: GoogleFonts.spaceMono(
+                  fontSize: 10,
+                  color: Colors.black54,
+                ),
+              ),
+            ],
+          ),
+          Icon(
+            icon,
+            color: isDestructive ? const Color(0xFFB81D13) : Colors.black,
+            size: 20,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsRow() {
+    return Consumer<UserProvider>(
+      builder: (context, user, _) {
+        return Row(
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black, width: 2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black,
+                      offset: Offset(4, 4),
+                      blurRadius: 0,
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'FOCUS TIME',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 8,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '142h',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFDEB00),
+                  border: Border.all(color: Colors.black, width: 2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black,
+                      offset: Offset(4, 4),
+                      blurRadius: 0,
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'MOOD SCORE',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 8,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      (user.wellnessScore / 10).toStringAsFixed(1),
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -194,179 +419,40 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsRow() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildStatCard('12', 'Total\nChats', const Color(0xFF4B39EF)),
-          _buildStatCard('15', 'Day\nStreak', const Color(0xFF7B61FF)),
-          _buildStatCard('4', 'Exercises\nDone', const Color(0xFFE54335)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String value, String label, Color color) {
-    return Container(
-      width: 105,
-      height: 115,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: color,
+  Widget _buildLogoutButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _confirmLogout(context),
+      child: Container(
+        height: 60,
+        decoration: BoxDecoration(
+          color: const Color(0xFFB81D13),
+          border: Border.all(color: Colors.black, width: 2),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black,
+              offset: Offset(4, 4),
+              blurRadius: 0,
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w400,
-              color: const Color(0xFF757575),
-              height: 1.2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingsList() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: [
-          _buildSettingsTile(
-            icon: Icons.face_retouching_natural_rounded,
-            title: 'Change Avatar',
-            onTap: (context) =>
-                Navigator.pushNamed(context, '/profile-setup'),
-          ),
-          const SizedBox(height: 16),
-          _buildSettingsTile(
-            icon: Icons.notifications_none_rounded,
-            title: 'Daily Reminders',
-          ),
-          const SizedBox(height: 16),
-          _buildSettingsTile(
-            icon: Icons.lock_outline_rounded,
-            title: 'Privacy & Security',
-          ),
-          const SizedBox(height: 16),
-          _buildSettingsTile(
-            icon: Icons.file_download_outlined,
-            title: 'Data & Exports',
-          ),
-          const SizedBox(height: 16),
-          _buildSettingsTile(
-            icon: Icons.info_outline_rounded,
-            title: 'About MindMate',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingsTile({
-    required IconData icon,
-    required String title,
-    void Function(BuildContext)? onTap,
-  }) {
-    return Builder(builder: (context) {
-      return GestureDetector(
-        onTap: onTap != null ? () => onTap(context) : null,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3F1FF),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Icon(
-                  icon,
-                  color: const Color(0xFF7B61FF),
-                  size: 24,
+              Text(
+                'LOGOUT',
+                style: GoogleFonts.spaceMono(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF1E1E1E),
-                  ),
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: Color(0xFFBBBBBB),
-              ),
+              const Icon(Icons.exit_to_app, color: Colors.white),
             ],
           ),
         ),
-      );
-    });
-  }
-
-  Widget _buildFooter(BuildContext context) {
-    return Column(
-      children: [
-        TextButton(
-          onPressed: () => _confirmLogout(context),
-          child: Text(
-            'Logout',
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[500],
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Version 1.2.0',
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            color: Colors.grey[400],
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -376,21 +462,21 @@ class ProfilePage extends StatelessWidget {
       context: context,
       barrierDismissible: true,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        backgroundColor: const Color(0xFFF2F0E9),
         title: Text(
-          'Log out?',
-          style: GoogleFonts.poppins(
+          'LOG OUT?',
+          style: GoogleFonts.spaceMono(
             fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: const Color(0xFF1E1E1E),
+            color: Colors.black,
           ),
         ),
         content: Text(
           'You\'ll need your recovery phrase to log back in. Make sure you have it saved.',
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.spaceMono(
             fontSize: 13,
-            color: Colors.grey[600],
+            color: Colors.black87,
             height: 1.5,
           ),
         ),
@@ -398,20 +484,20 @@ class ProfilePage extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(
-                color: const Color(0xFF7B61FF),
-                fontWeight: FontWeight.w600,
+              'CANCEL',
+              style: GoogleFonts.spaceMono(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
-              'Log out',
-              style: GoogleFonts.poppins(
-                color: Colors.redAccent,
-                fontWeight: FontWeight.w600,
+              'LOG OUT',
+              style: GoogleFonts.spaceMono(
+                color: const Color(0xFFB81D13),
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -420,12 +506,9 @@ class ProfilePage extends StatelessWidget {
     );
 
     if (confirmed == true && context.mounted) {
-      // 1. Clear JWT + UUID from secure storage
       await AuthRepository().logout();
-      // 2. Reset in-memory user state so a new login starts fresh
       if (context.mounted) {
         context.read<UserProvider>().reset();
-        // 3. Navigate to login and remove all previous routes
         Navigator.of(context).pushNamedAndRemoveUntil(
           '/login',
           (route) => false,
