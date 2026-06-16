@@ -220,7 +220,8 @@ class _AnimatedSplashPageState extends State<AnimatedSplashPage> with SingleTick
                                 Expanded(
                                   child: GestureDetector(
                                     onTap: () {
-                                      Navigator.pushReplacementNamed(context, '/login');
+                                      context.read<AuthViewModel>().resetToEmail();
+                                      Navigator.pushNamed(context, '/login');
                                     },
                                     child: Stack(
                                       clipBehavior: Clip.none,
@@ -248,7 +249,7 @@ class _AnimatedSplashPageState extends State<AnimatedSplashPage> with SingleTick
                                   child: GestureDetector(
                                     onTap: () {
                                       context.read<AuthViewModel>().startRecoveryFlow();
-                                      Navigator.pushReplacementNamed(context, '/login');
+                                      Navigator.pushNamed(context, '/login');
                                     },
                                     child: Stack(
                                       clipBehavior: Clip.none,
