@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../core/constants/colors.dart';
 
 class MindMateBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -8,22 +7,34 @@ class MindMateBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NavigationBarTheme(
-      data: NavigationBarThemeData(
-        labelTextStyle: WidgetStateProperty.all(
-          GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500),
+    return Container(
+      height: 72,
+      decoration: const BoxDecoration(
+        color: Color(0xFFF2F0E9), // Beige
+        border: Border(
+          top: BorderSide(color: Colors.black, width: 2),
         ),
-        indicatorColor: AppColors.primaryPurple.withOpacity(0.1),
       ),
-      child: NavigationBar(
-        height: 72,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        selectedIndex: currentIndex,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        onDestinationSelected: (index) {
+      child: Row(
+        children: [
+          _buildNavItem(context, 0, Icons.home_outlined, "HOME"),
+          _buildNavItem(context, 1, Icons.chat_bubble_outline, "CHAT"),
+          _buildNavItem(context, 2, Icons.book_outlined, "Journal"),
+          _buildNavItem(context, 3, Icons.auto_graph, "Insights"),
+          _buildNavItem(context, 4, Icons.person_outline, "PROFILE"),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(BuildContext context, int index, IconData icon, String label) {
+    final isSelected = currentIndex == index;
+    
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
           if (index == currentIndex) return;
-          
           switch (index) {
             case 0:
               Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
@@ -42,33 +53,32 @@ class MindMateBottomNav extends StatelessWidget {
               break;
           }
         },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_filled, color: AppColors.primaryPurple),
-            label: "Home",
+        child: Container(
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFFFDEB00) : Colors.transparent,
+            border: isSelected 
+              ? const Border(
+                  left: BorderSide(color: Colors.black, width: 2),
+                  right: BorderSide(color: Colors.black, width: 2),
+                )
+              : null,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble, color: AppColors.primaryPurple),
-            label: "Chat",
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 24, color: Colors.black),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: GoogleFonts.spaceMono(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.edit_note_outlined),
-            selectedIcon: Icon(Icons.edit_note, color: AppColors.primaryPurple),
-            label: "Journal",
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.analytics_outlined),
-            selectedIcon: Icon(Icons.analytics, color: AppColors.primaryPurple),
-            label: "Insights",
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: AppColors.primaryPurple),
-            label: "Profile",
-          ),
-        ],
+        ),
       ),
     );
   }

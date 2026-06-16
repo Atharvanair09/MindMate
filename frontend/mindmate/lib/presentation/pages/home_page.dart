@@ -2,14 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:visibility_detector/visibility_detector.dart';
-import '../../core/constants/colors.dart';
 import '../../core/state/user_provider.dart';
-import '../widgets/wellness_score_card.dart';
-import '../widgets/mood_selector.dart';
-import '../widgets/weekly_chart.dart';
-import '../widgets/check_in_card.dart';
-import '../widgets/action_card.dart';
 import '../widgets/bottom_nav.dart';
 
 class HomePage extends StatefulWidget {
@@ -20,60 +13,34 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // Hardcoded for UI demo
+  int _selectedMoodIndex = 1;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8F8F8), // Light grey background
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _animateWidget(const SizedBox(height: 20), 0),
-              _animateWidget(_buildTopBar(context), 1),
-              _animateWidget(const SizedBox(height: 24), 2),
-              _animateWidget(
-                Consumer<UserProvider>(
-                  builder: (context, userProvider, child) {
-                    return WellnessScoreCard(score: userProvider.wellnessScore);
-                  },
-                ),
-                3,
-              ),
-              _animateWidget(const SizedBox(height: 32), 4),
-              _animateWidget(const MoodSelector(), 5),
-              _animateWidget(const SizedBox(height: 32), 6),
-              _animateWidget(const WeeklyChart(), 7),
-              _animateWidget(const SizedBox(height: 32), 8),
-              _animateWidget(const CheckInCard(), 9),
-              _animateWidget(const SizedBox(height: 32), 10),
-              _animateWidget(
-                Row(
-                  children: [
-                    Expanded(
-                      child: ActionCard(
-                        title: "Breathe",
-                        subtitle: "3 min focus",
-                        icon: Icons.air,
-                        bgColor: AppColors.breatheBg,
-                        iconColor: Colors.redAccent,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ActionCard(
-                        title: "Coping",
-                        subtitle: "Reading",
-                        icon: Icons.menu_book,
-                        bgColor: AppColors.copingBg,
-                        iconColor: AppColors.primaryPurple,
-                      ),
-                    ),
-                  ],
-                ),
-                11,
-              ),
+              _buildTopBar(context),
+              const SizedBox(height: 24),
+              _buildBurnoutCard(),
+              const SizedBox(height: 24),
+              _buildSectionTitle("HOW ARE YOU FEELING?"),
+              const SizedBox(height: 12),
+              _buildMoodSelector(),
+              const SizedBox(height: 24),
+              _buildWeeklyChart(),
+              const SizedBox(height: 24),
+              _buildActionButtons(),
+              const SizedBox(height: 24),
+              _buildSectionTitle("STUDENT RESOURCES"),
+              const SizedBox(height: 12),
+              _buildResourceCard(),
               const SizedBox(height: 100), // Space for bottom nav
             ],
           ),
@@ -83,78 +50,44 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _animateWidget(Widget child, int index) {
-    return _FadeInOnScroll(
-      key: ValueKey('home_widget_$index'),
-      child: child,
-    );
-  }
-
   Widget _buildTopBar(BuildContext context) {
-    return Consumer<UserProvider>(
-      builder: (context, userState, child) {
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: Colors.white,
-                    child: ClipOval(
-                      child: _buildAvatarImage(userState),
-                    ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Consumer<UserProvider>(
+          builder: (context, userProvider, child) {
+            final userName = userProvider.userName.isNotEmpty 
+                ? userProvider.userName 
+                : "Friend";
+            return Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    border: Border.all(color: Colors.black, width: 2),
                   ),
-                  const SizedBox(width: 12),
-                  Flexible(
-                    child: RichText(
-                      overflow: TextOverflow.ellipsis,
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text: "Hey, ",
-                            style: GoogleFonts.poppins(
-                              fontSize: 30,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                          TextSpan(
-                            text: userState.userName.isEmpty
-                                ? "Friend"
-                                : userState.userName,
-                            style: GoogleFonts.poppins(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF4B39EF),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
+                  child: ClipRect(
+                    child: _buildAvatarImage(userProvider),
                   ),
-                ],
-              ),
-              child: const Icon(Icons.notifications_none_outlined, color: AppColors.darkText, size: 24),
-            ),
-          ],
-        );
-      },
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  userName.toUpperCase(),
+                  style: GoogleFonts.vt323(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        const Icon(Icons.notifications_none, color: Colors.black, size: 28),
+      ],
     );
   }
 
@@ -162,8 +95,8 @@ class _HomePageState extends State<HomePage> {
     if (userState.localAvatarPath != null) {
       return Image.file(
         File(userState.localAvatarPath!),
-        width: 44,
-        height: 44,
+        width: 32,
+        height: 32,
         fit: BoxFit.cover,
       );
     }
@@ -173,8 +106,8 @@ class _HomePageState extends State<HomePage> {
       if (imageUrl.startsWith('http')) {
         return Image.network(
           imageUrl,
-          width: 44,
-          height: 44,
+          width: 32,
+          height: 32,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) => _buildDefaultIcon(userState),
         );
@@ -183,8 +116,8 @@ class _HomePageState extends State<HomePage> {
         if (bytes != null) {
           return Image.memory(
             bytes,
-            width: 44,
-            height: 44,
+            width: 32,
+            height: 32,
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) => _buildDefaultIcon(userState),
           );
@@ -200,14 +133,14 @@ class _HomePageState extends State<HomePage> {
       final index = userState.avatarLabel.replaceAll('CyberAvatar', '');
       return Image.asset(
         'assets/avatars/avatar_$index.png',
-        width: 44,
-        height: 44,
+        width: 32,
+        height: 32,
         fit: BoxFit.cover,
       );
     }
     return Container(
-      width: 44,
-      height: 44,
+      width: 32,
+      height: 32,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: userState.avatarGradient,
@@ -218,72 +151,369 @@ class _HomePageState extends State<HomePage> {
       child: Center(
         child: Icon(
           userState.avatarIcon,
-          size: 22,
+          size: 16,
           color: Colors.white,
         ),
       ),
     );
   }
-}
 
-class _FadeInOnScroll extends StatefulWidget {
-  final Widget child;
-  const _FadeInOnScroll({super.key, required this.child});
-
-  @override
-  State<_FadeInOnScroll> createState() => _FadeInOnScrollState();
-}
-
-class _FadeInOnScrollState extends State<_FadeInOnScroll> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-  bool _isVisible = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _animation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutQuart,
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: GoogleFonts.vt323(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: Colors.black,
+        letterSpacing: 2,
+      ),
     );
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  Widget _buildBurnoutCard() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.black,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black,
+            offset: Offset(4, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "BURNOUT RISK",
+                style: GoogleFonts.vt323(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "LOW",
+                style: GoogleFonts.inter(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.greenAccent,
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Text(
+                "72",
+                style: GoogleFonts.spaceMono(
+                  fontSize: 56,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.yellow,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Container(
+                width: 6,
+                height: 60,
+                color: Colors.yellow,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return VisibilityDetector(
-      key: widget.key!,
-      onVisibilityChanged: (info) {
-        if (info.visibleFraction > 0.1 && !_isVisible) {
-          if (mounted) {
+  Widget _buildMoodSelector() {
+    final moods = [
+      {"emoji": "🤩", "label": "GREAT"},
+      {"emoji": "😊", "label": "GOOD"},
+      {"emoji": "😐", "label": "OKAY"},
+      {"emoji": "😔", "label": "LOW"},
+      {"emoji": "😵", "label": "G.O"},
+    ];
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: List.generate(moods.length, (index) {
+        final isSelected = _selectedMoodIndex == index;
+        return GestureDetector(
+          onTap: () {
             setState(() {
-              _isVisible = true;
+              _selectedMoodIndex = index;
             });
-            _controller.forward();
-          }
-        }
-      },
-      child: AnimatedBuilder(
-        animation: _animation,
-        builder: (context, child) {
-          return Opacity(
-            opacity: _animation.value,
-            child: Transform.translate(
-              offset: Offset(0, 20 * (1 - _animation.value)),
-              child: child,
+          },
+          child: Container(
+            width: (MediaQuery.of(context).size.width - 40 - 48) / 5, // Auto-size based on screen width
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.yellow : Colors.white,
+              border: Border.all(color: Colors.black, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black,
+                  offset: isSelected ? const Offset(4, 4) : const Offset(3, 3),
+                ),
+              ],
             ),
-          );
-        },
-        child: widget.child,
+            child: Column(
+              children: [
+                Text(
+                  moods[index]["emoji"]!,
+                  style: const TextStyle(fontSize: 24),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  moods[index]["label"]!,
+                  style: GoogleFonts.vt323(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              ],
+            ),
+          ));
+      }),
+    );
+  }
+
+  Widget _buildWeeklyChart() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.black, width: 2),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black,
+            offset: Offset(4, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.only(bottom: 2),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.black, width: 3)),
+            ),
+            child: Text(
+              "THIS WEEK",
+              style: GoogleFonts.vt323(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+                letterSpacing: 2,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 120,
+            child: Stack(
+              children: [
+                // Grid lines
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(
+                    4,
+                    (index) => Container(
+                      height: 1,
+                      color: Colors.grey[300],
+                    ),
+                  ),
+                ),
+                // Bars
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _buildBar(0.4, false),
+                      _buildBar(0.7, false),
+                      _buildBar(0.2, false),
+                      _buildBar(0.5, false),
+                      _buildBar(0.8, true), // Friday highlighted
+                      _buildBar(0.4, false),
+                      _buildBar(0.5, false),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) {
+              return Text(
+                day,
+                style: GoogleFonts.vt323(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBar(double fillPct, bool isHighlighted) {
+    return Container(
+      width: 24,
+      height: 120 * fillPct,
+      decoration: BoxDecoration(
+        color: isHighlighted ? Colors.yellow : Colors.black,
+        border: isHighlighted ? Border.all(color: Colors.black, width: 1) : null,
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.yellow,
+              border: Border.all(color: Colors.black, width: 2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black,
+                  offset: Offset(4, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "CHAT",
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "talk to someone →",
+                  style: GoogleFonts.vt323(
+                    fontSize: 14,
+                    color: Colors.black,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              border: Border.all(color: Colors.black, width: 2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black,
+                  offset: Offset(4, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "JOURNAL",
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.yellow,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "private. on-device →",
+                  style: GoogleFonts.vt323(
+                    fontSize: 14,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildResourceCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.black, width: 2),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black,
+            offset: Offset(4, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 80,
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE0E0E0),
+              border: Border(right: BorderSide(color: Colors.black, width: 2)),
+            ),
+            child: const Icon(Icons.menu_book, color: Colors.black, size: 32),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "EXAM ANXIETY GUIDE",
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "5 MIN READ •\nSURVIVAL TIPS",
+                    style: GoogleFonts.vt323(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      letterSpacing: 1.5,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
