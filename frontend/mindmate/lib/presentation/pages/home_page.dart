@@ -34,9 +34,9 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 12),
               _buildMoodSelector(),
               const SizedBox(height: 24),
-              _buildWeeklyChart(),
-              const SizedBox(height: 24),
               _buildActionButtons(),
+              const SizedBox(height: 24),
+              _buildWeeklyChart(),
               const SizedBox(height: 24),
               _buildSectionTitle("STUDENT RESOURCES"),
               const SizedBox(height: 12),
@@ -162,10 +162,10 @@ class _HomePageState extends State<HomePage> {
     return Text(
       title,
       style: GoogleFonts.vt323(
-        fontSize: 16,
+        fontSize: 24,
         fontWeight: FontWeight.w600,
         color: Colors.black,
-        letterSpacing: 2,
+        letterSpacing: 3,
       ),
     );
   }
@@ -273,7 +273,7 @@ class _HomePageState extends State<HomePage> {
                 Text(
                   moods[index]["label"]!,
                   style: GoogleFonts.vt323(
-                    fontSize: 14,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
                   ),
@@ -282,6 +282,86 @@ class _HomePageState extends State<HomePage> {
             ),
           ));
       }),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.yellow,
+              border: Border.all(color: Colors.black, width: 2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black,
+                  offset: Offset(4, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "CHAT",
+                  style: GoogleFonts.inter(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "talk to someone →",
+                  style: GoogleFonts.vt323(
+                    fontSize: 18,
+                    color: Colors.black,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              border: Border.all(color: Colors.black, width: 2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black,
+                  offset: Offset(4, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "JOURNAL",
+                  style: GoogleFonts.inter(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.yellow,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "private. on-device →",
+                  style: GoogleFonts.vt323(
+                    fontSize: 15,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -379,86 +459,6 @@ class _HomePageState extends State<HomePage> {
         color: isHighlighted ? Colors.yellow : Colors.black,
         border: isHighlighted ? Border.all(color: Colors.black, width: 1) : null,
       ),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.yellow,
-              border: Border.all(color: Colors.black, width: 2),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black,
-                  offset: Offset(4, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "CHAT",
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "talk to someone →",
-                  style: GoogleFonts.vt323(
-                    fontSize: 14,
-                    color: Colors.black,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.black,
-              border: Border.all(color: Colors.black, width: 2),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black,
-                  offset: Offset(4, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "JOURNAL",
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.yellow,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "private. on-device →",
-                  style: GoogleFonts.vt323(
-                    fontSize: 14,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 

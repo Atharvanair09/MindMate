@@ -95,10 +95,14 @@ class _ChatPageState extends State<ChatPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: const Color(0xFFF4EFEB),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.zero,
+          side: BorderSide(color: Colors.black, width: 3),
+        ),
         title: Text(
-          'We care about you',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          'WE CARE ABOUT YOU',
+          style: GoogleFonts.vt323(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.black),
         ),
         content: Text(
           'It sounds like you might be going through a tough time. '
@@ -106,16 +110,17 @@ class _ChatPageState extends State<ChatPage> {
           'or a helpline — can really help.\n\n'
           'iCall: 9152987821\n'
           'Vandrevala Foundation: 1860-2662-345',
-          style: GoogleFonts.poppins(fontSize: 14, height: 1.6),
+          style: GoogleFonts.vt323(fontSize: 18, color: Colors.black),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: Text(
-              'I understand',
-              style: GoogleFonts.poppins(
-                color: const Color(0xFF4B39EF),
-                fontWeight: FontWeight.w600,
+              'I UNDERSTAND',
+              style: GoogleFonts.vt323(
+                color: Colors.black,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -146,23 +151,29 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF4EFEB),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
             _buildTopBar(),
             Expanded(
               child: _isLoadingHistory
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: CircularProgressIndicator(color: Colors.black))
                   : _hasMessages
                       ? _buildMessageList()
                       : _buildEmptyState(),
             ),
-            _buildInputBar(),
+            _buildBottomSection(),
           ],
         ),
       ),
-      bottomNavigationBar: const MindMateBottomNav(currentIndex: 1),
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Colors.black, width: 3)),
+        ),
+        child: const MindMateBottomNav(currentIndex: 1),
+      ),
     );
   }
 
@@ -202,10 +213,11 @@ class _ChatPageState extends State<ChatPage> {
   void _showConversationsModal() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF4EFEB),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(0)),
+        side: BorderSide(color: Colors.black, width: 3),
       ),
       builder: (ctx) {
         return DraggableScrollableSheet(
@@ -222,10 +234,11 @@ class _ChatPageState extends State<ChatPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Past Conversations',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
+                        'PAST CONVERSATIONS',
+                        style: GoogleFonts.vt323(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
                         ),
                       ),
                       TextButton(
@@ -238,35 +251,36 @@ class _ChatPageState extends State<ChatPage> {
                           });
                         },
                         child: Text(
-                          'New Chat',
-                          style: GoogleFonts.poppins(
-                            color: const Color(0xFF4B39EF),
-                            fontWeight: FontWeight.w600,
+                          'NEW CHAT',
+                          style: GoogleFonts.vt323(
+                            color: Colors.black,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const Divider(height: 1),
+                const Divider(height: 1, color: Colors.black, thickness: 3),
                 Expanded(
                   child: FutureBuilder<List<Map<String, dynamic>>>(
                     future: _chatRepo.getConversations(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
+                        return const Center(child: CircularProgressIndicator(color: Colors.black));
                       } else if (snapshot.hasError) {
                         return Center(
                           child: Text(
-                            'Failed to load conversations',
-                            style: GoogleFonts.poppins(),
+                            'FAILED TO LOAD CONVERSATIONS',
+                            style: GoogleFonts.vt323(fontSize: 20, color: Colors.black),
                           ),
                         );
                       } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                         return Center(
                           child: Text(
-                            'No past conversations found.',
-                            style: GoogleFonts.poppins(),
+                            'NO PAST CONVERSATIONS FOUND.',
+                            style: GoogleFonts.vt323(fontSize: 20, color: Colors.black),
                           ),
                         );
                       }
@@ -280,12 +294,12 @@ class _ChatPageState extends State<ChatPage> {
                           final preview = conv['preview'] as String? ?? 'Empty conversation';
                           final id = conv['conversation_id'] as String;
                           return ListTile(
-                            leading: const Icon(Icons.chat_bubble_outline, color: Color(0xFF4B39EF)),
+                            leading: const Icon(Icons.chat_bubble_outline, color: Colors.black),
                             title: Text(
                               preview,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.poppins(fontSize: 14),
+                              style: GoogleFonts.vt323(fontSize: 20, color: Colors.black),
                             ),
                             onTap: () {
                               Navigator.pop(ctx);
@@ -307,32 +321,47 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget _buildTopBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Chat bubble icon
-          GestureDetector(
+          _buildBrutalistButton(
             onTap: _showConversationsModal,
-            child: const Icon(
-              Icons.chat_bubble_outline_rounded,
-              color: Color(0xFF4B39EF),
-              size: 26,
-            ),
+            icon: Icons.chat_bubble_outline_rounded,
+            color: Colors.white,
           ),
-          GestureDetector(
+          _buildBrutalistButton(
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Voice calling is temporarily disabled.')),
               );
             },
-            child: const Icon(
-              Icons.phone_in_talk,
-              color: Color(0xFF4B39EF),
-              size: 26,
-            ),
+            icon: Icons.phone_in_talk_outlined,
+            color: const Color(0xFFFFEB3B),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBrutalistButton({required VoidCallback onTap, required IconData icon, required Color color}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: color,
+          border: Border.all(color: Colors.black, width: 3),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black,
+              offset: Offset(4, 4),
+              blurRadius: 0,
+            ),
+          ],
+        ),
+        child: Icon(icon, color: Colors.black, size: 28),
       ),
     );
   }
@@ -340,44 +369,41 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildEmptyState() {
     return Consumer<UserProvider>(
       builder: (context, userState, child) {
-        final name = userState.userName.isEmpty ? 'Friend' : userState.userName;
+        final name = userState.userName.isEmpty ? 'FRIEND' : userState.userName.toUpperCase();
         return Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                RichText(
-                  textAlign: TextAlign.center,
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: 'Hello, ',
-                        style: GoogleFonts.poppins(
-                          fontSize: 38,
-                          fontWeight: FontWeight.w300,
-                          color: const Color(0xFF1E1E1E),
-                        ),
-                      ),
-                      TextSpan(
-                        text: name,
-                        style: GoogleFonts.poppins(
-                          fontSize: 42,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFF4B39EF),
-                        ),
-                      ),
-                    ],
+                Text(
+                  'HELLO,',
+                  style: GoogleFonts.poppins(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black,
+                    letterSpacing: 1.5,
                   ),
                 ),
-                const SizedBox(height: 12),
                 Text(
-                  'what would you like to talk about?',
+                  name,
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF3C3C3C),
+                    fontSize: 44,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF4A90E2),
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 30),
+                Text(
+                  'WHAT WOULD YOU LIKE TO TALK\nABOUT?',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.vt323(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    height: 1.2,
                   ),
                 ),
               ],
@@ -392,10 +418,8 @@ class _ChatPageState extends State<ChatPage> {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      // +1 for the typing indicator when loading
       itemCount: _messages.length + (_isLoading ? 1 : 0),
       itemBuilder: (context, index) {
-        // Show typing indicator as the last item when waiting for AI
         if (index == _messages.length && _isLoading) {
           return _buildTypingIndicator();
         }
@@ -405,7 +429,6 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  /// A subtle "..." typing indicator shown while Claude is responding.
   Widget _buildTypingIndicator() {
     return Align(
       alignment: Alignment.centerLeft,
@@ -413,13 +436,15 @@ class _ChatPageState extends State<ChatPage> {
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFFF2F2F7),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-            bottomLeft: Radius.circular(4),
-            bottomRight: Radius.circular(20),
-          ),
+          color: Colors.white,
+          border: Border.all(color: Colors.black, width: 3),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black,
+              offset: Offset(4, 4),
+              blurRadius: 0,
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -438,9 +463,9 @@ class _ChatPageState extends State<ChatPage> {
                 width: 8,
                 height: 8,
                 margin: const EdgeInsets.symmetric(horizontal: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFAAAAAA),
-                  shape: BoxShape.circle,
+                decoration: const BoxDecoration(
+                  color: Colors.black,
+                  shape: BoxShape.rectangle,
                 ),
               ),
             );
@@ -454,25 +479,28 @@ class _ChatPageState extends State<ChatPage> {
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
+        margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         decoration: BoxDecoration(
-          color: isUser ? const Color(0xFF4285F4) : const Color(0xFFF2F2F7),
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(20),
-            topRight: const Radius.circular(20),
-            bottomLeft: Radius.circular(isUser ? 20 : 4),
-            bottomRight: Radius.circular(isUser ? 4 : 20),
-          ),
+          color: isUser ? const Color(0xFF4A90E2) : Colors.white,
+          border: Border.all(color: Colors.black, width: 3),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black,
+              offset: Offset(4, 4),
+              blurRadius: 0,
+            ),
+          ],
         ),
         child: Text(
           text,
           style: GoogleFonts.poppins(
-            color: isUser ? Colors.white : const Color(0xFF1E1E1E),
+            color: isUser ? Colors.white : Colors.black,
             fontSize: 14,
+            fontWeight: FontWeight.w600,
             height: 1.5,
           ),
         ),
@@ -480,86 +508,117 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  Widget _buildBottomSection() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildInputBar(),
+      ],
+    );
+  }
+
   Widget _buildInputBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF2F2F7),
-          borderRadius: BorderRadius.circular(28),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            const SizedBox(width: 20),
-            // Text field
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                minLines: 1,
-                maxLines: 5,
-                keyboardType: TextInputType.multiline,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _sendMessage(),
-                enabled: !_isLoading,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: const Color(0xFF1E1E1E),
-                ),
-                decoration: InputDecoration(
-                  hintText: _isLoading ? 'Thinking...' : 'Ask Jarvis',
-                  hintStyle: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: const Color(0xFFAAAAAA),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 52),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.black, width: 3),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black,
+                    offset: Offset(4, 4),
+                    blurRadius: 0,
                   ),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: const EdgeInsets.only(top: 9, bottom: 9),
-                ),
+                ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      minLines: 1,
+                      maxLines: 5,
+                      keyboardType: TextInputType.multiline,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _sendMessage(),
+                      enabled: !_isLoading,
+                      style: GoogleFonts.vt323(
+                        fontSize: 20,
+                        color: Colors.black,
+                      ),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        hintText: _isLoading ? 'THINKING...' : 'SAY SOMETHING REAL.',
+                        hintStyle: GoogleFonts.vt323(
+                          fontSize: 20,
+                          color: const Color(0xFF9E9E9E),
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12.0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _inputIconButton(
+                          icon: Icons.mic_none_outlined,
+                          onTap: () {},
+                        ),
+                        const SizedBox(width: 8),
+                        _inputIconButton(
+                          icon: Icons.camera_alt_outlined,
+                          onTap: () {},
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 8),
-            // Mic icon
-            _inputIconButton(
-              icon: Icons.mic_none_rounded,
-              onTap: () {},
+          ),
+          const SizedBox(width: 16),
+          GestureDetector(
+            onTap: _isLoading ? () {} : _sendMessage,
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                border: Border.all(color: Colors.black, width: 3),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black45,
+                    offset: Offset(4, 4),
+                    blurRadius: 0,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.arrow_forward,
+                color: Colors.white,
+                size: 28,
+              ),
             ),
-            const SizedBox(width: 4),
-            // Camera icon
-            _inputIconButton(
-              icon: Icons.camera_alt_outlined,
-              onTap: () {},
-            ),
-            const SizedBox(width: 4),
-            // Send / AI icon
-            _inputIconButton(
-              icon: Icons.arrow_forward_rounded,
-              onTap: _isLoading ? () {} : _sendMessage,
-              color: _isLoading
-                  ? const Color(0xFFAAAAAA)
-                  : const Color(0xFF4B39EF),
-            ),
-            const SizedBox(width: 8),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _inputIconButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    Color color = const Color(0xFF6E6E73),
-  }) {
+  Widget _inputIconButton({required IconData icon, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        alignment: Alignment.center,
-        child: Icon(icon, color: color, size: 22),
-      ),
+      child: Icon(icon, color: Colors.black87, size: 24),
     );
   }
 }

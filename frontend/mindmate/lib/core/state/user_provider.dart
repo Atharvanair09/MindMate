@@ -76,7 +76,7 @@ class UserProvider extends ChangeNotifier {
         _userName = profile['username'] ?? '';
         _avatarIcon = avatar.icon;
         _avatarGradient = avatar.gradient;
-        _avatarLabel = avatar.label;
+        _avatarLabel = label ?? avatar.label;
         // Restore persisted custom photo (base64 data URL)
         _avatarImageUrl = profile['avatarImageUrl'];
         _localAvatarPath = null; // local paths don't survive restarts
