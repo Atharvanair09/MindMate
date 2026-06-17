@@ -38,13 +38,19 @@ const otpLimiter = rateLimit({
 
 app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, location = 'Mumbai, Maharashtra', deviceId = 'MM-X900-STDT' } = req.body;
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
     }
     
-    // Generate a 6-digit OTP
+    // Generate a 6-digit OTP and dynamic variables for the email
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const internalRef = `MM-DT-${Math.floor(1000 + Math.random() * 9000)}`;
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    }).toUpperCase();
     
     // Save/Update OTP in database
     await Otp.findOneAndUpdate(
@@ -59,150 +65,160 @@ app.post('/api/auth/send-otp', otpLimiter, async (req, res) => {
       to: [{ email: email }],
       subject: 'Your Verification Code',
       textContent: `Your verification code is: ${otp}. It will expire in 5 minutes.`,
-      htmlContent: `<b><!DOCTYPE html>
+      htmlContent: `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-  <title>Your One-Time Code</title>
-  <!--[if mso]>
-  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
-  <![endif]-->
-  <style>
-    body, table, td, a { -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
-    table, td { mso-table-lspace:0pt; mso-table-rspace:0pt; }
-    body { margin:0!important; padding:0!important; background-color:#f0faf4; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Clearance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #f4f1ea;
+            font-family: 'Space Grotesk', sans-serif;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 320px;
+            border: 2px solid #000;
+            padding: 20px;
+            background-color: #fff;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #000;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+        }
+
+        .logo div { border: 1px solid #000; }
+        .logo div:nth-child(1) { background: #000; }
+        .logo div:nth-child(2) { background: #0000ff; }
+        .logo div:nth-child(4) { background: #ffff00; }
+
+        .ref { font-size: 10px; font-weight: 500; }
+
+        hr { border: 0; border-top: 2px solid #000; margin-bottom: 20px; }
+
+        h1 {
+            font-family: 'Anton', sans-serif;
+            font-size: 42px;
+            line-height: 1;
+            margin-bottom: 15px;
+        }
+
+        .date { font-size: 12px; margin-bottom: 25px; border-left: 3px solid #8e8e52; padding-left: 8px; }
+
+        .verification-box {
+            border: 2px solid #000;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        h2 { font-size: 20px; margin-bottom: 15px; }
+
+        .text { font-size: 12px; margin-bottom: 20px; line-height: 1.4; }
+
+        .code {
+            background: #000;
+            color: #fff;
+            font-size: 32px;
+            text-align: center;
+            padding: 15px;
+            letter-spacing: 10px;
+            margin-bottom: 20px;
+        }
+
+        .confirm-btn {
+            background: #ffe600;
+            border: 2px solid #000;
+            width: 100%;
+            padding: 15px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .location-info { font-size: 10px; margin-bottom: 20px; }
+
+        .crisis {
+            background: #c92a2a;
+            color: #fff;
+            padding: 15px;
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .footer-bar {
+            background: #000;
+            color: #fff;
+            padding: 15px;
+            font-size: 10px;
+        }
+    </style>
 </head>
-<body style="margin:0;padding:0;background-color:#f0faf4;font-family:Georgia,'Times New Roman',serif;">
+<body>
 
-  <!-- Preheader -->
-  <div style="display:none;max-height:0;overflow:hidden;font-size:1px;color:#f0faf4;">
-    Your one-time sign-in code is ready. Expires in 5 minutes.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
-  </div>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <div></div><div></div><div></div><div></div>
+            </div>
+            <div class="ref">INTERNAL REF: ${internalRef}</div>
+        </div>
+        <hr>
+        <h1>SECURITY CLEARANCE REQUIRED</h1>
+        <div class="date">DATE: ${currentDate}</div>
 
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0faf4;">
-    <tr>
-      <td align="center" style="padding:32px 16px;">
+        <div class="verification-box">
+            <h2>IDENTITY VERIFICATION</h2>
+            <p class="text">Identity verification in progress. Do not share this code with anyone. This is the first and last time we see your email.</p>
+            <div class="code">${otp}</div>
+            <button class="confirm-btn">CONFIRM IDENTITY <span>&rarr;</span></button>
+        </div>
 
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;">
+        <div class="location-info">
+            <p>LOCATION TRACKED: ${location.toUpperCase()}</p>
+            <p>DEVICE ID: ${deviceId.toUpperCase()}</p>
+        </div>
 
-          <!-- Hero illustration area -->
-          <tr>
-            <td align="center" style="background-color:#d6f5e3;border-radius:20px 20px 0 0;padding:36px 40px 0 40px;">
+        <div class="crisis">
+            CRISIS HELP?<br>
+            IMMEDIATE ASSISTANCE AVAILABLE 24/7
+        </div>
 
-              <!-- SVG Illustration: woman with phone inside padlock shape -->
-              <svg width="180" height="170" viewBox="0 0 180 170" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- Padlock outer shape -->
-                <ellipse cx="90" cy="100" rx="72" ry="65" fill="#a8edca" stroke="#3dba7b" stroke-width="2.5"/>
-                <!-- Padlock shackle (top arch) -->
-                <path d="M58 68 Q58 28 90 28 Q122 28 122 68" stroke="#3dba7b" stroke-width="5" fill="none" stroke-linecap="round"/>
-                <!-- Person body -->
-                <ellipse cx="90" cy="112" rx="28" ry="34" fill="#2e7d52"/>
-                <!-- Person head -->
-                <circle cx="90" cy="74" r="16" fill="#f5c5a3"/>
-                <!-- Hair -->
-                <path d="M74 68 Q76 52 90 52 Q104 52 106 68 Q100 60 90 62 Q80 60 74 68Z" fill="#2c2c2c"/>
-                <!-- Phone in hands -->
-                <rect x="78" y="100" width="24" height="16" rx="3" fill="#e0e0e0" stroke="#aaa" stroke-width="1"/>
-                <rect x="80" y="102" width="20" height="10" rx="1" fill="#90caf9"/>
-                <!-- Decorative circles around padlock -->
-                <circle cx="38" cy="80" r="4" fill="#3dba7b" opacity="0.4"/>
-                <circle cx="145" cy="95" r="3" fill="#3dba7b" opacity="0.4"/>
-                <circle cx="55" cy="140" r="2.5" fill="#3dba7b" opacity="0.3"/>
-                <circle cx="130" cy="55" r="2" fill="#3dba7b" opacity="0.3"/>
-              </svg>
-
-              <!-- Five star/dot OTP mask indicator -->
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 0 auto;">
-                <tr>
-                  <td align="center" style="background-color:#1a1a1a;border-radius:30px;padding:8px 20px;">
-                    <span style="font-family:'Courier New',Courier,monospace;font-size:18px;color:#3dba7b;letter-spacing:8px;">
-                      &#10033; &#10033; &#10033; &#10033; &#10033;
-                    </span>
-                  </td>
-                </tr>
-              </table>
-              <div style="height:24px;"></div>
-            </td>
-          </tr>
-
-          <!-- White card body -->
-          <tr>
-            <td style="background-color:#ffffff;padding:36px 40px 32px 40px;">
-
-              <!-- Heading -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td align="center" style="padding-bottom:18px;">
-                    <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:bold;color:#111111;">
-                      Your one-time code is
-                    </h1>
-                  </td>
-                </tr>
-
-                <!-- OTP Code -->
-                <tr>
-                  <td align="center" style="padding-bottom:22px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border:2px solid #222222;border-radius:4px;">
-                      <tr>
-                        <td align="center" style="padding:12px 48px;">
-                          <!-- *** REPLACE {{OTP_CODE}} with your dynamic value *** -->
-                          <span style="font-family:'Courier New',Courier,monospace;font-size:28px;font-weight:bold;color:#111111;letter-spacing:6px;">
-                            ${otp}
-                          </span>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- Body text -->
-                <tr>
-                  <td align="center" style="padding-bottom:28px;">
-                    <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:14px;color:#555555;line-height:1.7;text-align:center;max-width:340px;">
-                      Please verify you're really you by entering this 6-digit code when you sign in. Just a heads up, this code will expire
-                      in <strong>5 minutes</strong> for security reasons.
-                    </p>
-                  </td>
-                </tr>
-
-                <!-- Divider -->
-                <tr>
-                  <td style="border-top:1px solid #eeeeee;padding-bottom:20px;font-size:0;">&nbsp;</td>
-                </tr>
-
-                <!-- Warning text -->
-                <tr>
-                  <td align="center" style="padding-bottom:22px;">
-                    <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:14px;color:#555555;line-height:1.7;text-align:center;">
-                      If you didn't just try to sign in,<br/>
-                      we recommend you reset your password here:
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <tr>
-            <td align="center" style="background-color:#ffffff;border-radius:0 0 20px 20px;border-top:1px solid #eeeeee;padding:18px 40px 28px 40px;">
-              <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:12px;color:#999999;line-height:1.7;text-align:center;">
-                If you have any questions, contact our
-                <a href="{{GUIDES_URL}}" style="color:#3dba7b;text-decoration:none;">Website Guides</a>.<br/>
-                Or, visit our <a href="{{HELP_URL}}" style="color:#3dba7b;text-decoration:none;">Help Center</a>.
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
+        <div class="footer-bar">
+            <p>MINDMATE // NO PRETENDING, NO DATA MINING.</p>
+            <p style="margin-top: 10px;">PRIVACY PROTOCOL. TERMS OF SERVICE. UNSUBSCRIBE</p>
+            <p style="margin-top: 15px;">&copy; 2026 MINDMATE ARCHITECTURE. BUILT FOR RESILIENCE. ALL RIGHTS RESERVED.</p>
+        </div>
+    </div>
 
 </body>
-</html></p>`
+</html>`
     };
 
     try {

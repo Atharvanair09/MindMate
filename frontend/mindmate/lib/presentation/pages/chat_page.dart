@@ -202,7 +202,7 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Future<void> _loadHistory(String conversationId) async {
+  void _loadLocalHistory(String conversationId) {
     setState(() {
       _isLoadingHistory = true;
       _conversationId = conversationId;
@@ -210,15 +210,15 @@ class _ChatPageState extends State<ChatPage> {
     });
 
     try {
-      final history = await _chatRepo.getHistory(conversationId: conversationId);
-      if (!mounted) return;
-
+      final provider = Provider.of<ArchiveProvider>(context, listen: false);
+      final chat = provider.chats.firstWhere((c) => c.id == conversationId);
+      
       setState(() {
         _activeMessages.clear();
-        for (final msg in history) {
+        for (final msg in chat.messages) {
           _activeMessages.add({
-            'text': msg['message'] as String,
-            'isUser': msg['role'] == 'user',
+            'text': msg.text,
+            'isUser': msg.role == 'user',
           });
         }
         _isLoadingHistory = false;
@@ -226,7 +226,6 @@ class _ChatPageState extends State<ChatPage> {
 
       _scrollToBottom();
     } catch (e) {
-      if (!mounted) return;
       setState(() {
         _isLoadingHistory = false;
       });
@@ -291,19 +290,10 @@ class _ChatPageState extends State<ChatPage> {
                 ),
                 const Divider(height: 1, color: Colors.black, thickness: 3),
                 Expanded(
-                  child: FutureBuilder<List<Map<String, dynamic>>>(
-                    future: _chatRepo.getConversations(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator(color: Colors.black));
-                      } else if (snapshot.hasError) {
-                        return Center(
-                          child: Text(
-                            'FAILED TO LOAD CONVERSATIONS',
-                            style: GoogleFonts.vt323(fontSize: 20, color: Colors.black),
-                          ),
-                        );
-                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  child: Consumer<ArchiveProvider>(
+                    builder: (context, provider, child) {
+                      final convs = provider.chats;
+                      if (convs.isEmpty) {
                         return Center(
                           child: Text(
                             'NO PAST CONVERSATIONS FOUND.',
@@ -312,14 +302,15 @@ class _ChatPageState extends State<ChatPage> {
                         );
                       }
 
-                      final convs = snapshot.data!;
+                      final sortedConvs = List.of(convs)..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
                       return ListView.builder(
                         controller: scrollController,
-                        itemCount: convs.length,
+                        itemCount: sortedConvs.length,
                         itemBuilder: (context, index) {
-                          final conv = convs[index];
-                          final preview = conv['preview'] as String? ?? 'Empty conversation';
-                          final id = conv['conversation_id'] as String;
+                          final conv = sortedConvs[index];
+                          final preview = conv.title.isNotEmpty ? conv.title : 'Empty conversation';
+                          final id = conv.id;
                           return ListTile(
                             leading: const Icon(Icons.chat_bubble_outline, color: Colors.black),
                             title: Text(
@@ -330,7 +321,7 @@ class _ChatPageState extends State<ChatPage> {
                             ),
                             onTap: () {
                               Navigator.pop(ctx);
-                              _loadHistory(id);
+                              _loadLocalHistory(id);
                             },
                           );
                         },
