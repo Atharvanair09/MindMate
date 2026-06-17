@@ -15,9 +15,14 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
+  static String? _activeConversationId;
+  static final List<Map<String, dynamic>> _activeMessages = [];
+
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final List<Map<String, dynamic>> _messages = [];
+  
+  List<Map<String, dynamic>> get _messages => _activeMessages;
+
   final ChatRepository _chatRepo = ChatRepository();
 
   /// Unique conversation ID — persisted for the lifetime of this chat session.
@@ -35,8 +40,18 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
-    _conversationId = _chatRepo.newConversationId();
-    _isLoadingHistory = false; // Fresh conversation — nothing to load
+    if (_activeConversationId == null) {
+      _activeConversationId = _chatRepo.newConversationId();
+      _activeMessages.clear();
+    }
+    _conversationId = _activeConversationId!;
+    _isLoadingHistory = false; 
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_hasMessages) {
+        _scrollToBottom();
+      }
+    });
   }
 
   /// Sends a user message to the backend and handles the AI response.
@@ -181,6 +196,7 @@ class _ChatPageState extends State<ChatPage> {
     setState(() {
       _isLoadingHistory = true;
       _conversationId = conversationId;
+      _activeConversationId = conversationId;
     });
 
     try {
@@ -188,9 +204,9 @@ class _ChatPageState extends State<ChatPage> {
       if (!mounted) return;
 
       setState(() {
-        _messages.clear();
+        _activeMessages.clear();
         for (final msg in history) {
-          _messages.add({
+          _activeMessages.add({
             'text': msg['message'] as String,
             'isUser': msg['role'] == 'user',
           });
@@ -245,8 +261,9 @@ class _ChatPageState extends State<ChatPage> {
                         onPressed: () {
                           Navigator.pop(ctx);
                           setState(() {
-                            _conversationId = _chatRepo.newConversationId();
-                            _messages.clear();
+                            _activeConversationId = _chatRepo.newConversationId();
+                            _conversationId = _activeConversationId!;
+                            _activeMessages.clear();
                             _isLoadingHistory = false;
                           });
                         },
@@ -378,9 +395,9 @@ class _ChatPageState extends State<ChatPage> {
               children: [
                 Text(
                   'HELLO,',
-                  style: GoogleFonts.poppins(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
+                  style: GoogleFonts.anton(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w100,
                     color: Colors.black,
                     letterSpacing: 1.5,
                   ),
@@ -388,19 +405,18 @@ class _ChatPageState extends State<ChatPage> {
                 Text(
                   name,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    fontSize: 44,
+                  style: GoogleFonts.anton(
+                    fontSize: 48,
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFF4A90E2),
                     letterSpacing: 1.5,
                   ),
                 ),
-                const SizedBox(height: 30),
                 Text(
                   'WHAT WOULD YOU LIKE TO TALK\nABOUT?',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.vt323(
-                    fontSize: 24,
+                    fontSize: 30,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
                     height: 1.2,
@@ -478,31 +494,79 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildMessageBubble(String text, bool isUser) {
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        decoration: BoxDecoration(
-          color: isUser ? const Color(0xFF4A90E2) : Colors.white,
-          border: Border.all(color: Colors.black, width: 3),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black,
-              offset: Offset(4, 4),
-              blurRadius: 0,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Column(
+          crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: isUser
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'YOU',
+                          style: GoogleFonts.vt323(
+                            color: Colors.grey[500],
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEB3B),
+                            border: Border.all(color: Colors.black, width: 2),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Text(
+                      'MINDMATE',
+                      style: GoogleFonts.vt323(
+                        color: const Color(0xFF4A90E2),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+            Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.8,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              decoration: BoxDecoration(
+                color: isUser ? Colors.black : Colors.white,
+                border: isUser
+                    ? Border.all(color: Colors.black, width: 3)
+                    : const Border(
+                        top: BorderSide(color: Colors.black, width: 3),
+                        right: BorderSide(color: Colors.black, width: 3),
+                        bottom: BorderSide(color: Colors.black, width: 3),
+                        left: BorderSide(color: Color(0xFF4A90E2), width: 6),
+                      ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isUser ? const Color(0xFFFFEB3B) : Colors.black,
+                    offset: const Offset(4, 4),
+                    blurRadius: 0,
+                  ),
+                ],
+              ),
+              child: Text(
+                text,
+                style: GoogleFonts.spaceGrotesk(
+                  color: isUser ? const Color(0xFF81D4FA) : Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  height: 1.5,
+                ),
+              ),
             ),
           ],
-        ),
-        child: Text(
-          text,
-          style: GoogleFonts.poppins(
-            color: isUser ? Colors.white : Colors.black,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            height: 1.5,
-          ),
         ),
       ),
     );
@@ -547,6 +611,7 @@ class _ChatPageState extends State<ChatPage> {
                       maxLines: 5,
                       keyboardType: TextInputType.multiline,
                       textInputAction: TextInputAction.send,
+                      textCapitalization: TextCapitalization.sentences,
                       onSubmitted: (_) => _sendMessage(),
                       enabled: !_isLoading,
                       style: GoogleFonts.vt323(

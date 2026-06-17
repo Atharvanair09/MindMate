@@ -272,7 +272,7 @@ class ProfilePage extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _buildSettingsTile(
-          title: 'DATA EXPORT (RAW)',
+          title: 'DATA Storage (RAW)',
           subtitle: 'Format: .JSON / .CSV',
           icon: Icons.storage_rounded,
         ),

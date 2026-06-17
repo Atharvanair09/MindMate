@@ -143,6 +143,35 @@ class _DailyDiaryPageState extends State<DailyDiaryPage> {
     );
   }
 
+  Widget _buildRetroButton({
+    Widget? child,
+    IconData? icon,
+    required VoidCallback onPressed,
+    Color color = Colors.white,
+    Color iconColor = Colors.black,
+  }) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: color,
+          border: Border.all(color: Colors.black, width: 2),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black,
+              offset: Offset(2, 2),
+            ),
+          ],
+        ),
+        child: Center(
+          child: child ?? Icon(icon, color: iconColor, size: 20),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final diaryProvider = Provider.of<DiaryProvider>(context);
@@ -150,52 +179,78 @@ class _DailyDiaryPageState extends State<DailyDiaryPage> {
     final totalWordCount = _getTotalWordCount(_pages);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF9FF),
+      backgroundColor: const Color(0xFFF6F1E3),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xFFF6F1E3),
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF4B39EF)),
-          onPressed: () => Navigator.pop(context),
+        toolbarHeight: 60,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(2.0),
+          child: Container(color: Colors.black, height: 2.0),
+        ),
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16.0),
+          child: Center(
+            child: _buildRetroButton(
+              icon: Icons.arrow_back,
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
         ),
         title: Text(
-          "Edit Page ${_currentPageIndex + 1}",
-          style: GoogleFonts.poppins(
-            color: const Color(0xFF4B39EF),
+          "EDIT PAGE ${_currentPageIndex + 1}",
+          style: GoogleFonts.vt323(
+            color: Colors.black,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.text_format, color: Color(0xFF4B39EF)),
-            onPressed: () => _showFontSettings(context),
-            tooltip: "Text Format",
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Center(
+              child: _buildRetroButton(
+                child: const Text('Tt', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
+                onPressed: () => _showFontSettings(context),
+              ),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.image_outlined, color: Color(0xFF4B39EF)),
-            onPressed: _pickImageForCurrentPage,
-            tooltip: "Add Image",
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Center(
+              child: _buildRetroButton(
+                icon: Icons.image_outlined,
+                onPressed: _pickImageForCurrentPage,
+              ),
+            ),
           ),
           if (_isLayoutMode)
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _isLayoutMode = false;
-                  _selectedImageId = null;
-                });
-              },
-              child: Text(
-                "Done",
-                style: GoogleFonts.poppins(
-                  color: const Color(0xFF4B39EF),
-                  fontWeight: FontWeight.bold,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: Center(
+                child: _buildRetroButton(
+                  icon: Icons.check,
+                  onPressed: () {
+                    setState(() {
+                      _isLayoutMode = false;
+                      _selectedImageId = null;
+                    });
+                  },
+                  color: const Color(0xFF7D7017),
+                  iconColor: Colors.white,
                 ),
               ),
             ),
-          IconButton(
-            icon: const Icon(Icons.add_box_outlined, color: Color(0xFF4B39EF)),
-            onPressed: _addNewPage,
-            tooltip: "Add Page",
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0, left: 4.0),
+            child: Center(
+              child: _buildRetroButton(
+                icon: Icons.add,
+                onPressed: _addNewPage,
+                color: const Color(0xFF7D7017),
+                iconColor: Colors.white,
+              ),
+            ),
           ),
         ],
         centerTitle: false,
@@ -218,19 +273,17 @@ class _DailyDiaryPageState extends State<DailyDiaryPage> {
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
-                  margin: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
+                  margin: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    color: const Color(0xFFF6F1E3),
                     border: Border.all(
-                      color: Colors.grey.shade300,
+                      color: Colors.black,
                       width: 2,
                     ),
-                    boxShadow: [
+                    boxShadow: const [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+                        color: Colors.black,
+                        offset: Offset(4, 4),
                       ),
                     ],
                   ),
@@ -267,24 +320,20 @@ class _DailyDiaryPageState extends State<DailyDiaryPage> {
 
           // Bottom Bar for Page Navigation
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -4),
-                )
-              ],
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 20),
+            decoration: const BoxDecoration(
+              color: Color(0xFFB92A28),
+              border: Border(
+                top: BorderSide(color: Colors.black, width: 2),
+              ),
             ),
             child: SafeArea(
+              top: false,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.chevron_left),
-                    color: _currentPageIndex > 0 ? const Color(0xFF4B39EF) : Colors.grey,
+                    icon: const Icon(Icons.chevron_left, color: Colors.white),
                     onPressed: _currentPageIndex > 0 ? () {
                       _pageController.previousPage(
                         duration: const Duration(milliseconds: 300),
@@ -293,16 +342,15 @@ class _DailyDiaryPageState extends State<DailyDiaryPage> {
                     } : null,
                   ),
                   Text(
-                    "Page ${_currentPageIndex + 1} of ${_pages.length}  •  $totalWordCount words",
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF4B39EF),
-                      fontSize: 12,
+                    "PAGE ${_currentPageIndex + 1} OF ${_pages.length} - $totalWordCount WORDS",
+                    style: GoogleFonts.vt323(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 22,
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.chevron_right),
-                    color: _currentPageIndex < _pages.length - 1 ? const Color(0xFF4B39EF) : Colors.grey,
+                    icon: const Icon(Icons.chevron_right, color: Colors.white),
                     onPressed: _currentPageIndex < _pages.length - 1 ? () {
                       _pageController.nextPage(
                         duration: const Duration(milliseconds: 300),
