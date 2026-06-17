@@ -2,24 +2,39 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:uuid/uuid.dart';
 import '../../presentation/widgets/diary_grid/models/diary_page_data.dart';
 import '../../presentation/widgets/diary_grid/models/diary_image_block.dart';
+import '../../data/repositories/archive_repository.dart';
+import '../../domain/models/archive_models.dart';
 
-class DiaryProvider extends ChangeNotifier {
+class DiaryProvider extends ChangeNotifier with WidgetsBindingObserver {
   List<DiaryPageData> _pages = [DiaryPageData()];
-  final _storage = const FlutterSecureStorage();
-  static const _keyAlias = 'diary_encryption_key';
+  final ArchiveRepository _repository;
 
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 
   List<DiaryPageData> get pages => _pages;
 
-  DiaryProvider() {
+  JournalEntry? _currentJournal;
+
+  DiaryProvider({required ArchiveRepository repository}) : _repository = repository {
+    WidgetsBinding.instance.addObserver(this);
     _init();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.detached) {
+      saveDiary();
+    }
   }
 
   Future<void> _init() async {
@@ -28,37 +43,44 @@ class DiaryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<encrypt.Key> _getEncryptionKey() async {
-    String? keyBase64 = await _storage.read(key: _keyAlias);
-    if (keyBase64 == null) {
-      final key = encrypt.Key.fromSecureRandom(32);
-      await _storage.write(key: _keyAlias, value: key.base64);
-      return key;
-    } else {
-      return encrypt.Key.fromBase64(keyBase64);
-    }
+  String _generatePlainTextContent() {
+    return _pages.map((p) => p.text).where((t) => t.trim().isNotEmpty).join('\n\n');
   }
 
   Future<void> saveDiary() async {
+    if (!_isInitialized) return;
+    
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/diary_state.json');
+      final now = DateTime.now();
+      
+      if (_currentJournal != null) {
+        if (_currentJournal!.journalDate.year != now.year ||
+            _currentJournal!.journalDate.month != now.month ||
+            _currentJournal!.journalDate.day != now.day) {
+          _currentJournal = null;
+        }
+      }
 
       final jsonList = _pages.map((p) => p.toJson()).toList();
-      final jsonString = jsonEncode(jsonList);
+      final pagesJson = jsonEncode(jsonList);
+      final plainText = _generatePlainTextContent();
 
-      final key = await _getEncryptionKey();
-      final iv = encrypt.IV.fromSecureRandom(16);
-      final encrypter = encrypt.Encrypter(encrypt.AES(key));
+      if (_currentJournal == null) {
+        _currentJournal = JournalEntry(
+          id: const Uuid().v4(),
+          content: plainText,
+          createdAt: now,
+          updatedAt: now,
+          journalDate: now,
+          pagesJson: pagesJson,
+        );
+      } else {
+        _currentJournal!.content = plainText;
+        _currentJournal!.updatedAt = now;
+        _currentJournal!.pagesJson = pagesJson;
+      }
 
-      final encrypted = encrypter.encrypt(jsonString, iv: iv);
-
-      final payload = jsonEncode({
-        'iv': iv.base64,
-        'data': encrypted.base64,
-      });
-
-      await file.writeAsString(payload);
+      await _repository.saveJournal(_currentJournal!);
     } catch (e) {
       debugPrint("Error saving diary: $e");
     }
@@ -66,28 +88,26 @@ class DiaryProvider extends ChangeNotifier {
 
   Future<void> loadDiary() async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/diary_state.json');
-
-      if (await file.exists()) {
-        final payload = await file.readAsString();
-        final map = jsonDecode(payload);
-
-        final iv = encrypt.IV.fromBase64(map['iv']);
-        final encrypted = encrypt.Encrypted.fromBase64(map['data']);
-
-        final key = await _getEncryptionKey();
-        final encrypter = encrypt.Encrypter(encrypt.AES(key));
-
-        final decryptedString = encrypter.decrypt(encrypted, iv: iv);
-        final List<dynamic> jsonList = jsonDecode(decryptedString);
-
-        _pages = jsonList.map((json) => DiaryPageData.fromJson(json)).toList();
+      final now = DateTime.now();
+      final journal = await _repository.getJournalForDate(now);
+      
+      if (journal != null) {
+        _currentJournal = journal;
+        if (journal.pagesJson != null) {
+          final List<dynamic> jsonList = jsonDecode(journal.pagesJson!);
+          _pages = jsonList.map((json) => DiaryPageData.fromJson(json)).toList();
+        } else {
+          final page = DiaryPageData();
+          page.text = journal.content;
+          _pages = [page];
+        }
       } else {
+        _currentJournal = null;
         _pages = [DiaryPageData()];
       }
     } catch (e) {
       debugPrint("Error loading diary: $e");
+      _currentJournal = null;
       _pages = [DiaryPageData()];
     }
   }
@@ -140,6 +160,7 @@ class DiaryProvider extends ChangeNotifier {
 
   void reset() {
     _pages = [DiaryPageData()];
+    _currentJournal = null;
     notifyListeners();
     saveDiary();
   }

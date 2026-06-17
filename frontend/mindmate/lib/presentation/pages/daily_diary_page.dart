@@ -33,6 +33,10 @@ class _DailyDiaryPageState extends State<DailyDiaryPage> {
 
   @override
   void dispose() {
+    // Explicitly trigger a save when leaving the page
+    final diaryProvider = Provider.of<DiaryProvider>(context, listen: false);
+    diaryProvider.saveDiary();
+    
     _pageController.dispose();
     super.dispose();
   }
@@ -275,7 +279,7 @@ class _DailyDiaryPageState extends State<DailyDiaryPage> {
                   curve: Curves.easeInOut,
                   margin: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF6F1E3),
+                    color: Colors.white,
                     border: Border.all(
                       color: Colors.black,
                       width: 2,

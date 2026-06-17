@@ -62,8 +62,8 @@ class _HomePageState extends State<HomePage> {
             return Row(
               children: [
                 Container(
-                  width: 36,
-                  height: 36,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: Colors.black,
                     border: Border.all(color: Colors.black, width: 2),
@@ -76,10 +76,10 @@ class _HomePageState extends State<HomePage> {
                 Text(
                   userName.toUpperCase(),
                   style: GoogleFonts.vt323(
-                    fontSize: 24,
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
-                    letterSpacing: 1.5,
+                    letterSpacing: 1.8,
                   ),
                 ),
               ],

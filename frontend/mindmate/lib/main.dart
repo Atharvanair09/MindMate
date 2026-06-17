@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'presentation/pages/home_page.dart';
 import 'presentation/pages/login_page.dart';
@@ -9,13 +10,19 @@ import 'presentation/pages/chat_page.dart';
 import 'presentation/pages/profile_page.dart';
 import 'presentation/pages/animated_splash_page.dart';
 import 'data/repositories/auth_repository.dart';
+import 'data/repositories/archive_repository.dart';
 import 'presentation/viewmodels/auth_viewmodel.dart';
 import 'core/state/user_provider.dart';
 import 'core/state/diary_provider.dart';
+import 'core/state/archive_provider.dart';
+import 'presentation/pages/memory_vault_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // This removes the debug guidelines border if it was accidentally enabled
+  debugPaintSizeEnabled = false;
+
   final authRepository = AuthRepository();
   final bool hasSession = await authRepository.hasValidSession();
 
@@ -27,6 +34,8 @@ void main() async {
     await preloadedProvider.loadProfile(authRepository);
   }
 
+  final archiveRepository = ArchiveRepository();
+
   runApp(
     MultiProvider(
       providers: [
@@ -34,7 +43,8 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => preloadedProvider ?? UserProvider(),
         ),
-        ChangeNotifierProvider(create: (_) => DiaryProvider()),
+        ChangeNotifierProvider(create: (_) => DiaryProvider(repository: archiveRepository)),
+        ChangeNotifierProvider(create: (_) => ArchiveProvider(repository: archiveRepository)..loadData()),
       ],
       child: MindMateApp(hasSession: hasSession),
     ),
@@ -67,6 +77,7 @@ class MindMateApp extends StatelessWidget {
         '/insights': (context) => const InsightsPage(),
         '/chat': (context) => const ChatPage(),
         '/profile-page': (context) => const ProfilePage(),
+        '/memory-vault': (context) => const MemoryVaultPage(),
       },
     );
   }

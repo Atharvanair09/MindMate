@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/state/user_provider.dart';
+import '../../core/state/archive_provider.dart';
 import '../../data/repositories/chat_repository.dart';
 import '../widgets/bottom_nav.dart';
 import 'voice_call_screen.dart';
@@ -59,6 +60,8 @@ class _ChatPageState extends State<ChatPage> {
     if (_controller.text.trim().isEmpty || _isLoading) return;
 
     final userText = _controller.text.trim();
+    final archiveProvider = Provider.of<ArchiveProvider>(context, listen: false);
+
     setState(() {
       _messages.add({'text': userText, 'isUser': true});
       _controller.clear();
@@ -66,6 +69,9 @@ class _ChatPageState extends State<ChatPage> {
     });
 
     _scrollToBottom();
+    
+    // Save to local Memory Vault
+    archiveProvider.saveMessageToChat(_conversationId, userText, true);
 
     try {
       final result = await _chatRepo.sendMessage(
@@ -75,16 +81,20 @@ class _ChatPageState extends State<ChatPage> {
 
       if (!mounted) return;
 
+      final aiText = result['response'] as String? ?? "I'm here for you. Could you tell me more?";
+
       setState(() {
         _messages.add({
-          'text': result['response'] as String? ??
-              "I'm here for you. Could you tell me more?",
+          'text': aiText,
           'isUser': false,
         });
         _isLoading = false;
       });
 
       _scrollToBottom();
+      
+      // Save AI response to local Memory Vault
+      archiveProvider.saveMessageToChat(_conversationId, aiText, false);
 
       // Check if the backend flagged escalation
       final showEscalation = result['show_escalation'] as bool? ?? false;

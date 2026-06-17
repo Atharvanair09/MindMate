@@ -275,6 +275,9 @@ class ProfilePage extends StatelessWidget {
           title: 'DATA Storage (RAW)',
           subtitle: 'Format: .JSON / .CSV',
           icon: Icons.storage_rounded,
+          onTap: () {
+            Navigator.pushNamed(context, '/memory-vault');
+          },
         ),
         const SizedBox(height: 8),
         _buildSettingsTile(
@@ -292,13 +295,16 @@ class ProfilePage extends StatelessWidget {
     required String subtitle,
     required IconData icon,
     bool isDestructive = false,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.black, width: 2),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: Colors.black, width: 2),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -330,7 +336,7 @@ class ProfilePage extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildStatsRow() {
