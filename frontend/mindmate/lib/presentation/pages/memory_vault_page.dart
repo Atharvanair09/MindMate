@@ -51,7 +51,7 @@ class _MemoryVaultPageState extends State<MemoryVaultPage> with SingleTickerProv
           ),
         ),
         title: Text(
-          'MINDMATE | ARCHIVE',
+          'ARCHIVE',
           style: GoogleFonts.spaceMono(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -71,6 +71,7 @@ class _MemoryVaultPageState extends State<MemoryVaultPage> with SingleTickerProv
                 ? const Center(child: CircularProgressIndicator(color: Colors.black))
                 : TabBarView(
                     controller: _tabController,
+                    physics: const NeverScrollableScrollPhysics(),
                     children: [
                       _buildChatsList(archiveProvider),
                       _buildJournalsList(archiveProvider),
@@ -208,102 +209,174 @@ class _MemoryVaultPageState extends State<MemoryVaultPage> with SingleTickerProv
         final chat = provider.chats[index];
         final isNew = index == 0 && DateTime.now().difference(chat.updatedAt).inHours < 24;
         
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => LocalChatViewPage(chatId: chat.id),
-              ),
-            );
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.black, width: 2),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black,
-                  offset: Offset(4, 4),
-                  blurRadius: 0,
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              chat.title.toUpperCase(),
-                              style: GoogleFonts.spaceMono(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ),
-                          const Icon(Icons.arrow_forward, color: Colors.black),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'TIMESTAMP: ${DateFormat('dd.MM.yy HH:mm').format(chat.updatedAt)}',
+        return Dismissible(
+          key: Key(chat.id),
+          direction: DismissDirection.startToEnd,
+          background: Container(
+            color: Colors.red,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.only(left: 24.0),
+            child: const Icon(Icons.delete, color: Colors.white, size: 32),
+          ),
+          confirmDismiss: (direction) async {
+            return await showDialog<bool>(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  backgroundColor: const Color(0xFFF2F0E9),
+                  shape: const RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black, width: 2),
+                    borderRadius: BorderRadius.zero,
+                  ),
+                  title: Text(
+                    'DELETE CHAT?',
+                    style: GoogleFonts.spaceMono(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  content: Text(
+                    'This action cannot be undone.',
+                    style: GoogleFonts.spaceMono(
+                      color: Colors.black87,
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: Text(
+                        'CANCEL',
                         style: GoogleFonts.spaceMono(
-                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                           color: Colors.black54,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      const Divider(color: Colors.black, thickness: 1, height: 1),
-                      const SizedBox(height: 12),
-                      Text(
-                        chat.messages.isNotEmpty 
-                          ? '"${chat.messages.last.text.replaceAll('\n', ' ')}"' 
-                          : '"No messages yet."',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.spaceMono(
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (isNew)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFDEB00),
-                        border: Border(
-                          left: BorderSide(color: Colors.black, width: 2),
-                          bottom: BorderSide(color: Colors.black, width: 2),
-                        ),
-                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
                       child: Text(
-                        'NEW',
+                        'DELETE',
                         style: GoogleFonts.spaceMono(
-                          fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: Colors.red,
                         ),
                       ),
                     ),
+                  ],
+                );
+              },
+            );
+          },
+          onDismissed: (direction) {
+            provider.deleteChat(chat.id);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'CHAT DELETED',
+                  style: GoogleFonts.spaceMono(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                backgroundColor: Colors.black,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          },
+          child: GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => LocalChatViewPage(chatId: chat.id),
+                ),
+              );
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.black, width: 2),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black,
+                    offset: Offset(4, 4),
+                    blurRadius: 0,
                   ),
-              ],
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                chat.title.toUpperCase(),
+                                style: GoogleFonts.spaceMono(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward, color: Colors.black),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'TIMESTAMP: ${DateFormat('dd.MM.yy HH:mm').format(chat.updatedAt)}',
+                          style: GoogleFonts.spaceMono(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Divider(color: Colors.black, thickness: 1, height: 1),
+                        const SizedBox(height: 12),
+                        Text(
+                          chat.messages.isNotEmpty 
+                            ? '"${chat.messages.last.text.replaceAll('\n', ' ')}"' 
+                            : '"No messages yet."',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.spaceMono(
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isNew)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFDEB00),
+                          border: Border(
+                            left: BorderSide(color: Colors.black, width: 2),
+                            bottom: BorderSide(color: Colors.black, width: 2),
+                          ),
+                        ),
+                        child: Text(
+                          'NEW',
+                          style: GoogleFonts.spaceMono(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         );
@@ -356,67 +429,139 @@ class _MemoryVaultPageState extends State<MemoryVaultPage> with SingleTickerProv
       separatorBuilder: (context, index) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         final journal = provider.journals[index];
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.black, width: 2),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black,
-                offset: Offset(4, 4),
-                blurRadius: 0,
-              ),
-            ],
+        return Dismissible(
+          key: Key(journal.id),
+          direction: DismissDirection.startToEnd,
+          background: Container(
+            color: Colors.red,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.only(left: 24.0),
+            child: const Icon(Icons.delete, color: Colors.white, size: 32),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'LOG: ${DateFormat('EEEE').format(journal.createdAt).toUpperCase()}',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+          confirmDismiss: (direction) async {
+            return await showDialog<bool>(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  backgroundColor: const Color(0xFFF2F0E9),
+                  shape: const RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black, width: 2),
+                    borderRadius: BorderRadius.zero,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'DATE: ${DateFormat('dd.MM.yy').format(journal.createdAt)}',
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black54,
+                  title: Text(
+                    'DELETE JOURNAL?',
+                    style: GoogleFonts.spaceMono(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  journal.preview,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.spaceMono(
-                    fontSize: 12,
-                    color: Colors.black87,
+                  content: Text(
+                    'This action cannot be undone.',
+                    style: GoogleFonts.spaceMono(
+                      color: Colors.black87,
+                    ),
                   ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: Text(
+                        'CANCEL',
+                        style: GoogleFonts.spaceMono(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: Text(
+                        'DELETE',
+                        style: GoogleFonts.spaceMono(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+          onDismissed: (direction) {
+            provider.deleteJournal(journal.id);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'JOURNAL DELETED',
+                  style: GoogleFonts.spaceMono(fontWeight: FontWeight.bold, color: Colors.white),
                 ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Container(
-                    color: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: Text(
-                      'VIEW FULL LOG',
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                backgroundColor: Colors.black,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.black, width: 2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black,
+                  offset: Offset(4, 4),
+                  blurRadius: 0,
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'LOG: ${DateFormat('EEEE').format(journal.createdAt).toUpperCase()}',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'DATE: ${DateFormat('dd.MM.yy').format(journal.createdAt)}',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    journal.preview,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 12,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      color: Colors.black,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      child: Text(
+                        'VIEW FULL LOG',
+                        style: GoogleFonts.spaceMono(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
