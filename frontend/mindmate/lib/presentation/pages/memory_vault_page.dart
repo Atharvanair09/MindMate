@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/state/archive_provider.dart';
 import '../../domain/models/archive_models.dart';
 import 'local_chat_view_page.dart';
-
+import 'local_journal_view_page.dart';
 class MemoryVaultPage extends StatefulWidget {
   const MemoryVaultPage({super.key});
 
@@ -547,15 +547,25 @@ class _MemoryVaultPageState extends State<MemoryVaultPage> with SingleTickerProv
                   const SizedBox(height: 12),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: Container(
-                      color: Colors.black,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      child: Text(
-                        'VIEW FULL LOG',
-                        style: GoogleFonts.spaceMono(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => LocalJournalViewPage(journalId: journal.id),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        color: Colors.black,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        child: Text(
+                          'VIEW FULL LOG',
+                          style: GoogleFonts.spaceMono(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),

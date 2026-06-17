@@ -13,6 +13,7 @@ class ScrapbookDiaryEditor extends StatefulWidget {
   final ValueChanged<String?> onImageSelected;
   final int gridColumns;
   final int gridRows;
+  final bool readOnly;
 
   const ScrapbookDiaryEditor({
     super.key,
@@ -24,6 +25,7 @@ class ScrapbookDiaryEditor extends StatefulWidget {
     required this.onImageSelected,
     this.gridColumns = 12,
     this.gridRows = 16,
+    this.readOnly = false,
   });
 
   @override
@@ -179,6 +181,7 @@ class _ScrapbookDiaryEditorState extends State<ScrapbookDiaryEditor> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
+        if (widget.readOnly) return;
         if (widget.isLayoutMode) {
           widget.onLayoutModeChanged(false);
           widget.onImageSelected(null);
@@ -342,7 +345,7 @@ class _ScrapbookDiaryEditorState extends State<ScrapbookDiaryEditor> {
                       ),
                       decoration: InputDecoration(
                         border: InputBorder.none,
-                        hintText: "Dear diary...",
+                        hintText: widget.readOnly ? "" : "Dear diary...",
                         hintStyle: GoogleFonts.getFont(
                           widget.pageData.fontFamily,
                           color: Colors.grey.shade400,
@@ -350,6 +353,7 @@ class _ScrapbookDiaryEditorState extends State<ScrapbookDiaryEditor> {
                         ),
                         contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
                       ),
+                      readOnly: widget.readOnly,
                       onChanged: (text) {
                         _notifyChanged();
                       },
@@ -396,6 +400,7 @@ class _ScrapbookDiaryEditorState extends State<ScrapbookDiaryEditor> {
 
     return GestureDetector(
       onTap: () {
+        if (widget.readOnly) return;
         widget.onImageSelected(image.id);
         if (!widget.isLayoutMode) {
           widget.onLayoutModeChanged(true);
