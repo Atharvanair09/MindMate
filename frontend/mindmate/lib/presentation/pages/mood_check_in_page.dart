@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../core/constants/colors.dart';
-import '../widgets/mood_check_in_widgets.dart';
 import '../widgets/bottom_nav.dart';
 import 'daily_diary_page.dart';
 
@@ -13,168 +11,241 @@ class MoodCheckInPage extends StatefulWidget {
 }
 
 class _MoodCheckInPageState extends State<MoodCheckInPage> {
-  String? _selectedMood;
+  String? _selectedMood = 'GOOD'; // Pre-selected in the image
 
   final List<Map<String, dynamic>> _moods = [
     {
-      'emoji': '🤩',
-      'title': 'Great',
-      'description': 'Everything feels amazing',
-      'bg': AppColors.greatBg,
-      'text': AppColors.greatText,
+      'emoji': '⚡️',
+      'title': 'GREAT',
+      'description': 'UNSTOPPABLE ENERGY',
     },
     {
-      'emoji': '😊',
-      'title': 'Good',
-      'description': 'Everything feels manageable',
-      'bg': AppColors.goodBg,
-      'text': AppColors.goodText,
+      'emoji': '✨',
+      'title': 'GOOD',
+      'description': 'POSITIVE VIBES',
     },
     {
       'emoji': '😐',
-      'title': 'Okay',
-      'description': 'Getting by, one step at a time',
-      'bg': AppColors.okayBg,
-      'text': AppColors.okayText,
+      'title': 'OKAY',
+      'description': 'MAINTAINING LEVEL',
     },
     {
-      'emoji': '😔',
-      'title': 'Low',
-      'description': 'Feeling a bit down',
-      'bg': AppColors.lowBg,
-      'text': AppColors.lowText,
+      'emoji': '☁️',
+      'title': 'LOW',
+      'description': 'FEELING DRAINED',
     },
     {
-      'emoji': '😫',
-      'title': 'Struggling',
-      'description': "It's a tough day",
-      'bg': AppColors.strugglingBg,
-      'text': AppColors.strugglingText,
+      'emoji': '🚨',
+      'title': 'STRUGGLING',
+      'description': 'NEED SUPPORT',
     },
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFAF6EE), // Light beige background
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFFAF6EE),
         elevation: 0,
+        centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF4B39EF)),
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          "Mood Check-in",
-          style: GoogleFonts.poppins(
-            color: const Color(0xFF4B39EF),
-            fontWeight: FontWeight.bold,
+          "JOURNAL",
+          style: GoogleFonts.anton(
+            color: Colors.black,
+            fontSize: 26,
+            letterSpacing: 1.0,
           ),
         ),
-        centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundImage: const NetworkImage('https://api.dicebear.com/7.x/avataaars/png?seed=Mimi'),
-            ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(2.0),
+          child: Container(
+            color: Colors.black,
+            height: 2.0,
           ),
-        ],
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const StreakCard(),
-            const SizedBox(height: 32),
-            Center(
-              child: Column(
+            // Streak Banner
+            Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFD600), // Yellow
+                border: Border(
+                  bottom: BorderSide(color: Colors.black, width: 2),
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "How are you feeling\ntoday?",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1E1E1E),
-                      height: 1.2,
+                    "🔥 5 DAY STREAK",
+                    style: GoogleFonts.anton(
+                      color: Colors.black,
+                      fontSize: 14,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  Text(
+                    "KEEP GOING",
+                    style: GoogleFonts.anton(
+                      color: Colors.black,
+                      fontSize: 14,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            Padding(
+              padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 24.0, bottom: 8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "HOW ARE YOU\nDOING?",
+                    style: GoogleFonts.anton(
+                      fontSize: 48,
+                      color: Colors.black,
+                      height: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  
+                  ..._moods.map((mood) => _buildMoodCard(
+                        emoji: mood['emoji'],
+                        title: mood['title'],
+                        description: mood['description'],
+                        isSelected: _selectedMood == mood['title'],
+                        onTap: () => setState(() => _selectedMood = mood['title']),
+                      )),
+                ],
+              ),
+            ),            
+            Padding(
+              padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "WHAT'S GOING ON?",
+                    style: GoogleFonts.anton(
+                      fontSize: 30,
+                      color: Colors.black,
+                      letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    "Take a moment to check in with yourself.",
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: AppColors.lightText,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            ..._moods.map((mood) => SelectableMoodCard(
-                  emoji: mood['emoji'],
-                  title: mood['title'],
-                  description: mood['description'],
-                  bgColor: mood['bg'],
-                  textColor: mood['text'],
-                  isSelected: _selectedMood == mood['title'],
-                  onTap: () => setState(() => _selectedMood = mood['title']),
-                )),
-            Container(
-              width: double.infinity,
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: AppColors.logMoodGradient,
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primaryPurple.withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const DailyDiaryPage(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Log Mood",
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                  // Log It Button
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const DailyDiaryPage(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        border: Border.all(color: Colors.black, width: 2),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0xFFFFD600), // Yellow shadow
+                            offset: Offset(4, 4),
+                            blurRadius: 0,
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "LOG IT →",
+                            style: GoogleFonts.anton(
+                              color: Colors.white,
+                              fontSize: 24,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                          const Icon(Icons.check_circle_outline, color: Colors.white),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
               ),
             ),
-            const SizedBox(height: 32),
           ],
         ),
       ),
       bottomNavigationBar: const MindMateBottomNav(currentIndex: 2),
+    );
+  }
+
+  Widget _buildMoodCard({
+    required String emoji,
+    required String title,
+    required String description,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFFD600) : Colors.white,
+          border: Border.all(color: Colors.black, width: 2),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black,
+              offset: Offset(4, 4),
+              blurRadius: 0,
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 24)),
+                const SizedBox(width: 16),
+                Text(
+                  title,
+                  style: GoogleFonts.anton(
+                    fontSize: 24,
+                    color: Colors.black,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              description,
+              style: GoogleFonts.spaceMono(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.black87 : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

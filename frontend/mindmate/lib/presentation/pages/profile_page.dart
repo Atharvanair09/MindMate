@@ -16,8 +16,7 @@ class ProfilePage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFFF2F0E9),
         elevation: 0,
-        centerTitle: false,
-        titleSpacing: 0,
+        centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(3.0),
@@ -26,17 +25,13 @@ class ProfilePage extends StatelessWidget {
             height: 3.0,
           ),
         ),
-        title: Row(
-          children: [
-            Text(
-              'MINDMATE',
-              style: GoogleFonts.spaceMono(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-          ],
+        title: Text(
+          'PROFILE',
+          style: GoogleFonts.anton(
+            fontSize: 26,
+            color: Colors.black,
+            letterSpacing: 1.0,
+          ),
         ),
         actions: [
           IconButton(
@@ -54,10 +49,10 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 24),
             Text(
               'SYSTEM SETTINGS',
-              style: GoogleFonts.spaceMono(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+              style: GoogleFonts.anton(
+                fontSize: 20,
                 color: Colors.black,
+                letterSpacing: 0.5,
               ),
             ),
             const SizedBox(height: 8),
@@ -80,9 +75,8 @@ class ProfilePage extends StatelessWidget {
             alignment: Alignment.center,
             child: Text(
               'EMERGENCY HOTLINE: 988 // ALWAYS AVAILABLE',
-              style: GoogleFonts.spaceMono(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
+              style: GoogleFonts.anton(
+                fontSize: 12,
                 color: Colors.white,
                 letterSpacing: 1.0,
               ),
@@ -131,7 +125,7 @@ class ProfilePage extends StatelessWidget {
             border: Border.all(color: Colors.black, width: 2),
             boxShadow: const [
               BoxShadow(
-                color: Colors.black,
+                color: Colors.yellow,
                 offset: Offset(4, 4),
                 blurRadius: 0,
               ),
@@ -146,10 +140,10 @@ class ProfilePage extends StatelessWidget {
                 children: [
                   Text(
                     'CORE IDENTITY // UNIT 042',
-                    style: GoogleFonts.spaceMono(
+                    style: GoogleFonts.anton(
                       color: const Color(0xFFFDEB00),
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      letterSpacing: 0.5,
                     ),
                   ),
                   const Icon(Icons.qr_code_2, color: Colors.white, size: 20),
@@ -174,9 +168,8 @@ class ProfilePage extends StatelessWidget {
                 children: [
                   Text(
                     user.userName.isNotEmpty ? user.userName.toUpperCase() : 'UNKNOWN',
-                    style: GoogleFonts.spaceMono(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
+                    style: GoogleFonts.anton(
+                      fontSize: 32,
                       color: const Color(0xFF00E5FF),
                     ),
                   ),
@@ -185,9 +178,8 @@ class ProfilePage extends StatelessWidget {
                     top: 2,
                     child: Text(
                       user.userName.isNotEmpty ? user.userName.toUpperCase() : 'UNKNOWN',
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
+                      style: GoogleFonts.anton(
+                        fontSize: 32,
                         color: const Color(0xFFFF003C),
                       ),
                     ),
@@ -197,9 +189,8 @@ class ProfilePage extends StatelessWidget {
                     top: 1,
                     child: Text(
                       user.userName.isNotEmpty ? user.userName.toUpperCase() : 'UNKNOWN',
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
+                      style: GoogleFonts.anton(
+                        fontSize: 32,
                         color: Colors.white,
                       ),
                     ),
@@ -210,7 +201,7 @@ class ProfilePage extends StatelessWidget {
               // Enrolled
               Text(
                 'ENROLLED: SEPT 2024',
-                style: GoogleFonts.spaceMono(
+                style: GoogleFonts.spaceGrotesk(
                   color: const Color(0xFFFDEB00),
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -226,14 +217,15 @@ class ProfilePage extends StatelessWidget {
                     children: [
                       Text(
                         'SECURITY CLEARANCE',
-                        style: GoogleFonts.spaceMono(
+                        style: GoogleFonts.spaceGrotesk(
                           color: Colors.white54,
-                          fontSize: 8,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
                         'LEVEL 03 - VETERAN',
-                        style: GoogleFonts.spaceMono(
+                        style: GoogleFonts.spaceGrotesk(
                           color: Colors.white,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -246,7 +238,7 @@ class ProfilePage extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     child: Text(
                       'VERIFIED',
-                      style: GoogleFonts.spaceMono(
+                      style: GoogleFonts.spaceGrotesk(
                         color: Colors.black,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -313,8 +305,8 @@ class ProfilePage extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: GoogleFonts.spaceMono(
-                  fontSize: 12,
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: isDestructive ? const Color(0xFFB81D13) : Colors.black,
                 ),
@@ -322,8 +314,8 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: GoogleFonts.spaceMono(
-                  fontSize: 10,
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 12,
                   color: Colors.black54,
                 ),
               ),
@@ -363,17 +355,17 @@ class ProfilePage extends StatelessWidget {
                   children: [
                     Text(
                       'FOCUS TIME',
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 8,
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
                         color: Colors.black54,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '142h',
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                      style: GoogleFonts.anton(
+                        fontSize: 28,
                         color: Colors.black,
                       ),
                     ),
@@ -401,17 +393,17 @@ class ProfilePage extends StatelessWidget {
                   children: [
                     Text(
                       'MOOD SCORE',
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 8,
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
                         color: Colors.black54,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       (user.wellnessScore / 10).toStringAsFixed(1),
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                      style: GoogleFonts.anton(
+                        fontSize: 28,
                         color: Colors.black,
                       ),
                     ),
@@ -448,10 +440,10 @@ class ProfilePage extends StatelessWidget {
             children: [
               Text(
                 'LOGOUT',
-                style: GoogleFonts.spaceMono(
+                style: GoogleFonts.anton(
                   color: Colors.white,
                   fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0,
                 ),
               ),
               const Icon(Icons.exit_to_app, color: Colors.white),
@@ -472,16 +464,16 @@ class ProfilePage extends StatelessWidget {
         backgroundColor: const Color(0xFFF2F0E9),
         title: Text(
           'LOG OUT?',
-          style: GoogleFonts.spaceMono(
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
+          style: GoogleFonts.anton(
+            fontSize: 22,
             color: Colors.black,
           ),
         ),
         content: Text(
           'You\'ll need your recovery phrase to log back in. Make sure you have it saved.',
-          style: GoogleFonts.spaceMono(
-            fontSize: 13,
+          style: GoogleFonts.spaceGrotesk(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
             color: Colors.black87,
             height: 1.5,
           ),
@@ -491,7 +483,7 @@ class ProfilePage extends StatelessWidget {
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
               'CANCEL',
-              style: GoogleFonts.spaceMono(
+              style: GoogleFonts.spaceGrotesk(
                 color: Colors.black,
                 fontWeight: FontWeight.bold,
               ),
@@ -501,7 +493,7 @@ class ProfilePage extends StatelessWidget {
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
               'LOG OUT',
-              style: GoogleFonts.spaceMono(
+              style: GoogleFonts.spaceGrotesk(
                 color: const Color(0xFFB81D13),
                 fontWeight: FontWeight.bold,
               ),

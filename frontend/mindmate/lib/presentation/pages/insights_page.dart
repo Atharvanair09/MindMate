@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../core/constants/colors.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../widgets/bottom_nav.dart';
 
 class InsightsPage extends StatelessWidget {
@@ -10,49 +8,91 @@ class InsightsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFFAF6EE), // Light beige background
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: const Color(0xFFFAF6EE),
         elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16.0),
-          child: CircleAvatar(
-            radius: 18,
-            backgroundImage: const NetworkImage('https://api.dicebear.com/7.x/avataaars/png?seed=John'),
-          ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            Navigator.pop(context);
+          },
         ),
         title: Text(
-          "Your Insights",
-          style: GoogleFonts.poppins(
-            color: const Color(0xFF4B39EF),
-            fontWeight: FontWeight.bold,
+          "MESSAGES",
+          style: GoogleFonts.anton(
+            color: Colors.black,
+            fontSize: 24,
+            letterSpacing: 1.0,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none_outlined, color: AppColors.darkText),
-            onPressed: () {},
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(2.0),
+          child: Container(
+            color: Colors.black,
+            height: 2.0,
           ),
-          const SizedBox(width: 8),
-        ],
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildTimeFilter(),
-            const SizedBox(height: 24),
-            _buildSummaryCards(),
-            const SizedBox(height: 32),
-            _buildWeeklyTrend(),
-            const SizedBox(height: 32),
-            _buildInsightMessage(),
-            const SizedBox(height: 32),
-            _buildTopStressors(),
-            const SizedBox(height: 32),
-            _buildMonthlyHeatmap(),
-            const SizedBox(height: 100),
+            _buildSearchBar(),
+            const SizedBox(height: 20),
+            _buildArchivedButton(),
+            const SizedBox(height: 20),
+            const Divider(color: Colors.black, thickness: 2),
+            const SizedBox(height: 20),
+            _buildChatItem(
+              name: "JARVIS (AI)",
+              time: "21:56",
+              message: '"I\'ve updated your focu..."',
+              unreadCount: 2,
+              backgroundColor: const Color(0xFFFFD600), // Yellow
+            ),
+            const SizedBox(height: 16),
+            _buildChatItem(
+              name: "SAHIL",
+              time: "21:40",
+              message: "Okay, let's sync up after t...",
+              unreadCount: 0,
+              backgroundColor: Colors.white,
+            ),
+            const SizedBox(height: 30),
+            Text(
+              "RELEVANT GROUPS",
+              style: GoogleFonts.anton(
+                color: Colors.black,
+                fontSize: 20,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildGroupItem(
+              title: "STUDY SYNC",
+              subtitle: "1.2K MEMBERS • ACTIVE NOW",
+              backgroundColor: const Color(0xFF0D6EFD), // Blue
+              textColor: Colors.white,
+            ),
+            const SizedBox(height: 16),
+            _buildGroupItem(
+              title: "CALM COLLECTIVE",
+              subtitle: "850 MEMBERS • WELLNESS",
+              backgroundColor: const Color(0xFFFFD600), // Yellow
+              textColor: Colors.black,
+            ),
+            const SizedBox(height: 16),
+            _buildGroupItem(
+              title: "NIGHT OWLS",
+              subtitle: "420 MEMBERS • LATE NIGHT",
+              backgroundColor: const Color(0xFF4A4A4A), // Dark grey
+              textColor: Colors.white,
+            ),
+            const SizedBox(height: 40),
+            _buildEmergencyButton(),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -60,206 +100,244 @@ class InsightsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildTimeFilter() {
+  Widget _buildNeoContainer({
+    required Widget child,
+    required Color color,
+    double height = 60,
+    EdgeInsetsGeometry? padding,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      height: height,
+      padding: padding,
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F1FF),
-        borderRadius: BorderRadius.circular(20),
+        color: color,
+        border: Border.all(color: Colors.black, width: 2),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black,
+            offset: Offset(4, 4),
+            blurRadius: 0,
+          ),
+        ],
       ),
+      child: child,
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return _buildNeoContainer(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            "This Month",
-            style: GoogleFonts.poppins(
-              color: AppColors.primaryPurple,
-              fontWeight: FontWeight.w500,
+          Expanded(
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: "SEARCH CONVERSATIONS...",
+                hintStyle: GoogleFonts.spaceGrotesk(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+                border: InputBorder.none,
+              ),
+              style: GoogleFonts.spaceGrotesk(
+                color: Colors.black,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-          const Icon(Icons.keyboard_arrow_down, color: AppColors.primaryPurple),
+          const Icon(Icons.search, color: Colors.black, size: 28),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryCards() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _summaryItem("😐", "Avg Mood", "3.2/5"),
-        _summaryItem("☀️", "Best Day", "Thu"),
-        _summaryItem("🔥", "Streak", "5 days"),
-      ],
+  Widget _buildArchivedButton() {
+    return _buildNeoContainer(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          const Icon(Icons.archive_outlined, color: Colors.black),
+          const SizedBox(width: 12),
+          Text(
+            "ARCHIVED CONVERSATIONS",
+            style: GoogleFonts.spaceGrotesk(
+              color: Colors.black,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            color: Colors.black,
+            child: Text(
+              "33",
+              style: GoogleFonts.spaceGrotesk(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _summaryItem(String icon, String label, String value) {
+  Widget _buildChatItem({
+    required String name,
+    required String time,
+    required String message,
+    required int unreadCount,
+    required Color backgroundColor,
+  }) {
     return Container(
-      width: 105,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
+        color: backgroundColor,
+        border: Border.all(color: Colors.black, width: 2),
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
+            color: Colors.black,
+            offset: Offset(4, 4),
+            blurRadius: 0,
           ),
         ],
-      ),
-      child: Column(
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 24)),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: GoogleFonts.poppins(fontSize: 12, color: AppColors.lightText),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF4B39EF),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWeeklyTrend() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              "Weekly Trend",
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.darkText,
-              ),
-            ),
-            Text(
-              "Last 7 Days",
-              style: GoogleFonts.poppins(fontSize: 12, color: AppColors.lightText),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Container(
-          height: 180,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: LineChart(
-            LineChartData(
-              gridData: const FlGridData(show: false),
-              titlesData: FlTitlesData(
-                show: true,
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (value, meta) => Text(
-                      value.toInt().toString(),
-                      style: const TextStyle(color: Colors.grey, fontSize: 10),
-                    ),
-                    reservedSize: 22,
-                  ),
-                ),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (value, meta) {
-                      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                      if (value >= 0 && value < 7) {
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(days[value.toInt()], style: const TextStyle(fontSize: 10)),
-                        );
-                      }
-                      return const Text('');
-                    },
-                  ),
-                ),
-              ),
-              borderData: FlBorderData(show: false),
-              lineBarsData: [
-                LineChartBarData(
-                  spots: const [
-                     FlSpot(0, 2),
-                     FlSpot(1, 2.5),
-                     FlSpot(2, 3.8),
-                     FlSpot(3, 3),
-                     FlSpot(4, 2.2),
-                     FlSpot(5, 1.8),
-                     FlSpot(6, 1.7),
-                  ],
-                  isCurved: true,
-                  color: AppColors.primaryPurple,
-                  barWidth: 3,
-                  dotData: FlDotData(
-                    show: true,
-                    getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                      color: AppColors.primaryPurple,
-                      radius: index == 2 || index == 3 ? 3 : 0,
-                    ),
-                  ),
-                  belowBarData: BarAreaData(
-                    show: true,
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        AppColors.primaryPurple.withOpacity(0.2),
-                        AppColors.primaryPurple.withOpacity(0.0),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInsightMessage() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F4FF),
-        borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
-              color: AppColors.primaryPurple,
-              borderRadius: BorderRadius.circular(12),
+              color: Colors.black,
+              border: Border.all(color: Colors.black, width: 2),
             ),
-            child: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+            child: const Icon(Icons.person, color: Colors.white, size: 30),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      name,
+                      style: GoogleFonts.spaceGrotesk(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      time,
+                      style: GoogleFonts.spaceGrotesk(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        message,
+                        style: GoogleFonts.spaceGrotesk(
+                          color: Colors.black87,
+                          fontStyle: FontStyle.italic,
+                          fontSize: 14,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (unreadCount > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        color: Colors.black,
+                        child: Text(
+                          unreadCount.toString(),
+                          style: GoogleFonts.spaceGrotesk(
+                            color: const Color(0xFFFFD600),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGroupItem({
+    required String title,
+    required String subtitle,
+    required Color backgroundColor,
+    required Color textColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        border: Border.all(color: Colors.black, width: 2),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black,
+            offset: Offset(4, 4),
+            blurRadius: 0,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.anton(
+                  color: textColor,
+                  fontSize: 18,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: GoogleFonts.spaceGrotesk(
+                  color: textColor.withOpacity(0.9),
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Colors.black,
             child: Text(
-              "\"You tend to feel better mid-week. Sunday evenings show a dip — possibly pre-week anxiety. Try a 5-min breathing exercise Sunday nights.\"",
-              style: GoogleFonts.poppins(
+              "JOIN",
+              style: GoogleFonts.spaceGrotesk(
+                color: backgroundColor == Colors.white ? Colors.black : Colors.white,
+                fontWeight: FontWeight.bold,
                 fontSize: 14,
-                fontStyle: FontStyle.italic,
-                color: const Color(0xFF4A4A4A),
-                height: 1.5,
               ),
             ),
           ),
@@ -268,137 +346,24 @@ class InsightsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildTopStressors() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Top Stressors This Week",
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.darkText,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            _stressorChip("Exams x4", const Color(0xFFEBF5FF), Colors.blue),
-            const SizedBox(width: 12),
-            _stressorChip("Sleep x3", const Color(0xFFFFF4E7), Colors.orange),
-            const SizedBox(width: 12),
-            _stressorChip("Placements x2", const Color(0xFFE9F7EF), Colors.green),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _stressorChip(String label, Color bg, Color text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: text.withOpacity(0.1)),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.poppins(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: text,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMonthlyHeatmap() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              "Monthly Heatmap",
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.darkText,
-              ),
+  Widget _buildEmergencyButton() {
+    return _buildNeoContainer(
+      color: const Color(0xFFC62828), // Dark Red
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            "EMERGENCY CRISIS SUPPORT",
+            style: GoogleFonts.anton(
+              color: Colors.white,
+              fontSize: 16,
+              letterSpacing: 0.5,
             ),
-            Row(
-              children: [
-                _heatmapLegend(const Color(0xFF00D6A0)),
-                _heatmapLegend(const Color(0xFFFFD166)),
-                _heatmapLegend(const Color(0xFFEF476F)),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
           ),
-          child: Column(
-            children: [
-               _buildHeatmapHeader(),
-               const SizedBox(height: 12),
-               _buildHeatmapGrid(),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _heatmapLegend(Color color) {
-    return Container(
-      width: 12,
-      height: 12,
-      margin: const EdgeInsets.only(left: 4),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(2),
+          const Icon(Icons.phone, color: Colors.white),
+        ],
       ),
-    );
-  }
-
-  Widget _buildHeatmapHeader() {
-    const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: days.map((d) => SizedBox(
-        width: 30,
-        child: Center(child: Text(d, style: const TextStyle(fontSize: 10, color: Colors.grey))),
-      )).toList(),
-    );
-  }
-
-  Widget _buildHeatmapGrid() {
-    final List<Color?> grid = [
-      null, null, const Color(0xFF00D6A0), const Color(0xFFFFD166), const Color(0xFF00D6A0), const Color(0xFFFFD166), const Color(0xFFEF476F),
-      const Color(0xFFFFD166), const Color(0xFF00D6A0), const Color(0xFF00D6A0), const Color(0xFF00D6A0), const Color(0xFFFFD166), null, const Color(0xFFEF476F),
-      const Color(0xFFFFD166), const Color(0xFFFFD166), const Color(0xFF00D6A0), const Color(0xFF00D6A0), const Color(0xFF00D6A0), const Color(0xFF00D6A0), const Color(0xFFFFD166),
-      const Color(0xFF00D6A0), const Color(0xFFFFD166), const Color(0xFF00D6A0), const Color(0xFF00D6A0), null, null, null,
-      null, null, null, null, null, null, null,
-    ];
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: grid.map((color) => Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: color ?? const Color(0xFFF3F3F5),
-          borderRadius: BorderRadius.circular(8),
-        ),
-      )).toList(),
     );
   }
 }
