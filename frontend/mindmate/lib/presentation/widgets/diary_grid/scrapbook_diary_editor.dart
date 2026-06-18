@@ -332,32 +332,47 @@ class _ScrapbookDiaryEditorState extends State<ScrapbookDiaryEditor> {
                   bottom: textBottomOffset,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: TextField(
-                      controller: _textController,
-                      focusNode: _textFocusNode,
-                      maxLines: null,
-                      expands: true,
-                      style: GoogleFonts.getFont(
-                        widget.pageData.fontFamily,
-                        fontSize: fontSize,
-                        color: const Color(0xFF1E1E1E),
-                        height: textHeight,
-                      ),
-                      decoration: InputDecoration(
-                        border: InputBorder.none,
-                        hintText: widget.readOnly ? "" : "Dear diary...",
-                        hintStyle: GoogleFonts.getFont(
-                          widget.pageData.fontFamily,
-                          color: Colors.grey.shade400,
-                          fontSize: fontSize,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
-                      ),
-                      readOnly: widget.readOnly,
-                      onChanged: (text) {
-                        _notifyChanged();
-                      },
-                    ),
+                    child: widget.readOnly
+                        ? SingleChildScrollView(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              child: Text(
+                                widget.pageData.text,
+                                style: GoogleFonts.getFont(
+                                  widget.pageData.fontFamily,
+                                  fontSize: fontSize,
+                                  color: const Color(0xFF1E1E1E),
+                                  height: textHeight,
+                                ),
+                              ),
+                            ),
+                          )
+                        : TextField(
+                            controller: _textController,
+                            focusNode: _textFocusNode,
+                            maxLines: null,
+                            expands: true,
+                            style: GoogleFonts.getFont(
+                              widget.pageData.fontFamily,
+                              fontSize: fontSize,
+                              color: const Color(0xFF1E1E1E),
+                              height: textHeight,
+                            ),
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText: "Dear diary...",
+                              hintStyle: GoogleFonts.getFont(
+                                widget.pageData.fontFamily,
+                                color: Colors.grey.shade400,
+                                fontSize: fontSize,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
+                            ),
+                            readOnly: false,
+                            onChanged: (text) {
+                              _notifyChanged();
+                            },
+                          ),
                   ),
                 ),
 

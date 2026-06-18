@@ -16,9 +16,12 @@ import 'core/state/user_provider.dart';
 import 'core/state/diary_provider.dart';
 import 'core/state/archive_provider.dart';
 import 'presentation/pages/memory_vault_page.dart';
+import 'data/database/isar_database.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  await IsarDatabase.initialize();
   
   // This removes the debug guidelines border if it was accidentally enabled
   debugPaintSizeEnabled = false;

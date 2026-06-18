@@ -24,6 +24,10 @@ class _MemoryVaultPageState extends State<MemoryVaultPage> with SingleTickerProv
     _tabController.addListener(() {
       setState(() {});
     });
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ArchiveProvider>().loadData();
+    });
   }
 
   @override

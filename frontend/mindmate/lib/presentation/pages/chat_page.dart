@@ -4,9 +4,10 @@ import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/state/user_provider.dart';
 import '../../core/state/archive_provider.dart';
-import '../../data/repositories/chat_repository.dart';
+import '../../data/services/chat_api_service.dart';
 import '../widgets/bottom_nav.dart';
 import 'voice_call_screen.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -22,9 +23,13 @@ class _ChatPageState extends State<ChatPage> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   
+  final stt.SpeechToText _speechToText = stt.SpeechToText();
+  bool _speechEnabled = false;
+  bool _isListening = false;
+
   List<Map<String, dynamic>> get _messages => _activeMessages;
 
-  final ChatRepository _chatRepo = ChatRepository();
+  final ChatApiService _chatApi = ChatApiService();
 
   /// Unique conversation ID — persisted for the lifetime of this chat session.
   /// A new one is generated each time the user opens a fresh chat.
@@ -41,8 +46,9 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    _initSpeech();
     if (_activeConversationId == null) {
-      _activeConversationId = _chatRepo.newConversationId();
+      _activeConversationId = _chatApi.newConversationId();
       _activeMessages.clear();
     }
     _conversationId = _activeConversationId!;
@@ -74,7 +80,7 @@ class _ChatPageState extends State<ChatPage> {
     archiveProvider.saveMessageToChat(_conversationId, userText, true);
 
     try {
-      final result = await _chatRepo.sendMessage(
+      final result = await _chatApi.sendMessage(
         message: userText,
         conversationId: _conversationId,
       );
@@ -164,6 +170,39 @@ class _ChatPageState extends State<ChatPage> {
         );
       }
     });
+  }
+
+  void _initSpeech() async {
+    _speechEnabled = await _speechToText.initialize();
+    if (mounted) setState(() {});
+  }
+
+  void _startListening() async {
+    if (!_speechEnabled) return;
+    String initialText = _controller.text;
+    await _speechToText.listen(
+      onResult: (result) {
+        if (mounted) {
+          setState(() {
+            _controller.text = initialText + (initialText.isNotEmpty && result.recognizedWords.isNotEmpty ? " " : "") + result.recognizedWords;
+          });
+        }
+      },
+    );
+    if (mounted) {
+      setState(() {
+        _isListening = true;
+      });
+    }
+  }
+
+  void _stopListening() async {
+    await _speechToText.stop();
+    if (mounted) {
+      setState(() {
+        _isListening = false;
+      });
+    }
   }
 
   @override
@@ -270,7 +309,7 @@ class _ChatPageState extends State<ChatPage> {
                         onPressed: () {
                           Navigator.pop(ctx);
                           setState(() {
-                            _activeConversationId = _chatRepo.newConversationId();
+                            _activeConversationId = _chatApi.newConversationId();
                             _conversationId = _activeConversationId!;
                             _activeMessages.clear();
                             _isLoadingHistory = false;
@@ -637,8 +676,15 @@ class _ChatPageState extends State<ChatPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _inputIconButton(
-                          icon: Icons.mic_none_outlined,
-                          onTap: () {},
+                          icon: _isListening ? Icons.mic : Icons.mic_none_outlined,
+                          color: _isListening ? Colors.red : Colors.black87,
+                          onTap: () {
+                            if (_isListening) {
+                              _stopListening();
+                            } else {
+                              _startListening();
+                            }
+                          },
                         ),
                         const SizedBox(width: 8),
                         _inputIconButton(
@@ -681,10 +727,10 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _inputIconButton({required IconData icon, required VoidCallback onTap}) {
+  Widget _inputIconButton({required IconData icon, required VoidCallback onTap, Color? color}) {
     return GestureDetector(
       onTap: onTap,
-      child: Icon(icon, color: Colors.black87, size: 24),
+      child: Icon(icon, color: color ?? Colors.black87, size: 24),
     );
   }
 }
