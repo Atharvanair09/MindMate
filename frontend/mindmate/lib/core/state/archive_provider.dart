@@ -1,24 +1,31 @@
 import 'package:flutter/material.dart';
-import '../../data/repositories/archive_repository.dart';
-import '../../domain/models/archive_models.dart';
+import '../../domain/repositories/chat_repository.dart';
+import '../../domain/repositories/journal_repository.dart';
+import '../../domain/models/archive_models.dart' as archive;
+import '../../domain/models/journal_entry.dart';
+import '../../domain/models/chat_message.dart';
 
 class ArchiveProvider extends ChangeNotifier {
-  final ArchiveRepository _repository;
+  final ChatRepository _chatRepository;
+  final JournalRepository _journalRepository;
 
-  List<LocalChat> _chats = [];
+  List<archive.LocalChat> _chats = [];
   List<JournalEntry> _journals = [];
   
-  List<LocalChat> _filteredChats = [];
+  List<archive.LocalChat> _filteredChats = [];
   List<JournalEntry> _filteredJournals = [];
 
   bool _isLoading = false;
   String _searchQuery = '';
 
-  ArchiveProvider({ArchiveRepository? repository})
-      : _repository = repository ?? ArchiveRepository();
+  ArchiveProvider({
+    required ChatRepository chatRepository,
+    required JournalRepository journalRepository,
+  })  : _chatRepository = chatRepository,
+        _journalRepository = journalRepository;
 
   bool get isLoading => _isLoading;
-  List<LocalChat> get chats => _searchQuery.isEmpty ? _chats : _filteredChats;
+  List<archive.LocalChat> get chats => _searchQuery.isEmpty ? _chats : _filteredChats;
   List<JournalEntry> get journals => _searchQuery.isEmpty ? _journals : _filteredJournals;
 
   Future<void> loadData() async {
@@ -26,8 +33,45 @@ class ArchiveProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _chats = await _repository.getAllChats();
-      _journals = await _repository.getAllJournals();
+      final allMessages = await _chatRepository.getAll();
+      
+      // Group messages by conversationId
+      final Map<String, List<ChatMessage>> grouped = {};
+      for (var msg in allMessages) {
+        if (!grouped.containsKey(msg.conversationId)) {
+          grouped[msg.conversationId] = [];
+        }
+        grouped[msg.conversationId]!.add(msg);
+      }
+
+      _chats = grouped.entries.map((entry) {
+        final msgs = entry.value;
+        msgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        
+        final localMsgs = msgs.map((m) => archive.LocalMessage(
+          role: m.role,
+          text: m.message,
+          timestamp: m.createdAt,
+        )).toList();
+        
+        final firstMsgText = localMsgs.firstWhere((m) => m.role == 'user', orElse: () => localMsgs.first).text;
+        final title = firstMsgText.length > 30 ? '${firstMsgText.substring(0, 27)}...' : firstMsgText;
+        
+        return archive.LocalChat(
+          id: entry.key,
+          title: title,
+          messages: localMsgs,
+          createdAt: msgs.first.createdAt,
+          updatedAt: msgs.last.createdAt,
+        );
+      }).toList();
+      
+      _chats.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+      final allJournals = await _journalRepository.getAll();
+      _journals = allJournals.where((j) => !j.isDeleted).toList();
+      _journals.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
       _applySearch();
     } finally {
       _isLoading = false;
@@ -64,28 +108,42 @@ class ArchiveProvider extends ChangeNotifier {
     if (chatIndex != -1) {
       _chats[chatIndex].title = newTitle;
       _chats[chatIndex].updatedAt = DateTime.now();
-      await _repository.saveChat(_chats[chatIndex]);
-      _applySearch();
       notifyListeners();
     }
   }
 
   Future<void> deleteChat(String id) async {
-    await _repository.deleteChat(id);
+    final allMessages = await _chatRepository.getAll();
+    final toDelete = allMessages.where((m) => m.conversationId == id).toList();
+    for (var m in toDelete) {
+      await _chatRepository.delete(m.id);
+    }
     _chats.removeWhere((c) => c.id == id);
     _applySearch();
     notifyListeners();
   }
 
-  Future<void> deleteJournal(String id) async {
-    await _repository.deleteJournal(id);
+  Future<void> deleteJournal(int id) async {
+    final j = await _journalRepository.getById(id);
+    if (j != null) {
+      j.isDeleted = true;
+      await _journalRepository.update(j);
+    }
     _journals.removeWhere((j) => j.id == id);
     _applySearch();
     notifyListeners();
   }
 
   Future<void> clearAllData() async {
-    await _repository.clearAllData();
+    final allChats = await _chatRepository.getAll();
+    for (var c in allChats) {
+      await _chatRepository.delete(c.id);
+    }
+    final allJournals = await _journalRepository.getAll();
+    for (var j in allJournals) {
+      j.isDeleted = true;
+      await _journalRepository.update(j);
+    }
     _chats.clear();
     _journals.clear();
     _applySearch();
@@ -97,7 +155,7 @@ class ArchiveProvider extends ChangeNotifier {
     var chat = _chats.firstWhere(
       (c) => c.id == chatId,
       orElse: () {
-        final newChat = LocalChat(
+        final newChat = archive.LocalChat(
           id: chatId,
           title: text.length > 30 ? '${text.substring(0, 27)}...' : text,
           messages: [],
@@ -109,17 +167,25 @@ class ArchiveProvider extends ChangeNotifier {
       },
     );
 
-    chat.messages.add(LocalMessage(
+    final newMsg = archive.LocalMessage(
       role: isUser ? 'user' : 'ai',
       text: text,
       timestamp: DateTime.now(),
-    ));
+    );
+    chat.messages.add(newMsg);
     chat.updatedAt = DateTime.now();
     
     // Sort chats by updatedAt
     _chats.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
-    await _repository.saveChat(chat);
+    final isarMsg = ChatMessage()
+      ..conversationId = chatId
+      ..message = text
+      ..role = isUser ? 'user' : 'ai'
+      ..createdAt = DateTime.now();
+      
+    await _chatRepository.create(isarMsg);
+
     notifyListeners();
   }
 }

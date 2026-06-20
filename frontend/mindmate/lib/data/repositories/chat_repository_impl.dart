@@ -2,6 +2,7 @@ import 'package:isar/isar.dart';
 import '../../domain/models/chat_message.dart';
 import '../../domain/repositories/chat_repository.dart';
 import '../database/isar_database.dart';
+import '../../services/embedding/embedding_queue.dart';
 
 class ChatRepositoryImpl implements ChatRepository {
   Isar get _isar => IsarDatabase.instance;
@@ -9,9 +10,11 @@ class ChatRepositoryImpl implements ChatRepository {
 
   @override
   Future<int> create(ChatMessage item) async {
-    return await _isar.writeTxn(() async {
+    final id = await _isar.writeTxn(() async {
       return await _collection.put(item);
     });
+    await EmbeddingQueue.addTask('chat', id);
+    return id;
   }
 
   @override
@@ -19,6 +22,7 @@ class ChatRepositoryImpl implements ChatRepository {
     await _isar.writeTxn(() async {
       await _collection.put(item);
     });
+    await EmbeddingQueue.addTask('chat', item.id);
   }
 
   @override

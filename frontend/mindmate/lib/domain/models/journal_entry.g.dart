@@ -42,23 +42,33 @@ const JournalEntrySchema = CollectionSchema(
       name: r'isDeleted',
       type: IsarType.bool,
     ),
-    r'sentimentScore': PropertySchema(
+    r'journalDate': PropertySchema(
       id: 5,
+      name: r'journalDate',
+      type: IsarType.dateTime,
+    ),
+    r'pagesJson': PropertySchema(
+      id: 6,
+      name: r'pagesJson',
+      type: IsarType.string,
+    ),
+    r'sentimentScore': PropertySchema(
+      id: 7,
       name: r'sentimentScore',
       type: IsarType.double,
     ),
     r'title': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 7,
+      id: 9,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'wordCount': PropertySchema(
-      id: 8,
+      id: 10,
       name: r'wordCount',
       type: IsarType.long,
     )
@@ -81,6 +91,19 @@ const JournalEntrySchema = CollectionSchema(
           caseSensitive: false,
         )
       ],
+    ),
+    r'journalDate': IndexSchema(
+      id: 3387135046846725381,
+      name: r'journalDate',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'journalDate',
+          type: IndexType.value,
+          caseSensitive: false,
+        )
+      ],
     )
   },
   links: {},
@@ -98,7 +121,18 @@ int _journalEntryEstimateSize(
 ) {
   var bytesCount = offsets.last;
   bytesCount += 3 + object.content.length * 3;
-  bytesCount += 3 + object.title.length * 3;
+  {
+    final value = object.pagesJson;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.title;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   return bytesCount;
 }
 
@@ -113,10 +147,12 @@ void _journalEntrySerialize(
   writer.writeBool(offsets[2], object.embeddingGenerated);
   writer.writeLong(offsets[3], object.embeddingId);
   writer.writeBool(offsets[4], object.isDeleted);
-  writer.writeDouble(offsets[5], object.sentimentScore);
-  writer.writeString(offsets[6], object.title);
-  writer.writeDateTime(offsets[7], object.updatedAt);
-  writer.writeLong(offsets[8], object.wordCount);
+  writer.writeDateTime(offsets[5], object.journalDate);
+  writer.writeString(offsets[6], object.pagesJson);
+  writer.writeDouble(offsets[7], object.sentimentScore);
+  writer.writeString(offsets[8], object.title);
+  writer.writeDateTime(offsets[9], object.updatedAt);
+  writer.writeLong(offsets[10], object.wordCount);
 }
 
 JournalEntry _journalEntryDeserialize(
@@ -132,10 +168,12 @@ JournalEntry _journalEntryDeserialize(
   object.embeddingId = reader.readLongOrNull(offsets[3]);
   object.id = id;
   object.isDeleted = reader.readBool(offsets[4]);
-  object.sentimentScore = reader.readDoubleOrNull(offsets[5]);
-  object.title = reader.readString(offsets[6]);
-  object.updatedAt = reader.readDateTime(offsets[7]);
-  object.wordCount = reader.readLong(offsets[8]);
+  object.journalDate = reader.readDateTime(offsets[5]);
+  object.pagesJson = reader.readStringOrNull(offsets[6]);
+  object.sentimentScore = reader.readDoubleOrNull(offsets[7]);
+  object.title = reader.readStringOrNull(offsets[8]);
+  object.updatedAt = reader.readDateTime(offsets[9]);
+  object.wordCount = reader.readLongOrNull(offsets[10]);
   return object;
 }
 
@@ -157,13 +195,17 @@ P _journalEntryDeserializeProp<P>(
     case 4:
       return (reader.readBool(offset)) as P;
     case 5:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 6:
-      return (reader.readString(offset)) as P;
-    case 7:
       return (reader.readDateTime(offset)) as P;
+    case 6:
+      return (reader.readStringOrNull(offset)) as P;
+    case 7:
+      return (reader.readDoubleOrNull(offset)) as P;
     case 8:
-      return (reader.readLong(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
+    case 9:
+      return (reader.readDateTime(offset)) as P;
+    case 10:
+      return (reader.readLongOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -194,6 +236,14 @@ extension JournalEntryQueryWhereSort
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         const IndexWhereClause.any(indexName: r'createdAt'),
+      );
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterWhere> anyJournalDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'journalDate'),
       );
     });
   }
@@ -354,6 +404,99 @@ extension JournalEntryQueryWhere
         lower: [lowerCreatedAt],
         includeLower: includeLower,
         upper: [upperCreatedAt],
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterWhereClause>
+      journalDateEqualTo(DateTime journalDate) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'journalDate',
+        value: [journalDate],
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterWhereClause>
+      journalDateNotEqualTo(DateTime journalDate) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'journalDate',
+              lower: [],
+              upper: [journalDate],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'journalDate',
+              lower: [journalDate],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'journalDate',
+              lower: [journalDate],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'journalDate',
+              lower: [],
+              upper: [journalDate],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterWhereClause>
+      journalDateGreaterThan(
+    DateTime journalDate, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'journalDate',
+        lower: [journalDate],
+        includeLower: include,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterWhereClause>
+      journalDateLessThan(
+    DateTime journalDate, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'journalDate',
+        lower: [],
+        upper: [journalDate],
+        includeUpper: include,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterWhereClause>
+      journalDateBetween(
+    DateTime lowerJournalDate,
+    DateTime upperJournalDate, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'journalDate',
+        lower: [lowerJournalDate],
+        includeLower: includeLower,
+        upper: [upperJournalDate],
         includeUpper: includeUpper,
       ));
     });
@@ -702,6 +845,216 @@ extension JournalEntryQueryFilter
   }
 
   QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      journalDateEqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'journalDate',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      journalDateGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'journalDate',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      journalDateLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'journalDate',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      journalDateBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'journalDate',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      pagesJsonIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'pagesJson',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      pagesJsonIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'pagesJson',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      pagesJsonEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'pagesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      pagesJsonGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'pagesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      pagesJsonLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'pagesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      pagesJsonBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'pagesJson',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      pagesJsonStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'pagesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      pagesJsonEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'pagesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      pagesJsonContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'pagesJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      pagesJsonMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'pagesJson',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      pagesJsonIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'pagesJson',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      pagesJsonIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'pagesJson',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
       sentimentScoreIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -785,8 +1138,26 @@ extension JournalEntryQueryFilter
     });
   }
 
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      titleIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'title',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      titleIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'title',
+      ));
+    });
+  }
+
   QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition> titleEqualTo(
-    String value, {
+    String? value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -800,7 +1171,7 @@ extension JournalEntryQueryFilter
 
   QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
       titleGreaterThan(
-    String value, {
+    String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -815,7 +1186,7 @@ extension JournalEntryQueryFilter
   }
 
   QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition> titleLessThan(
-    String value, {
+    String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -830,8 +1201,8 @@ extension JournalEntryQueryFilter
   }
 
   QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition> titleBetween(
-    String lower,
-    String upper, {
+    String? lower,
+    String? upper, {
     bool includeLower = true,
     bool includeUpper = true,
     bool caseSensitive = true,
@@ -976,7 +1347,25 @@ extension JournalEntryQueryFilter
   }
 
   QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
-      wordCountEqualTo(int value) {
+      wordCountIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'wordCount',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      wordCountIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'wordCount',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      wordCountEqualTo(int? value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'wordCount',
@@ -987,7 +1376,7 @@ extension JournalEntryQueryFilter
 
   QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
       wordCountGreaterThan(
-    int value, {
+    int? value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -1001,7 +1390,7 @@ extension JournalEntryQueryFilter
 
   QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
       wordCountLessThan(
-    int value, {
+    int? value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -1015,8 +1404,8 @@ extension JournalEntryQueryFilter
 
   QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
       wordCountBetween(
-    int lower,
-    int upper, {
+    int? lower,
+    int? upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -1100,6 +1489,31 @@ extension JournalEntryQuerySortBy
   QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> sortByIsDeletedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isDeleted', Sort.desc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> sortByJournalDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'journalDate', Sort.asc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy>
+      sortByJournalDateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'journalDate', Sort.desc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> sortByPagesJson() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pagesJson', Sort.asc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> sortByPagesJsonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pagesJson', Sort.desc);
     });
   }
 
@@ -1231,6 +1645,31 @@ extension JournalEntryQuerySortThenBy
     });
   }
 
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> thenByJournalDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'journalDate', Sort.asc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy>
+      thenByJournalDateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'journalDate', Sort.desc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> thenByPagesJson() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pagesJson', Sort.asc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> thenByPagesJsonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pagesJson', Sort.desc);
+    });
+  }
+
   QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy>
       thenBySentimentScore() {
     return QueryBuilder.apply(this, (query) {
@@ -1316,6 +1755,19 @@ extension JournalEntryQueryWhereDistinct
     });
   }
 
+  QueryBuilder<JournalEntry, JournalEntry, QDistinct> distinctByJournalDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'journalDate');
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QDistinct> distinctByPagesJson(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'pagesJson', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<JournalEntry, JournalEntry, QDistinct>
       distinctBySentimentScore() {
     return QueryBuilder.apply(this, (query) {
@@ -1382,6 +1834,18 @@ extension JournalEntryQueryProperty
     });
   }
 
+  QueryBuilder<JournalEntry, DateTime, QQueryOperations> journalDateProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'journalDate');
+    });
+  }
+
+  QueryBuilder<JournalEntry, String?, QQueryOperations> pagesJsonProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'pagesJson');
+    });
+  }
+
   QueryBuilder<JournalEntry, double?, QQueryOperations>
       sentimentScoreProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -1389,7 +1853,7 @@ extension JournalEntryQueryProperty
     });
   }
 
-  QueryBuilder<JournalEntry, String, QQueryOperations> titleProperty() {
+  QueryBuilder<JournalEntry, String?, QQueryOperations> titleProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'title');
     });
@@ -1401,7 +1865,7 @@ extension JournalEntryQueryProperty
     });
   }
 
-  QueryBuilder<JournalEntry, int, QQueryOperations> wordCountProperty() {
+  QueryBuilder<JournalEntry, int?, QQueryOperations> wordCountProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'wordCount');
     });

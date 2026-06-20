@@ -3,7 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../core/state/archive_provider.dart';
-import '../../domain/models/archive_models.dart';
+import '../../domain/models/archive_models.dart' hide JournalEntry;
+import '../../domain/models/journal_entry.dart';
 import 'local_chat_view_page.dart';
 import 'local_journal_view_page.dart';
 class MemoryVaultPage extends StatefulWidget {
@@ -434,7 +435,7 @@ class _MemoryVaultPageState extends State<MemoryVaultPage> with SingleTickerProv
       itemBuilder: (context, index) {
         final journal = provider.journals[index];
         return Dismissible(
-          key: Key(journal.id),
+          key: Key(journal.id.toString()),
           direction: DismissDirection.startToEnd,
           background: Container(
             color: Colors.red,
@@ -556,7 +557,7 @@ class _MemoryVaultPageState extends State<MemoryVaultPage> with SingleTickerProv
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => LocalJournalViewPage(journalId: journal.id),
+                            builder: (context) => LocalJournalViewPage(journalId: journal.id.toString()),
                           ),
                         );
                       },

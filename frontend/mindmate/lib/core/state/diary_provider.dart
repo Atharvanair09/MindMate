@@ -5,12 +5,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../presentation/widgets/diary_grid/models/diary_page_data.dart';
 import '../../presentation/widgets/diary_grid/models/diary_image_block.dart';
-import '../../data/repositories/archive_repository.dart';
-import '../../domain/models/archive_models.dart';
+import '../../domain/repositories/journal_repository.dart';
+import '../../domain/models/journal_entry.dart';
 
 class DiaryProvider extends ChangeNotifier with WidgetsBindingObserver {
   List<DiaryPageData> _pages = [DiaryPageData()];
-  final ArchiveRepository _repository;
+  final JournalRepository _repository;
 
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
@@ -19,7 +19,7 @@ class DiaryProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   JournalEntry? _currentJournal;
 
-  DiaryProvider({required ArchiveRepository repository}) : _repository = repository {
+  DiaryProvider({required JournalRepository repository}) : _repository = repository {
     WidgetsBinding.instance.addObserver(this);
     _init();
   }
@@ -32,8 +32,22 @@ class DiaryProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.detached) {
+    if (state == AppLifecycleState.resumed) {
+      _checkDayRollover();
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.detached) {
       saveDiary();
+    }
+  }
+
+  void _checkDayRollover() {
+    if (_currentJournal != null) {
+      final now = DateTime.now();
+      if (_currentJournal!.journalDate.year != now.year ||
+          _currentJournal!.journalDate.month != now.month ||
+          _currentJournal!.journalDate.day != now.day) {
+        // Day has changed, load a fresh diary for today
+        loadDiary();
+      }
     }
   }
 
@@ -52,35 +66,30 @@ class DiaryProvider extends ChangeNotifier with WidgetsBindingObserver {
     
     try {
       final now = DateTime.now();
-      
-      if (_currentJournal != null) {
-        if (_currentJournal!.journalDate.year != now.year ||
-            _currentJournal!.journalDate.month != now.month ||
-            _currentJournal!.journalDate.day != now.day) {
-          _currentJournal = null;
-        }
-      }
 
       final jsonList = _pages.map((p) => p.toJson()).toList();
       final pagesJson = jsonEncode(jsonList);
       final plainText = _generatePlainTextContent();
+      final wordCount = plainText.trim().isEmpty ? 0 : plainText.trim().split(RegExp(r'\s+')).length;
 
       if (_currentJournal == null) {
-        _currentJournal = JournalEntry(
-          id: const Uuid().v4(),
-          content: plainText,
-          createdAt: now,
-          updatedAt: now,
-          journalDate: now,
-          pagesJson: pagesJson,
-        );
+        _currentJournal = JournalEntry()
+          ..content = plainText
+          ..createdAt = now
+          ..updatedAt = now
+          ..journalDate = now
+          ..pagesJson = pagesJson
+          ..wordCount = wordCount;
+        
+        final id = await _repository.create(_currentJournal!);
+        // After Isar insertion, the ID is assigned
       } else {
         _currentJournal!.content = plainText;
         _currentJournal!.updatedAt = now;
         _currentJournal!.pagesJson = pagesJson;
+        _currentJournal!.wordCount = wordCount;
+        await _repository.update(_currentJournal!);
       }
-
-      await _repository.saveJournal(_currentJournal!);
     } catch (e) {
       debugPrint("Error saving diary: $e");
     }
@@ -89,7 +98,15 @@ class DiaryProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> loadDiary() async {
     try {
       final now = DateTime.now();
-      final journal = await _repository.getJournalForDate(now);
+      
+      // We need to fetch today's journal if it exists
+      final allJournals = await _repository.getAll();
+      final todayJournals = allJournals.where((entry) => 
+          entry.journalDate.year == now.year &&
+          entry.journalDate.month == now.month &&
+          entry.journalDate.day == now.day).toList();
+      
+      JournalEntry? journal = todayJournals.isNotEmpty ? todayJournals.first : null;
       
       if (journal != null) {
         _currentJournal = journal;

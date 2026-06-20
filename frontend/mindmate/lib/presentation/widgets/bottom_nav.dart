@@ -19,8 +19,8 @@ class MindMateBottomNav extends StatelessWidget {
         children: [
           _buildNavItem(context, 0, Icons.home_outlined, "HOME"),
           _buildNavItem(context, 1, Icons.chat_bubble_outline, "CHAT"),
-          _buildNavItem(context, 2, Icons.book_outlined, "Journal"),
-          _buildNavItem(context, 3, Icons.auto_graph, "Insights"),
+          _buildNavItem(context, 2, Icons.book_outlined, "JOURNAL"),
+          _buildNavItem(context, 3, Icons.message_rounded, "MESSAGES"),
           _buildNavItem(context, 4, Icons.person_outline, "PROFILE"),
         ],
       ),

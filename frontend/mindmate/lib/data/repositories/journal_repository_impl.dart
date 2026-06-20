@@ -2,6 +2,7 @@ import 'package:isar/isar.dart';
 import '../../domain/models/journal_entry.dart';
 import '../../domain/repositories/journal_repository.dart';
 import '../database/isar_database.dart';
+import '../../services/embedding/embedding_queue.dart';
 
 class JournalRepositoryImpl implements JournalRepository {
   Isar get _isar => IsarDatabase.instance;
@@ -9,9 +10,11 @@ class JournalRepositoryImpl implements JournalRepository {
 
   @override
   Future<int> create(JournalEntry item) async {
-    return await _isar.writeTxn(() async {
+    final id = await _isar.writeTxn(() async {
       return await _collection.put(item);
     });
+    await EmbeddingQueue.addTask('journal', id);
+    return id;
   }
 
   @override
@@ -19,6 +22,7 @@ class JournalRepositoryImpl implements JournalRepository {
     await _isar.writeTxn(() async {
       await _collection.put(item);
     });
+    await EmbeddingQueue.addTask('journal', item.id);
   }
 
   @override
@@ -51,7 +55,7 @@ class JournalRepositoryImpl implements JournalRepository {
     final all = await getAll();
     final lowerQuery = query.toLowerCase();
     return all.where((entry) => 
-      entry.title.toLowerCase().contains(lowerQuery) || 
+      (entry.title?.toLowerCase().contains(lowerQuery) ?? false) ||
       entry.content.toLowerCase().contains(lowerQuery)
     ).toList();
   }

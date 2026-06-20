@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../core/state/archive_provider.dart';
-import '../../domain/models/archive_models.dart';
+import '../../domain/models/journal_entry.dart';
 import '../widgets/diary_grid/models/diary_page_data.dart';
 import '../widgets/diary_grid/scrapbook_diary_editor.dart';
 
@@ -30,17 +30,11 @@ class _LocalJournalViewPageState extends State<LocalJournalViewPage> {
   Widget build(BuildContext context) {
     final provider = context.watch<ArchiveProvider>();
     final journal = provider.journals.firstWhere(
-      (j) => j.id == widget.journalId,
-      orElse: () => JournalEntry(
-        id: 'error',
-        content: 'Journal not found.',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        journalDate: DateTime.now(),
-      ),
+      (j) => j.id.toString() == widget.journalId,
+      orElse: () => JournalEntry()..id = -1, // Dummy ID to check for error
     );
 
-    if (journal.id == 'error') {
+    if (journal.id == -1) {
       return Scaffold(
         appBar: AppBar(title: const Text('ERROR')),
         body: const Center(child: Text('Journal not found.')),

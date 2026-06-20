@@ -8,6 +8,7 @@ import '../../domain/models/session_log.dart';
 import '../../domain/models/embedding_record.dart';
 import '../../domain/models/prediction_log.dart';
 import '../../domain/models/intervention_log.dart';
+import '../../domain/models/embedding_task.dart';
 
 class IsarDatabase {
   static late Isar instance;
@@ -33,6 +34,7 @@ class IsarDatabase {
         EmbeddingRecordSchema,
         PredictionLogSchema,
         InterventionLogSchema,
+        EmbeddingTaskSchema,
       ],
       directory: dir.path,
     );

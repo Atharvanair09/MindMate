@@ -10,18 +10,21 @@ import 'presentation/pages/chat_page.dart';
 import 'presentation/pages/profile_page.dart';
 import 'presentation/pages/animated_splash_page.dart';
 import 'data/repositories/auth_repository.dart';
-import 'data/repositories/archive_repository.dart';
+import 'data/repositories/journal_repository_impl.dart';
+import 'data/repositories/chat_repository_impl.dart';
 import 'presentation/viewmodels/auth_viewmodel.dart';
 import 'core/state/user_provider.dart';
 import 'core/state/diary_provider.dart';
 import 'core/state/archive_provider.dart';
 import 'presentation/pages/memory_vault_page.dart';
 import 'data/database/isar_database.dart';
+import 'services/embedding/embedding_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   await IsarDatabase.initialize();
+  await EmbeddingService.instance.init();
   
   // This removes the debug guidelines border if it was accidentally enabled
   debugPaintSizeEnabled = false;
@@ -37,7 +40,8 @@ void main() async {
     await preloadedProvider.loadProfile(authRepository);
   }
 
-  final archiveRepository = ArchiveRepository();
+  final journalRepository = JournalRepositoryImpl();
+  final chatRepository = ChatRepositoryImpl();
 
   runApp(
     MultiProvider(
@@ -46,8 +50,8 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => preloadedProvider ?? UserProvider(),
         ),
-        ChangeNotifierProvider(create: (_) => DiaryProvider(repository: archiveRepository)),
-        ChangeNotifierProvider(create: (_) => ArchiveProvider(repository: archiveRepository)..loadData()),
+        ChangeNotifierProvider(create: (_) => DiaryProvider(repository: journalRepository)),
+        ChangeNotifierProvider(create: (_) => ArchiveProvider(chatRepository: chatRepository, journalRepository: journalRepository)..loadData()),
       ],
       child: MindMateApp(hasSession: hasSession),
     ),

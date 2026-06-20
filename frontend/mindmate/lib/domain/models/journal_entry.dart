@@ -11,11 +11,16 @@ class JournalEntry {
 
   late DateTime updatedAt;
 
-  late String title;
+  @Index()
+  late DateTime journalDate;
+
+  String? title;
 
   late String content;
 
-  late int wordCount;
+  String? pagesJson;
+
+  int? wordCount;
 
   double? sentimentScore;
 
@@ -24,4 +29,10 @@ class JournalEntry {
   int? embeddingId;
 
   bool isDeleted = false;
+
+  String get preview {
+    if (content.isEmpty) return 'Empty journal';
+    final lines = content.split('\n');
+    return lines.first.length > 50 ? '${lines.first.substring(0, 47)}...' : lines.first;
+  }
 }

@@ -18,4 +18,6 @@ class EmbeddingRecord {
   late DateTime createdAt;
 
   bool storedLocally = true;
+
+  late List<double> vector;
 }

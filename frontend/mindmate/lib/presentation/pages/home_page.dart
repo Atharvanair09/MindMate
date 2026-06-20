@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/state/user_provider.dart';
 import '../widgets/bottom_nav.dart';
+import 'developer_debug_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -304,12 +305,22 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "CHAT",
-                  style: GoogleFonts.inter(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.black,
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DeveloperDebugPage(),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    "CHAT",
+                    style: GoogleFonts.inter(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.black,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),

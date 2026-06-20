@@ -42,8 +42,13 @@ const EmbeddingRecordSchema = CollectionSchema(
       name: r'storedLocally',
       type: IsarType.bool,
     ),
-    r'vectorDimension': PropertySchema(
+    r'vector': PropertySchema(
       id: 5,
+      name: r'vector',
+      type: IsarType.doubleList,
+    ),
+    r'vectorDimension': PropertySchema(
+      id: 6,
       name: r'vectorDimension',
       type: IsarType.long,
     )
@@ -84,6 +89,7 @@ int _embeddingRecordEstimateSize(
   var bytesCount = offsets.last;
   bytesCount += 3 + object.modelVersion.length * 3;
   bytesCount += 3 + object.sourceType.length * 3;
+  bytesCount += 3 + object.vector.length * 8;
   return bytesCount;
 }
 
@@ -98,7 +104,8 @@ void _embeddingRecordSerialize(
   writer.writeLong(offsets[2], object.sourceId);
   writer.writeString(offsets[3], object.sourceType);
   writer.writeBool(offsets[4], object.storedLocally);
-  writer.writeLong(offsets[5], object.vectorDimension);
+  writer.writeDoubleList(offsets[5], object.vector);
+  writer.writeLong(offsets[6], object.vectorDimension);
 }
 
 EmbeddingRecord _embeddingRecordDeserialize(
@@ -114,7 +121,8 @@ EmbeddingRecord _embeddingRecordDeserialize(
   object.sourceId = reader.readLong(offsets[2]);
   object.sourceType = reader.readString(offsets[3]);
   object.storedLocally = reader.readBool(offsets[4]);
-  object.vectorDimension = reader.readLong(offsets[5]);
+  object.vector = reader.readDoubleList(offsets[5]) ?? [];
+  object.vectorDimension = reader.readLong(offsets[6]);
   return object;
 }
 
@@ -136,6 +144,8 @@ P _embeddingRecordDeserializeProp<P>(
     case 4:
       return (reader.readBool(offset)) as P;
     case 5:
+      return (reader.readDoubleList(offset) ?? []) as P;
+    case 6:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -733,6 +743,161 @@ extension EmbeddingRecordQueryFilter
   }
 
   QueryBuilder<EmbeddingRecord, EmbeddingRecord, QAfterFilterCondition>
+      vectorElementEqualTo(
+    double value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'vector',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<EmbeddingRecord, EmbeddingRecord, QAfterFilterCondition>
+      vectorElementGreaterThan(
+    double value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'vector',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<EmbeddingRecord, EmbeddingRecord, QAfterFilterCondition>
+      vectorElementLessThan(
+    double value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'vector',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<EmbeddingRecord, EmbeddingRecord, QAfterFilterCondition>
+      vectorElementBetween(
+    double lower,
+    double upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'vector',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<EmbeddingRecord, EmbeddingRecord, QAfterFilterCondition>
+      vectorLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'vector',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<EmbeddingRecord, EmbeddingRecord, QAfterFilterCondition>
+      vectorIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'vector',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<EmbeddingRecord, EmbeddingRecord, QAfterFilterCondition>
+      vectorIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'vector',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<EmbeddingRecord, EmbeddingRecord, QAfterFilterCondition>
+      vectorLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'vector',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<EmbeddingRecord, EmbeddingRecord, QAfterFilterCondition>
+      vectorLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'vector',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<EmbeddingRecord, EmbeddingRecord, QAfterFilterCondition>
+      vectorLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'vector',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
+  QueryBuilder<EmbeddingRecord, EmbeddingRecord, QAfterFilterCondition>
       vectorDimensionEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -1018,6 +1183,12 @@ extension EmbeddingRecordQueryWhereDistinct
     });
   }
 
+  QueryBuilder<EmbeddingRecord, EmbeddingRecord, QDistinct> distinctByVector() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'vector');
+    });
+  }
+
   QueryBuilder<EmbeddingRecord, EmbeddingRecord, QDistinct>
       distinctByVectorDimension() {
     return QueryBuilder.apply(this, (query) {
@@ -1064,6 +1235,13 @@ extension EmbeddingRecordQueryProperty
       storedLocallyProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'storedLocally');
+    });
+  }
+
+  QueryBuilder<EmbeddingRecord, List<double>, QQueryOperations>
+      vectorProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'vector');
     });
   }
 
