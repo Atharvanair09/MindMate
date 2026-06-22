@@ -5,6 +5,17 @@ import 'package:provider/provider.dart';
 import '../../core/state/user_provider.dart';
 import '../widgets/bottom_nav.dart';
 import 'developer_debug_page.dart';
+import '../../domain/models/reflection_result.dart';
+import '../../services/ml/reflection_engine.dart';
+import '../../domain/models/daily_mood_check_in.dart';
+import '../../data/database/isar_database.dart';
+import 'package:isar/isar.dart';
+import '../../services/notifications/notification_service.dart';
+import '../../services/reflection_follow_up/reflection_follow_up_service.dart';
+import '../../services/ml/feature_pipeline.dart';
+import '../../domain/models/reflection_follow_up.dart';
+import '../../domain/models/app_notification.dart';
+import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,8 +25,143 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Hardcoded for UI demo
-  int _selectedMoodIndex = 1;
+  int _selectedMoodIndex = -1;
+  ReflectionResult? _reflection;
+  bool _isLoading = true;
+  DailyMoodCheckIn? _todayMood;
+  ReflectionFollowUp? _activeFollowUp;
+  bool _showReflectionInput = false;
+  final TextEditingController _reflectionController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  @override
+  void dispose() {
+    _reflectionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      await NotificationService.instance.requestPermissions();
+      await NotificationService.instance.scheduleDailyMoodReminder();
+    } catch (e) {
+      debugPrint("Error in notification setup: $e");
+    }
+
+    try {
+      final isar = IsarDatabase.instance;
+      final now = DateTime.now();
+      final todayMidnight = DateTime.utc(now.year, now.month, now.day);
+      
+      final todayMood = await isar.dailyMoodCheckIns
+        .where()
+        .dateEqualTo(todayMidnight)
+        .findFirst();
+
+      ReflectionFollowUp? activePrompt = await ReflectionFollowUpService.instance.getActiveFollowUp();
+      
+      if (todayMood != null && activePrompt == null) {
+        try {
+          final created = await ReflectionFollowUpService.instance.detectAndSaveFollowUp();
+          if (created) {
+            activePrompt = await ReflectionFollowUpService.instance.getActiveFollowUp();
+            await NotificationService.instance.sendSmartMoodReminder();
+            await ReflectionFollowUpService.instance.recordFollowUpShown();
+          }
+        } catch (e) {
+          debugPrint("Error in reflection follow-up logic: $e");
+        }
+      }
+
+      final reflection = await ReflectionEngine.instance.getLatestReflection();
+      if (mounted) {
+        setState(() {
+          _todayMood = todayMood;
+          _activeFollowUp = activePrompt;
+          _reflection = reflection;
+          _isLoading = false;
+          
+          if (todayMood != null) {
+            final levels = ["GREAT", "GOOD", "OKAY", "LOW", "STRUGGLING"];
+            _selectedMoodIndex = levels.indexOf(todayMood.moodLevel);
+          } else if (reflection.moodScore != null) {
+            _selectedMoodIndex = 5 - reflection.moodScore!;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading home page data: $e");
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _saveMood(int index, String source) async {
+    final levels = ["GREAT", "GOOD", "OKAY", "LOW", "STRUGGLING"];
+    final moodLevel = levels[index];
+    
+    final isar = IsarDatabase.instance;
+    final now = DateTime.now();
+    final todayMidnight = DateTime.utc(now.year, now.month, now.day);
+    
+    DailyMoodCheckIn moodToSave;
+    
+    if (_todayMood != null) {
+      moodToSave = _todayMood!;
+      moodToSave.moodLevel = moodLevel;
+      moodToSave.updatedAt = now;
+      moodToSave.source = source;
+    } else {
+      moodToSave = DailyMoodCheckIn()
+        ..date = todayMidnight
+        ..moodLevel = moodLevel
+        ..createdAt = now
+        ..updatedAt = now
+        ..source = source;
+    }
+    
+    await isar.writeTxn(() async {
+      await isar.dailyMoodCheckIns.put(moodToSave);
+    });
+
+    // Run feature pipeline to update burnout and reflections based on new mood
+    await FeaturePipeline.instance.triggerPipeline();
+
+    if (_activeFollowUp != null) {
+      await ReflectionFollowUpService.instance.markResolved(_activeFollowUp!.id);
+    }
+
+    // Evaluate reflection follow-up based on the new mood state
+    try {
+      await ReflectionFollowUpService.instance.detectAndSaveFollowUp();
+    } catch (e) {
+      debugPrint("Error detecting reflection follow-up in _saveMood: $e");
+    }
+
+    final activeFollowUp = await ReflectionFollowUpService.instance.getActiveFollowUp();
+    final updatedReflection = await ReflectionEngine.instance.getLatestReflection();
+    
+    // We've logged a mood today, so we can cancel the daily reminder
+    await NotificationService.instance.cancelDailyMoodReminder();
+
+    if (mounted) {
+      setState(() {
+        _todayMood = moodToSave;
+        _selectedMoodIndex = index;
+        _reflection = updatedReflection;
+        _activeFollowUp = activeFollowUp; // Update with the new follow-up state (can be null or a newly triggered one)
+        _showReflectionInput = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +179,10 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 24),
               _buildSectionTitle("HOW ARE YOU FEELING?"),
               const SizedBox(height: 12),
+              if (_activeFollowUp != null) ...[
+                _buildReflectionFollowUpCard(),
+                const SizedBox(height: 12),
+              ],
               _buildMoodSelector(),
               const SizedBox(height: 24),
               _buildActionButtons(),
@@ -87,7 +237,51 @@ class _HomePageState extends State<HomePage> {
             );
           },
         ),
-        const Icon(Icons.notifications_none, color: Colors.black, size: 28),
+        FutureBuilder<int>(
+          future: NotificationService.instance.getUnreadCount(),
+          builder: (context, snapshot) {
+            final count = snapshot.data ?? 0;
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_none, color: Colors.black, size: 28),
+                  onPressed: () => _showNotificationCenter(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                if (count > 0)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.black, width: 1.5),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Center(
+                        child: Text(
+                          count.toString(),
+                          style: GoogleFonts.vt323(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            height: 1.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
       ],
     );
   }
@@ -172,6 +366,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildBurnoutCard() {
+    final score = _reflection?.burnoutScore.toString() ?? "--";
+    final level = _reflection?.burnoutLevel ?? "CALC...";
+    final insight = _reflection?.insight ?? "Analyzing your latest activity...";
+    Color levelColor = Colors.greenAccent;
+    if (level == 'MODERATE') levelColor = Colors.orangeAccent;
+    if (level == 'HIGH') levelColor = Colors.redAccent;
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.black,
@@ -183,63 +384,344 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                "BURNOUT RISK",
-                style: GoogleFonts.vt323(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 2,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "BURNOUT RISK",
+                    style: GoogleFonts.vt323(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    level,
+                    style: GoogleFonts.inter(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: levelColor,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                "LOW",
-                style: GoogleFonts.inter(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.greenAccent,
-                ),
+              Row(
+                children: [
+                  Text(
+                    score,
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 56,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.yellow,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Container(
+                    width: 6,
+                    height: 60,
+                    color: Colors.yellow,
+                  ),
+                ],
               ),
             ],
           ),
-          Row(
-            children: [
-              Text(
-                "72",
-                style: GoogleFonts.spaceMono(
-                  fontSize: 56,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.yellow,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Container(
-                width: 6,
-                height: 60,
-                color: Colors.yellow,
-              ),
-            ],
+          const SizedBox(height: 16),
+          Container(height: 2, color: Colors.grey[800]),
+          const SizedBox(height: 12),
+          Text(
+            insight,
+            style: GoogleFonts.vt323(
+              fontSize: 18,
+              color: Colors.yellow,
+              letterSpacing: 1,
+            ),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildReflectionFollowUpCard() {
+    String inputPrompt = "What changed since your journal entry?";
+    if (_activeFollowUp!.journalNegativeMoodMismatch) {
+      inputPrompt = "Anything that improved your day?";
+    } else if (_activeFollowUp!.journalPositiveMoodMismatch) {
+      inputPrompt = "Anything that made things more difficult?";
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.black, width: 3),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black,
+            offset: Offset(6, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                "✨ REFLECTION FOLLOW-UP",
+                style: GoogleFonts.vt323(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            _activeFollowUp!.message,
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (!_showReflectionInput) ...[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildCardButton(
+                    label: "TELL ME MORE",
+                    onTap: () {
+                      setState(() {
+                        _showReflectionInput = true;
+                      });
+                    },
+                    backgroundColor: Colors.yellow,
+                    textColor: Colors.black,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildCardButton(
+                    label: "KEEP CURRENT MOOD",
+                    onTap: () async {
+                      await ReflectionFollowUpService.instance.markResolved(_activeFollowUp!.id);
+                      setState(() {
+                        _activeFollowUp = null;
+                      });
+                      await _loadData();
+                    },
+                    backgroundColor: Colors.black,
+                    textColor: Colors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildCardButton(
+                    label: "DISMISS",
+                    onTap: () async {
+                      await ReflectionFollowUpService.instance.markDismissed(_activeFollowUp!.id);
+                      setState(() {
+                        _activeFollowUp = null;
+                      });
+                    },
+                    backgroundColor: Colors.white,
+                    textColor: Colors.black,
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            Text(
+              inputPrompt,
+              style: GoogleFonts.vt323(
+                fontSize: 16,
+                color: Colors.black87,
+                letterSpacing: 1.1,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _reflectionController,
+              decoration: InputDecoration(
+                hintText: "Type optional context...",
+                hintStyle: GoogleFonts.vt323(color: Colors.grey[600], fontSize: 16),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.zero,
+                  borderSide: const BorderSide(color: Colors.black, width: 2),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.zero,
+                  borderSide: const BorderSide(color: Colors.yellow, width: 3),
+                ),
+              ),
+              style: GoogleFonts.inter(fontSize: 14, color: Colors.black),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _buildCardButton(
+                  label: "SAVE CONTEXT",
+                  onTap: () async {
+                    await ReflectionFollowUpService.instance.markResolved(
+                      _activeFollowUp!.id,
+                      userResponse: _reflectionController.text,
+                    );
+                    _reflectionController.clear();
+                    setState(() {
+                      _activeFollowUp = null;
+                      _showReflectionInput = false;
+                    });
+                    await _loadData();
+                  },
+                  backgroundColor: Colors.yellow,
+                  textColor: Colors.black,
+                ),
+                const SizedBox(width: 8),
+                _buildCardButton(
+                  label: "CANCEL",
+                  onTap: () {
+                    setState(() {
+                      _showReflectionInput = false;
+                    });
+                  },
+                  backgroundColor: Colors.white,
+                  textColor: Colors.black,
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardButton({
+    required String label,
+    required VoidCallback onTap,
+    required Color backgroundColor,
+    required Color textColor,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          border: Border.all(color: Colors.black, width: 2),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.vt323(
+            fontSize: 16,
+            color: textColor,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.1,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMoodSelector() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: Colors.black));
+    }
+
     final moods = [
-      {"emoji": "🤩", "label": "GREAT"},
+      {"emoji": "😄", "label": "GREAT"},
       {"emoji": "😊", "label": "GOOD"},
       {"emoji": "😐", "label": "OKAY"},
       {"emoji": "😔", "label": "LOW"},
-      {"emoji": "😵", "label": "G.O"},
+      {"emoji": "🚨", "label": "BAD"},
     ];
+
+    if (_todayMood != null) {
+      final currentMood = moods.firstWhere((m) => m["label"] == _todayMood!.moodLevel, orElse: () => moods[2]);
+      
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: Colors.black, width: 2),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black,
+              offset: Offset(4, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(currentMood["emoji"]!, style: const TextStyle(fontSize: 32)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Today's Mood: ${currentMood["label"]!}",
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _reflection?.insight ?? "Thanks for checking in! Your mood has been recorded.",
+                        style: GoogleFonts.vt323(
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _todayMood = null; // Set to null to show selector again
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  border: Border.all(color: Colors.black, width: 2),
+                ),
+                child: Text(
+                  "CHANGE MOOD",
+                  style: GoogleFonts.vt323(
+                    fontSize: 16,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -247,9 +729,7 @@ class _HomePageState extends State<HomePage> {
         final isSelected = _selectedMoodIndex == index;
         return GestureDetector(
           onTap: () {
-            setState(() {
-              _selectedMoodIndex = index;
-            });
+            _saveMood(index, _activeFollowUp != null ? 'smart_prompt' : 'manual');
           },
           child: Container(
             width: (MediaQuery.of(context).size.width - 40 - 48) / 5, // Auto-size based on screen width
@@ -526,6 +1006,226 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showNotificationCenter(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.4),
+      builder: (context) {
+        return Align(
+          alignment: Alignment.topRight,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 60, right: 20),
+            child: Material(
+              color: Colors.transparent,
+              child: FutureBuilder<List<AppNotification>>(
+                future: NotificationService.instance.getNotifications(),
+                builder: (context, snapshot) {
+                  final notifications = snapshot.data ?? [];
+                  return Container(
+                    width: 320,
+                    constraints: const BoxConstraints(
+                      maxHeight: 450,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      border: Border.all(color: Colors.yellow, width: 3),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.yellow,
+                          offset: Offset(4, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Header
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: const BoxDecoration(
+                            border: Border(bottom: BorderSide(color: Colors.yellow, width: 2)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "NOTIFICATIONS",
+                                style: GoogleFonts.vt323(
+                                  color: Colors.yellow,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  if (notifications.any((n) => !n.isRead))
+                                    GestureDetector(
+                                      onTap: () async {
+                                        await NotificationService.instance.markAllAsRead();
+                                        if (context.mounted) {
+                                          Navigator.of(context).pop();
+                                          _showNotificationCenter(context); // reload popup
+                                          setState(() {}); // refresh home badge
+                                        }
+                                      },
+                                      child: Text(
+                                        "READ ALL",
+                                        style: GoogleFonts.vt323(
+                                          color: Colors.cyanAccent,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  const SizedBox(width: 12),
+                                  GestureDetector(
+                                    onTap: () => Navigator.of(context).pop(),
+                                    child: const Icon(Icons.close, color: Colors.yellow, size: 20),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // List
+                        Flexible(
+                          child: notifications.isEmpty
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 40),
+                                  child: Center(
+                                    child: Text(
+                                      "ALL CLEAR",
+                                      style: GoogleFonts.vt323(
+                                        color: Colors.grey,
+                                        fontSize: 20,
+                                        letterSpacing: 2,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : ListView.separated(
+                                  shrinkWrap: true,
+                                  padding: const EdgeInsets.all(8),
+                                  itemCount: notifications.length,
+                                  separatorBuilder: (context, index) => Container(
+                                    height: 1,
+                                    color: Colors.grey[900],
+                                  ),
+                                  itemBuilder: (context, index) {
+                                    final notification = notifications[index];
+                                    IconData iconData = Icons.notifications_none;
+                                    Color iconColor = Colors.white;
+                                    
+                                    switch (notification.type) {
+                                      case 'ai_insight':
+                                        iconData = Icons.auto_awesome;
+                                        iconColor = Colors.yellow;
+                                        break;
+                                      case 'reflection_follow_up':
+                                        iconData = Icons.chat_bubble_outline;
+                                        iconColor = Colors.greenAccent;
+                                        break;
+                                      case 'burnout_alert':
+                                        iconData = Icons.warning_amber;
+                                        iconColor = Colors.redAccent;
+                                        break;
+                                      case 'mood_reminder':
+                                        iconData = Icons.mood;
+                                        iconColor = Colors.purpleAccent;
+                                        break;
+                                      case 'system':
+                                        iconData = Icons.info_outline;
+                                        iconColor = Colors.blueAccent;
+                                        break;
+                                    }
+
+                                    final timeStr = DateFormat('h:mm a').format(notification.timestamp);
+
+                                    return InkWell(
+                                      onTap: () async {
+                                        if (!notification.isRead) {
+                                          await NotificationService.instance.markAsRead(notification.id);
+                                          if (context.mounted) {
+                                            Navigator.of(context).pop();
+                                            _showNotificationCenter(context); // reload popup
+                                            setState(() {}); // refresh home badge
+                                          }
+                                        }
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Icon(iconData, color: iconColor, size: 20),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        notification.title.toUpperCase(),
+                                                        style: GoogleFonts.vt323(
+                                                          color: notification.isRead ? Colors.grey : Colors.white,
+                                                          fontSize: 16,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        timeStr,
+                                                        style: GoogleFonts.vt323(
+                                                          color: Colors.grey,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    notification.message,
+                                                    style: GoogleFonts.inter(
+                                                      color: notification.isRead ? Colors.grey[600] : Colors.grey[300],
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            if (!notification.isRead) ...[
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                width: 8,
+                                                height: 8,
+                                                decoration: const BoxDecoration(
+                                                  color: Colors.yellow,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

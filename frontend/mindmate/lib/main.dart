@@ -19,13 +19,19 @@ import 'core/state/archive_provider.dart';
 import 'presentation/pages/memory_vault_page.dart';
 import 'data/database/isar_database.dart';
 import 'services/embedding/embedding_service.dart';
+import 'services/ml/feature_pipeline.dart';
+import 'services/notifications/notification_service.dart';
+import 'core/state/session_initializer.dart';
+import 'core/state/app_state_observer.dart';
+
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  await IsarDatabase.initialize();
-  await EmbeddingService.instance.init();
-  
+  // Initialize app state awareness
+  AppStateObserver.instance.initialize();
+
   // This removes the debug guidelines border if it was accidentally enabled
   debugPaintSizeEnabled = false;
 
@@ -38,6 +44,11 @@ void main() async {
   if (hasSession) {
     preloadedProvider = UserProvider();
     await preloadedProvider.loadProfile(authRepository);
+    
+    final uuid = await authRepository.getDeviceUuid();
+    if (uuid != null) {
+      await SessionInitializer.initializeUserSession(uuid);
+    }
   }
 
   final journalRepository = JournalRepositoryImpl();
@@ -66,6 +77,7 @@ class MindMateApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scaffoldMessengerKey: scaffoldMessengerKey,
       title: 'MindMate',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

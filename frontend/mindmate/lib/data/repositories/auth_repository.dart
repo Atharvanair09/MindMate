@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:bip39/bip39.dart' as bip39;
 import 'package:crypto/crypto.dart';
 import '../services/auth_service.dart';
+import '../database/isar_database.dart';
 
 class AuthRepository {
   final AuthService _authService;
@@ -127,8 +128,14 @@ class AuthRepository {
 
   /// Clears all stored credentials. Call on logout.
   Future<void> logout() async {
+    await IsarDatabase.close();
     await _secureStorage.delete(key: _jwtKey);
     await _secureStorage.delete(key: _uuidKey);
+  }
+
+  /// Get the currently authenticated device UUID
+  Future<String?> getDeviceUuid() async {
+    return await _secureStorage.read(key: _uuidKey);
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────

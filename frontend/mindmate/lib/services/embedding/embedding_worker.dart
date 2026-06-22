@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:battery_plus/battery_plus.dart';
+import 'package:flutter/foundation.dart';
 import '../../data/database/isar_database.dart';
 import '../../domain/models/journal_entry.dart';
 import '../../domain/models/chat_message.dart';
 import '../../domain/models/embedding_record.dart';
+import '../ml/journal_sentiment_analyzer.dart';
 import 'embedding_model.dart';
 import 'embedding_queue.dart';
 
@@ -12,6 +14,8 @@ class EmbeddingWorker {
   final EmbeddingModel _model;
   final Battery _battery = Battery();
   bool _isProcessing = false;
+  final JournalSentimentAnalyzer _sentimentAnalyzer =
+      JournalSentimentAnalyzer.instance;
 
   EmbeddingWorker(this._model);
 
@@ -98,6 +102,20 @@ class EmbeddingWorker {
               if (entry != null) {
                 entry.embeddingGenerated = true;
                 entry.embeddingId = recordId;
+
+                // Run sentiment analysis and persist scores
+                final analysis = _sentimentAnalyzer.analyzeText(textToEmbed);
+                entry.sentimentScore = analysis.sentimentScore;
+                entry.stressScore = analysis.stressScore;
+                entry.energyScore = analysis.energyScore;
+                entry.emotionalKeywords = analysis.emotionalKeywords.join(',');
+
+                debugPrint('[SentimentAnalysis] Journal #${entry.id}: '
+                    'sentiment=${analysis.sentimentScore.toStringAsFixed(3)}, '
+                    'stress=${analysis.stressScore.toStringAsFixed(3)}, '
+                    'energy=${analysis.energyScore.toStringAsFixed(3)}, '
+                    'keywords=${analysis.emotionalKeywords}');
+
                 await isar.collection<JournalEntry>().put(entry);
               }
             } else if (task.sourceType == 'chat') {
@@ -105,6 +123,11 @@ class EmbeddingWorker {
               if (msg != null) {
                 msg.embeddingGenerated = true;
                 msg.embeddingId = recordId;
+
+                // Run sentiment analysis for chat messages too
+                final analysis = _sentimentAnalyzer.analyzeText(textToEmbed);
+                msg.sentimentScore = analysis.sentimentScore;
+
                 await isar.collection<ChatMessage>().put(msg);
               }
             }

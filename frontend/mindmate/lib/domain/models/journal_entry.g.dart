@@ -37,38 +37,58 @@ const JournalEntrySchema = CollectionSchema(
       name: r'embeddingId',
       type: IsarType.long,
     ),
-    r'isDeleted': PropertySchema(
+    r'emotionalKeywords': PropertySchema(
       id: 4,
+      name: r'emotionalKeywords',
+      type: IsarType.string,
+    ),
+    r'energyScore': PropertySchema(
+      id: 5,
+      name: r'energyScore',
+      type: IsarType.double,
+    ),
+    r'isDeleted': PropertySchema(
+      id: 6,
       name: r'isDeleted',
       type: IsarType.bool,
     ),
     r'journalDate': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'journalDate',
       type: IsarType.dateTime,
     ),
     r'pagesJson': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'pagesJson',
       type: IsarType.string,
     ),
+    r'preview': PropertySchema(
+      id: 9,
+      name: r'preview',
+      type: IsarType.string,
+    ),
     r'sentimentScore': PropertySchema(
-      id: 7,
+      id: 10,
       name: r'sentimentScore',
       type: IsarType.double,
     ),
+    r'stressScore': PropertySchema(
+      id: 11,
+      name: r'stressScore',
+      type: IsarType.double,
+    ),
     r'title': PropertySchema(
-      id: 8,
+      id: 12,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 9,
+      id: 13,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'wordCount': PropertySchema(
-      id: 10,
+      id: 14,
       name: r'wordCount',
       type: IsarType.long,
     )
@@ -122,11 +142,18 @@ int _journalEntryEstimateSize(
   var bytesCount = offsets.last;
   bytesCount += 3 + object.content.length * 3;
   {
+    final value = object.emotionalKeywords;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
     final value = object.pagesJson;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
     }
   }
+  bytesCount += 3 + object.preview.length * 3;
   {
     final value = object.title;
     if (value != null) {
@@ -146,13 +173,17 @@ void _journalEntrySerialize(
   writer.writeDateTime(offsets[1], object.createdAt);
   writer.writeBool(offsets[2], object.embeddingGenerated);
   writer.writeLong(offsets[3], object.embeddingId);
-  writer.writeBool(offsets[4], object.isDeleted);
-  writer.writeDateTime(offsets[5], object.journalDate);
-  writer.writeString(offsets[6], object.pagesJson);
-  writer.writeDouble(offsets[7], object.sentimentScore);
-  writer.writeString(offsets[8], object.title);
-  writer.writeDateTime(offsets[9], object.updatedAt);
-  writer.writeLong(offsets[10], object.wordCount);
+  writer.writeString(offsets[4], object.emotionalKeywords);
+  writer.writeDouble(offsets[5], object.energyScore);
+  writer.writeBool(offsets[6], object.isDeleted);
+  writer.writeDateTime(offsets[7], object.journalDate);
+  writer.writeString(offsets[8], object.pagesJson);
+  writer.writeString(offsets[9], object.preview);
+  writer.writeDouble(offsets[10], object.sentimentScore);
+  writer.writeDouble(offsets[11], object.stressScore);
+  writer.writeString(offsets[12], object.title);
+  writer.writeDateTime(offsets[13], object.updatedAt);
+  writer.writeLong(offsets[14], object.wordCount);
 }
 
 JournalEntry _journalEntryDeserialize(
@@ -166,14 +197,17 @@ JournalEntry _journalEntryDeserialize(
   object.createdAt = reader.readDateTime(offsets[1]);
   object.embeddingGenerated = reader.readBool(offsets[2]);
   object.embeddingId = reader.readLongOrNull(offsets[3]);
+  object.emotionalKeywords = reader.readStringOrNull(offsets[4]);
+  object.energyScore = reader.readDoubleOrNull(offsets[5]);
   object.id = id;
-  object.isDeleted = reader.readBool(offsets[4]);
-  object.journalDate = reader.readDateTime(offsets[5]);
-  object.pagesJson = reader.readStringOrNull(offsets[6]);
-  object.sentimentScore = reader.readDoubleOrNull(offsets[7]);
-  object.title = reader.readStringOrNull(offsets[8]);
-  object.updatedAt = reader.readDateTime(offsets[9]);
-  object.wordCount = reader.readLongOrNull(offsets[10]);
+  object.isDeleted = reader.readBool(offsets[6]);
+  object.journalDate = reader.readDateTime(offsets[7]);
+  object.pagesJson = reader.readStringOrNull(offsets[8]);
+  object.sentimentScore = reader.readDoubleOrNull(offsets[10]);
+  object.stressScore = reader.readDoubleOrNull(offsets[11]);
+  object.title = reader.readStringOrNull(offsets[12]);
+  object.updatedAt = reader.readDateTime(offsets[13]);
+  object.wordCount = reader.readLongOrNull(offsets[14]);
   return object;
 }
 
@@ -193,18 +227,26 @@ P _journalEntryDeserializeProp<P>(
     case 3:
       return (reader.readLongOrNull(offset)) as P;
     case 4:
-      return (reader.readBool(offset)) as P;
-    case 5:
-      return (reader.readDateTime(offset)) as P;
-    case 6:
       return (reader.readStringOrNull(offset)) as P;
-    case 7:
+    case 5:
       return (reader.readDoubleOrNull(offset)) as P;
+    case 6:
+      return (reader.readBool(offset)) as P;
+    case 7:
+      return (reader.readDateTime(offset)) as P;
     case 8:
       return (reader.readStringOrNull(offset)) as P;
     case 9:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 10:
+      return (reader.readDoubleOrNull(offset)) as P;
+    case 11:
+      return (reader.readDoubleOrNull(offset)) as P;
+    case 12:
+      return (reader.readStringOrNull(offset)) as P;
+    case 13:
+      return (reader.readDateTime(offset)) as P;
+    case 14:
       return (reader.readLongOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -781,6 +823,244 @@ extension JournalEntryQueryFilter
     });
   }
 
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      emotionalKeywordsIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'emotionalKeywords',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      emotionalKeywordsIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'emotionalKeywords',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      emotionalKeywordsEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'emotionalKeywords',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      emotionalKeywordsGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'emotionalKeywords',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      emotionalKeywordsLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'emotionalKeywords',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      emotionalKeywordsBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'emotionalKeywords',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      emotionalKeywordsStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'emotionalKeywords',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      emotionalKeywordsEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'emotionalKeywords',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      emotionalKeywordsContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'emotionalKeywords',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      emotionalKeywordsMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'emotionalKeywords',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      emotionalKeywordsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'emotionalKeywords',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      emotionalKeywordsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'emotionalKeywords',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      energyScoreIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'energyScore',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      energyScoreIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'energyScore',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      energyScoreEqualTo(
+    double? value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'energyScore',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      energyScoreGreaterThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'energyScore',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      energyScoreLessThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'energyScore',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      energyScoreBetween(
+    double? lower,
+    double? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'energyScore',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
   QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition> idEqualTo(
       Id value) {
     return QueryBuilder.apply(this, (query) {
@@ -1055,6 +1335,142 @@ extension JournalEntryQueryFilter
   }
 
   QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      previewEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'preview',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      previewGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'preview',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      previewLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'preview',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      previewBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'preview',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      previewStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'preview',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      previewEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'preview',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      previewContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'preview',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      previewMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'preview',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      previewIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'preview',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      previewIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'preview',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
       sentimentScoreIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -1129,6 +1545,90 @@ extension JournalEntryQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
         property: r'sentimentScore',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      stressScoreIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'stressScore',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      stressScoreIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'stressScore',
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      stressScoreEqualTo(
+    double? value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'stressScore',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      stressScoreGreaterThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'stressScore',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      stressScoreLessThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'stressScore',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      stressScoreBetween(
+    double? lower,
+    double? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'stressScore',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -1480,6 +1980,33 @@ extension JournalEntryQuerySortBy
     });
   }
 
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy>
+      sortByEmotionalKeywords() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'emotionalKeywords', Sort.asc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy>
+      sortByEmotionalKeywordsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'emotionalKeywords', Sort.desc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> sortByEnergyScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'energyScore', Sort.asc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy>
+      sortByEnergyScoreDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'energyScore', Sort.desc);
+    });
+  }
+
   QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> sortByIsDeleted() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isDeleted', Sort.asc);
@@ -1517,6 +2044,18 @@ extension JournalEntryQuerySortBy
     });
   }
 
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> sortByPreview() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'preview', Sort.asc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> sortByPreviewDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'preview', Sort.desc);
+    });
+  }
+
   QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy>
       sortBySentimentScore() {
     return QueryBuilder.apply(this, (query) {
@@ -1528,6 +2067,19 @@ extension JournalEntryQuerySortBy
       sortBySentimentScoreDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'sentimentScore', Sort.desc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> sortByStressScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stressScore', Sort.asc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy>
+      sortByStressScoreDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stressScore', Sort.desc);
     });
   }
 
@@ -1621,6 +2173,33 @@ extension JournalEntryQuerySortThenBy
     });
   }
 
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy>
+      thenByEmotionalKeywords() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'emotionalKeywords', Sort.asc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy>
+      thenByEmotionalKeywordsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'emotionalKeywords', Sort.desc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> thenByEnergyScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'energyScore', Sort.asc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy>
+      thenByEnergyScoreDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'energyScore', Sort.desc);
+    });
+  }
+
   QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -1670,6 +2249,18 @@ extension JournalEntryQuerySortThenBy
     });
   }
 
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> thenByPreview() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'preview', Sort.asc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> thenByPreviewDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'preview', Sort.desc);
+    });
+  }
+
   QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy>
       thenBySentimentScore() {
     return QueryBuilder.apply(this, (query) {
@@ -1681,6 +2272,19 @@ extension JournalEntryQuerySortThenBy
       thenBySentimentScoreDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'sentimentScore', Sort.desc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> thenByStressScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stressScore', Sort.asc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy>
+      thenByStressScoreDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stressScore', Sort.desc);
     });
   }
 
@@ -1749,6 +2353,20 @@ extension JournalEntryQueryWhereDistinct
     });
   }
 
+  QueryBuilder<JournalEntry, JournalEntry, QDistinct>
+      distinctByEmotionalKeywords({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'emotionalKeywords',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QDistinct> distinctByEnergyScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'energyScore');
+    });
+  }
+
   QueryBuilder<JournalEntry, JournalEntry, QDistinct> distinctByIsDeleted() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isDeleted');
@@ -1768,10 +2386,23 @@ extension JournalEntryQueryWhereDistinct
     });
   }
 
+  QueryBuilder<JournalEntry, JournalEntry, QDistinct> distinctByPreview(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'preview', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<JournalEntry, JournalEntry, QDistinct>
       distinctBySentimentScore() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'sentimentScore');
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QDistinct> distinctByStressScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'stressScore');
     });
   }
 
@@ -1828,6 +2459,19 @@ extension JournalEntryQueryProperty
     });
   }
 
+  QueryBuilder<JournalEntry, String?, QQueryOperations>
+      emotionalKeywordsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'emotionalKeywords');
+    });
+  }
+
+  QueryBuilder<JournalEntry, double?, QQueryOperations> energyScoreProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'energyScore');
+    });
+  }
+
   QueryBuilder<JournalEntry, bool, QQueryOperations> isDeletedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isDeleted');
@@ -1846,10 +2490,22 @@ extension JournalEntryQueryProperty
     });
   }
 
+  QueryBuilder<JournalEntry, String, QQueryOperations> previewProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'preview');
+    });
+  }
+
   QueryBuilder<JournalEntry, double?, QQueryOperations>
       sentimentScoreProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'sentimentScore');
+    });
+  }
+
+  QueryBuilder<JournalEntry, double?, QQueryOperations> stressScoreProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'stressScore');
     });
   }
 

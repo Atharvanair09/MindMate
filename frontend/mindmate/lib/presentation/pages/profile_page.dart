@@ -47,6 +47,8 @@ class ProfilePage extends StatelessWidget {
           children: [
             _buildCoreIdentityCard(context),
             const SizedBox(height: 24),
+            _buildStatsRow(),
+            const SizedBox(height: 24),
             Text(
               'SYSTEM SETTINGS',
               style: GoogleFonts.anton(
@@ -57,8 +59,6 @@ class ProfilePage extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _buildSettingsList(context),
-            const SizedBox(height: 24),
-            _buildStatsRow(),
             const SizedBox(height: 32),
             _buildLogoutButton(context),
             const SizedBox(height: 40),

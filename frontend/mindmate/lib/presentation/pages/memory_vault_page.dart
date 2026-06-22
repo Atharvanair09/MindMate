@@ -7,6 +7,8 @@ import '../../domain/models/archive_models.dart' hide JournalEntry;
 import '../../domain/models/journal_entry.dart';
 import 'local_chat_view_page.dart';
 import 'local_journal_view_page.dart';
+import '../widgets/activity_heatmap.dart';
+
 class MemoryVaultPage extends StatefulWidget {
   const MemoryVaultPage({super.key});
 
@@ -390,50 +392,100 @@ class _MemoryVaultPageState extends State<MemoryVaultPage> with SingleTickerProv
   }
 
   Widget _buildJournalsList(ArchiveProvider provider) {
+    final endDate = DateTime.now();
+    final startDate = endDate.subtract(const Duration(days: 140)); // 20 weeks
+    
+    final Map<DateTime, int> heatmapData = {};
+    for (var journal in provider.journals) {
+      final date = DateTime(journal.createdAt.year, journal.createdAt.month, journal.createdAt.day);
+      final wordCount = journal.wordCount ?? (journal.content.isNotEmpty ? journal.content.split(' ').length : 0);
+      int level = 1;
+      if (wordCount > 300) level = 3;
+      else if (wordCount > 100) level = 2;
+      
+      // Keep the highest intensity if there are multiple journals on the same day
+      if ((heatmapData[date] ?? 0) < level) {
+        heatmapData[date] = level;
+      }
+    }
+
+    final heatmapWidget = Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.black, width: 2),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black,
+            offset: Offset(4, 4),
+            blurRadius: 0,
+          ),
+        ],
+      ),
+      child: ActivityHeatmap(
+        data: heatmapData,
+        startDate: startDate,
+        endDate: endDate,
+      ),
+    );
+
     if (provider.journals.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'NO JOURNALS FOUND',
-              style: GoogleFonts.spaceMono(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black54,
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: heatmapWidget,
+          ),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'NO JOURNALS FOUND',
+                    style: GoogleFonts.spaceMono(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Journal creation coming soon.')),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                      side: const BorderSide(color: Colors.black, width: 2),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'CREATE JOURNAL (COMING SOON)',
+                      style: GoogleFonts.spaceMono(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                // Placeholder for future journal creation
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Journal creation coming soon.')),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                side: const BorderSide(color: Colors.black, width: 2),
-                elevation: 0,
-              ),
-              child: Text(
-                'CREATE JOURNAL (COMING SOON)',
-                style: GoogleFonts.spaceMono(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: provider.journals.length,
+      itemCount: provider.journals.length + 1,
       separatorBuilder: (context, index) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
-        final journal = provider.journals[index];
+        if (index == 0) {
+          return heatmapWidget;
+        }
+        
+        final journal = provider.journals[index - 1];
         return Dismissible(
           key: Key(journal.id.toString()),
           direction: DismissDirection.startToEnd,

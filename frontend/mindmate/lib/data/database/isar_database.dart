@@ -9,14 +9,21 @@ import '../../domain/models/embedding_record.dart';
 import '../../domain/models/prediction_log.dart';
 import '../../domain/models/intervention_log.dart';
 import '../../domain/models/embedding_task.dart';
+import '../../domain/models/mood_feature_vector.dart';
+import '../../domain/models/daily_mood_check_in.dart';
+import '../../domain/models/reflection_follow_up.dart';
+import '../../domain/models/app_notification.dart';
 
 class IsarDatabase {
   static late Isar instance;
   static bool _isInitialized = false;
 
-  static Future<void> initialize() async {
-    if (_isInitialized) return;
-    
+  static Future<void> initialize(String uuid) async {
+    if (_isInitialized) {
+      if (instance.name == uuid) return;
+      await close(); // Close existing instance if logging in as different user
+    }
+
     final dir = await getApplicationDocumentsDirectory();
     
     // Privacy Architecture Note:
@@ -35,10 +42,22 @@ class IsarDatabase {
         PredictionLogSchema,
         InterventionLogSchema,
         EmbeddingTaskSchema,
+        MoodFeatureVectorSchema,
+        DailyMoodCheckInSchema,
+        ReflectionFollowUpSchema,
+        AppNotificationSchema,
       ],
       directory: dir.path,
+      name: uuid,
     );
     
     _isInitialized = true;
+  }
+
+  static Future<void> close() async {
+    if (_isInitialized) {
+      await instance.close();
+      _isInitialized = false;
+    }
   }
 }

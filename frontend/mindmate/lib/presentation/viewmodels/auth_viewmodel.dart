@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../core/state/session_initializer.dart';
 
 enum AuthState { emailInput, otpInput, recoveryPhrase, recoverAccount }
 
@@ -120,6 +121,10 @@ class AuthViewModel extends ChangeNotifier {
     _setError(null);
     try {
       await _repository.registerWithPhrase(_recoveryPhrase!);
+      final uuid = await _repository.getDeviceUuid();
+      if (uuid != null) {
+        await SessionInitializer.initializeUserSession(uuid);
+      }
     } catch (e) {
       _setError(e.toString().replaceAll('Exception: ', ''));
     } finally {
@@ -132,6 +137,10 @@ class AuthViewModel extends ChangeNotifier {
     _setError(null);
     try {
       await _repository.recoverAccount(phrase);
+      final uuid = await _repository.getDeviceUuid();
+      if (uuid != null) {
+        await SessionInitializer.initializeUserSession(uuid);
+      }
       return true; // recovery successful
     } catch (e) {
       _setError(e.toString().replaceAll('Exception: ', ''));

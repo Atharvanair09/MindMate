@@ -7,6 +7,9 @@ import '../../presentation/widgets/diary_grid/models/diary_page_data.dart';
 import '../../presentation/widgets/diary_grid/models/diary_image_block.dart';
 import '../../domain/repositories/journal_repository.dart';
 import '../../domain/models/journal_entry.dart';
+import '../../services/ml/journal_sentiment_analyzer.dart';
+import '../../services/ml/feature_pipeline.dart';
+import '../../services/notifications/notification_service.dart';
 
 class DiaryProvider extends ChangeNotifier with WidgetsBindingObserver {
   List<DiaryPageData> _pages = [DiaryPageData()];
@@ -36,6 +39,15 @@ class DiaryProvider extends ChangeNotifier with WidgetsBindingObserver {
       _checkDayRollover();
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.detached) {
       saveDiary();
+      
+      // Hackathon: schedule context-aware check-in 1 minute after app closed/paused
+      if (NotificationService.pendingContextAwareCheckInMessage != null) {
+        NotificationService.instance.sendContextAwareCheckIn(
+          NotificationService.pendingContextAwareCheckInMessage!,
+          immediate: false,
+        );
+        NotificationService.pendingContextAwareCheckInMessage = null;
+      }
     }
   }
 
@@ -72,6 +84,17 @@ class DiaryProvider extends ChangeNotifier with WidgetsBindingObserver {
       final plainText = _generatePlainTextContent();
       final wordCount = plainText.trim().isEmpty ? 0 : plainText.trim().split(RegExp(r'\s+')).length;
 
+      // Run sentiment analysis immediately on the plain text
+      JournalAnalysisResult? analysis;
+      if (plainText.trim().isNotEmpty) {
+        analysis = JournalSentimentAnalyzer.instance.analyzeText(plainText);
+        debugPrint('[DiaryProvider] Immediate sentiment analysis: '
+            'sentiment=${analysis.sentimentScore.toStringAsFixed(3)}, '
+            'stress=${analysis.stressScore.toStringAsFixed(3)}, '
+            'energy=${analysis.energyScore.toStringAsFixed(3)}, '
+            'keywords=${analysis.emotionalKeywords}');
+      }
+
       if (_currentJournal == null) {
         _currentJournal = JournalEntry()
           ..content = plainText
@@ -81,6 +104,14 @@ class DiaryProvider extends ChangeNotifier with WidgetsBindingObserver {
           ..pagesJson = pagesJson
           ..wordCount = wordCount;
         
+        // Apply sentiment scores immediately
+        if (analysis != null) {
+          _currentJournal!.sentimentScore = analysis.sentimentScore;
+          _currentJournal!.stressScore = analysis.stressScore;
+          _currentJournal!.energyScore = analysis.energyScore;
+          _currentJournal!.emotionalKeywords = analysis.emotionalKeywords.join(',');
+        }
+
         final id = await _repository.create(_currentJournal!);
         // After Isar insertion, the ID is assigned
       } else {
@@ -88,7 +119,23 @@ class DiaryProvider extends ChangeNotifier with WidgetsBindingObserver {
         _currentJournal!.updatedAt = now;
         _currentJournal!.pagesJson = pagesJson;
         _currentJournal!.wordCount = wordCount;
+
+        // Apply sentiment scores immediately
+        if (analysis != null) {
+          _currentJournal!.sentimentScore = analysis.sentimentScore;
+          _currentJournal!.stressScore = analysis.stressScore;
+          _currentJournal!.energyScore = analysis.energyScore;
+          _currentJournal!.emotionalKeywords = analysis.emotionalKeywords.join(',');
+        }
+
         await _repository.update(_currentJournal!);
+      }
+
+      // Trigger feature pipeline to recalculate burnout with new sentiment data
+      try {
+        await FeaturePipeline.instance.triggerPipeline();
+      } catch (e) {
+        debugPrint('[DiaryProvider] Feature pipeline error: $e');
       }
     } catch (e) {
       debugPrint("Error saving diary: $e");

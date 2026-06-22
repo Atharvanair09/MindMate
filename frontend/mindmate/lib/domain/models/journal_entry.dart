@@ -24,6 +24,12 @@ class JournalEntry {
 
   double? sentimentScore;
 
+  double? stressScore;
+
+  double? energyScore;
+
+  String? emotionalKeywords;
+
   bool embeddingGenerated = false;
 
   int? embeddingId;

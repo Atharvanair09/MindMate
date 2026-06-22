@@ -7,6 +7,8 @@ import '../../core/state/archive_provider.dart';
 import '../../domain/models/journal_entry.dart';
 import '../widgets/diary_grid/models/diary_page_data.dart';
 import '../widgets/diary_grid/scrapbook_diary_editor.dart';
+import '../../domain/models/reflection_result.dart';
+import '../../services/ml/reflection_engine.dart';
 
 class LocalJournalViewPage extends StatefulWidget {
   final String journalId;
@@ -106,8 +108,143 @@ class _LocalJournalViewPageState extends State<LocalJournalViewPage> {
       ),
       body: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 20.0),
-        itemCount: pages.length,
+        itemCount: pages.length + 1,
         itemBuilder: (context, index) {
+          if (index == pages.length) {
+            return FutureBuilder<ReflectionResult>(
+              future: ReflectionEngine.instance.getLatestReflection(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const SizedBox(height: 100, child: Center(child: CircularProgressIndicator(color: Colors.black)));
+                }
+                final reflection = snapshot.data!;
+                return Container(
+                  margin: const EdgeInsets.only(left: 20.0, right: 20.0, bottom: 40.0),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0E0E0), // Light grey
+                    border: Border.all(color: Colors.black, width: 2),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black,
+                        offset: Offset(4, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.auto_awesome, color: Colors.black, size: 28),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "AI REFLECTION",
+                                  style: GoogleFonts.vt323(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  reflection.burnoutLevel == 'LOW' ? "Positive Vibes" : "Mixed Signals",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        reflection.insight,
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 16,
+                          color: Colors.black87,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        "CONTRIBUTING FACTORS",
+                        style: GoogleFonts.vt323(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: reflection.contributingFactors.map((factor) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: Colors.black, width: 1),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.circle, size: 8, color: Colors.yellow[700]),
+                                const SizedBox(width: 6),
+                                Text(
+                                  factor,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          border: Border.all(color: Colors.black, width: 2),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.lightbulb_outline, color: Colors.yellow),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                reflection.suggestedAction,
+                                style: GoogleFonts.spaceGrotesk(
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          }
+
           return Container(
             height: MediaQuery.of(context).size.height * 0.7, // Give each page a fixed height
             margin: const EdgeInsets.only(left: 20.0, right: 20.0, bottom: 24.0),
