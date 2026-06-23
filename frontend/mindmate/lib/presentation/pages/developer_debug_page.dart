@@ -14,6 +14,8 @@ import '../../domain/models/app_notification.dart';
 import '../../services/notifications/notification_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../core/state/app_state_observer.dart';
+import '../../domain/models/ai_insight_result.dart';
+import '../../services/ml/ai_insight_generator.dart';
 
 class DeveloperDebugPage extends StatefulWidget {
   const DeveloperDebugPage({super.key});
@@ -26,6 +28,7 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
   int _totalEmbeddings = 0;
   MoodFeatureVector? _latestFeatureVector;
   ReflectionResult? _reflection;
+  AiInsightResult? _aiInsight;
   DailyMoodCheckIn? _todayMood;
   List<ReflectionFollowUp> _followUps = [];
   JournalEntry? _latestJournal;
@@ -73,6 +76,22 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
       .sortByCreatedAtDesc()
       .findFirst();
 
+    ReflectionFollowUp? activePrompt;
+    try {
+      activePrompt = followUps.firstWhere((f) => !f.resolved && !f.dismissed);
+    } catch (_) {
+      activePrompt = null;
+    }
+
+    AiInsightResult? aiInsight;
+    if (latestVector != null) {
+      aiInsight = await AiInsightGenerator.instance.generateInsight(
+        currentReflection: reflection,
+        latestVector: latestVector,
+        activeFollowUp: activePrompt,
+      );
+    }
+
     final unreadCount = await NotificationService.instance.getUnreadCount();
     final totalCount = await isar.appNotifications.count();
     final pendingFollowUpsCount = await isar.reflectionFollowUps
@@ -109,6 +128,7 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
       _totalEmbeddings = total;
       _latestFeatureVector = latestVector;
       _reflection = reflection;
+      _aiInsight = aiInsight;
       _todayMood = todayMood;
       _followUps = followUps;
       _latestJournal = latestJournal;
@@ -263,6 +283,44 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
               _buildValueRow("Journal Details: ${_reflection?.journalContribution ?? 'None'}"),
               _buildValueRow("Chat Details: ${_reflection?.chatContribution ?? 'None'}"),
               _buildValueRow("Trend Details: ${_reflection?.trendContribution ?? 'None'}"),
+            ]),
+            _buildDashedLine(),
+            const SizedBox(height: 20),
+            _buildSection("Phase 2 AI Insight Generator", [
+              if (_aiInsight != null) ...[
+                _buildValueRow("Home Card Insight: ${_aiInsight!.homeCardInsight}"),
+                _buildValueRow("Detailed Reflection: ${_aiInsight!.detailedReflection}"),
+                _buildValueRow("Observation: ${_aiInsight!.observation}"),
+                _buildValueRow("Suggestion: ${_aiInsight!.suggestion}"),
+                const SizedBox(height: 10),
+                _buildValueRow("History Days Available: ${_aiInsight!.historyDaysAvailable}"),
+                _buildValueRow("Trend Available: ${_aiInsight!.trendAvailable}"),
+                _buildValueRow("Average Comparison Available: ${_aiInsight!.averageComparisonAvailable}"),
+                const SizedBox(height: 10),
+                _buildValueRow("Available Signals:", isCyan: true),
+                if (_aiInsight!.availableSignals.isEmpty)
+                  _buildValueRow("  None")
+                else
+                  ..._aiInsight!.availableSignals.map((s) => _buildValueRow("  * $s")),
+                const SizedBox(height: 10),
+                _buildValueRow("Used Signals:", isCyan: true),
+                if (_aiInsight!.signalsUsed.isEmpty)
+                  _buildValueRow("  None")
+                else
+                  ..._aiInsight!.signalsUsed.map((s) => _buildValueRow("  + $s")),
+                const SizedBox(height: 10),
+                _buildValueRow("Confidence Contributions:", isCyan: true),
+                _buildValueRow("  Base Confidence +20.0"),
+                ..._aiInsight!.confidenceContributions.entries.map((e) => _buildValueRow("  ${e.key} +${e.value.toStringAsFixed(0)}")),
+                _buildValueRow("  Final Confidence = ${_aiInsight!.confidence.toStringAsFixed(0)}%"),
+                const SizedBox(height: 10),
+                _buildValueRow("Insight Factors Used:", isCyan: true),
+                ..._aiInsight!.factorsUsed.map((f) => _buildValueRow("  - $f")),
+                const SizedBox(height: 10),
+                _buildValueRow("Generated At: ${_aiInsight!.generatedAt.toLocal().toString().split('.')[0]}"),
+              ] else ...[
+                _buildValueRow("No AI Insight Generated Yet", isCyan: true),
+              ],
             ]),
           ],
         ),

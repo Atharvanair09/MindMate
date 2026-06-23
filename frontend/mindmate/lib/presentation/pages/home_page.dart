@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/state/user_provider.dart';
 import '../widgets/bottom_nav.dart';
 import 'developer_debug_page.dart';
+import 'insight_detail_page.dart';
 import '../../domain/models/reflection_result.dart';
 import '../../services/ml/reflection_engine.dart';
 import '../../domain/models/daily_mood_check_in.dart';
@@ -13,7 +14,9 @@ import 'package:isar/isar.dart';
 import '../../services/notifications/notification_service.dart';
 import '../../services/reflection_follow_up/reflection_follow_up_service.dart';
 import '../../services/ml/feature_pipeline.dart';
+import '../../services/ml/ai_insight_generator.dart';
 import '../../domain/models/reflection_follow_up.dart';
+import '../../domain/models/ai_insight_result.dart';
 import '../../domain/models/app_notification.dart';
 import 'package:intl/intl.dart';
 
@@ -27,6 +30,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedMoodIndex = -1;
   ReflectionResult? _reflection;
+  AiInsightResult? _aiInsight;
   bool _isLoading = true;
   DailyMoodCheckIn? _todayMood;
   ReflectionFollowUp? _activeFollowUp;
@@ -79,11 +83,22 @@ class _HomePageState extends State<HomePage> {
       }
 
       final reflection = await ReflectionEngine.instance.getLatestReflection();
+      final vector = await FeaturePipeline.instance.getLatestVector();
+      AiInsightResult? aiInsight;
+      if (vector != null) {
+        aiInsight = await AiInsightGenerator.instance.generateInsight(
+          currentReflection: reflection,
+          latestVector: vector,
+          activeFollowUp: activePrompt,
+        );
+      }
+
       if (mounted) {
         setState(() {
           _todayMood = todayMood;
           _activeFollowUp = activePrompt;
           _reflection = reflection;
+          _aiInsight = aiInsight;
           _isLoading = false;
           
           if (todayMood != null) {
@@ -148,6 +163,15 @@ class _HomePageState extends State<HomePage> {
 
     final activeFollowUp = await ReflectionFollowUpService.instance.getActiveFollowUp();
     final updatedReflection = await ReflectionEngine.instance.getLatestReflection();
+    final vector = await FeaturePipeline.instance.getLatestVector();
+    AiInsightResult? aiInsight;
+    if (vector != null) {
+      aiInsight = await AiInsightGenerator.instance.generateInsight(
+        currentReflection: updatedReflection,
+        latestVector: vector,
+        activeFollowUp: activeFollowUp,
+      );
+    }
     
     // We've logged a mood today, so we can cancel the daily reminder
     await NotificationService.instance.cancelDailyMoodReminder();
@@ -157,6 +181,7 @@ class _HomePageState extends State<HomePage> {
         _todayMood = moodToSave;
         _selectedMoodIndex = index;
         _reflection = updatedReflection;
+        _aiInsight = aiInsight;
         _activeFollowUp = activeFollowUp; // Update with the new follow-up state (can be null or a newly triggered one)
         _showReflectionInput = false;
       });
@@ -368,14 +393,25 @@ class _HomePageState extends State<HomePage> {
   Widget _buildBurnoutCard() {
     final score = _reflection?.burnoutScore.toString() ?? "--";
     final level = _reflection?.burnoutLevel ?? "CALC...";
-    final insight = _reflection?.insight ?? "Analyzing your latest activity...";
+    final insight = _aiInsight?.homeCardInsight ?? _reflection?.insight ?? "Analyzing your latest activity...";
     Color levelColor = Colors.greenAccent;
     if (level == 'MODERATE') levelColor = Colors.orangeAccent;
     if (level == 'HIGH') levelColor = Colors.redAccent;
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.black,
+    return GestureDetector(
+      onTap: () {
+        if (_aiInsight != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => InsightDetailPage(insight: _aiInsight!),
+            ),
+          );
+        }
+      },
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.black,
         boxShadow: [
           BoxShadow(
             color: Colors.black,
@@ -446,7 +482,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildReflectionFollowUpCard() {
@@ -1077,7 +1113,7 @@ class _HomePageState extends State<HomePage> {
                                         "READ ALL",
                                         style: GoogleFonts.vt323(
                                           color: Colors.cyanAccent,
-                                          fontSize: 14,
+                                          fontSize: 18,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
