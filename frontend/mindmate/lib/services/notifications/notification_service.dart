@@ -324,12 +324,10 @@ class NotificationService {
   Future<void> scheduleDailyMoodReminder() async {
     final now = DateTime.now();
     var scheduledDate = DateTime(now.year, now.month, now.day, 19, 0, 0); // 7 PM
-    
+
     if (now.isAfter(scheduledDate)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
-
-    final tzDate = tz.TZDateTime.from(scheduledDate, tz.local);
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'daily_mood_channel_id',
@@ -338,13 +336,13 @@ class NotificationService {
       importance: Importance.max,
       priority: Priority.high,
     );
-    
+
     const NotificationDetails platformDetails = NotificationDetails(
       android: androidDetails,
       iOS: DarwinNotificationDetails(),
     );
 
-    // Pre-insert the daily reminder into Isar notifications for tomorrow if it doesn't exist
+    // Check if an Isar record already exists for this scheduled time
     final existing = await _isar.appNotifications
         .filter()
         .typeEqualTo('mood_reminder')
@@ -353,6 +351,7 @@ class NotificationService {
         .findFirst();
 
     if (existing == null) {
+      // Save to Isar for Notification Centre tracking
       final notifId = await saveNotification(
         'Mood Check-In',
         'How are you feeling right now?',
@@ -360,31 +359,63 @@ class NotificationService {
         scheduledTime: scheduledDate,
       );
 
-      // Cancel existing daily reminder to avoid duplicates
-      await flutterLocalNotificationsPlugin.cancel(id: notifId);
+      final tzDate = tz.TZDateTime.from(scheduledDate, tz.local);
 
-      if (AppStateObserver.instance.isForeground) {
-        _activeTimers[notifId]?.cancel();
-        _activeTimers[notifId] = Timer(scheduledDate.difference(now), () {
-          AppStateObserver.instance.suppressedCount++;
-          showInAppBanner('Mood Check-In', 'How are you feeling right now?');
-        });
-      } else {
+      // ALWAYS register the OS zonedSchedule so the alarm survives app termination.
+      // This is the primary delivery path for background / terminated state.
+      try {
+        await flutterLocalNotificationsPlugin.cancel(id: notifId);
         await flutterLocalNotificationsPlugin.zonedSchedule(
-          id: notifId, // use database id
+          id: notifId,
           title: 'Mood Check-In',
           body: 'How are you feeling right now?',
           scheduledDate: tzDate,
           notificationDetails: platformDetails,
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         );
+      } catch (_) {
+        // Fallback: inexact alarm if exact scheduling is unavailable (some Android 12+ devices)
+        await flutterLocalNotificationsPlugin.zonedSchedule(
+          id: notifId,
+          title: 'Mood Check-In',
+          body: 'How are you feeling right now?',
+          scheduledDate: tzDate,
+          notificationDetails: platformDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+      }
+
+      // ADDITIONALLY, when the app is currently in the foreground, set a Dart timer
+      // so we can show an in-app snackbar instead of an OS popup at 7 PM.
+      if (AppStateObserver.instance.isForeground) {
+        final delay = scheduledDate.difference(now);
+        _activeTimers[notifId]?.cancel();
+        _activeTimers[notifId] = Timer(delay, () {
+          // Cancel the OS notification (app is open) and show snackbar instead
+          flutterLocalNotificationsPlugin.cancel(id: notifId);
+          AppStateObserver.instance.suppressedCount++;
+          showInAppBanner('Mood Check-In', 'How are you feeling right now?');
+        });
       }
     }
   }
-  
+
   Future<void> cancelDailyMoodReminder() async {
-    await flutterLocalNotificationsPlugin.cancel(id: 1);
+    // Cancel all pending mood_reminder OS notifications
+    final now = DateTime.now();
+    final reminders = await _isar.appNotifications
+        .filter()
+        .typeEqualTo('mood_reminder')
+        .and()
+        .timestampGreaterThan(now)
+        .findAll();
+    for (final r in reminders) {
+      await flutterLocalNotificationsPlugin.cancel(id: r.id);
+      _activeTimers[r.id]?.cancel();
+      _activeTimers.remove(r.id);
+    }
   }
+
 
   Future<void> scheduleFollowUpReminders(ReflectionFollowUp followUp) async {
     final now = DateTime.now();
@@ -614,5 +645,94 @@ class NotificationService {
       "We noticed some changes in your recent reflections. Would you like to check in today?",
       immediate: true,
     );
+  }
+
+  // --- DEBUG HELPERS ---
+
+  /// Returns a map of notification diagnostic information for the Debug Page.
+  Future<Map<String, dynamic>> getNotificationDebugInfo() async {
+    // Permission status
+    String permissionStatus = 'Unknown';
+    final androidImpl = flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    if (androidImpl != null) {
+      final granted = await androidImpl.areNotificationsEnabled();
+      permissionStatus = (granted ?? false) ? 'GRANTED' : 'DENIED';
+    }
+
+    // Pending OS notifications
+    final pendingRequests = await flutterLocalNotificationsPlugin.pendingNotificationRequests();
+    final pendingCount = pendingRequests.length;
+
+    // Next scheduled mood reminder
+    final now = DateTime.now();
+    final nextReminder = await _isar.appNotifications
+        .filter()
+        .typeEqualTo('mood_reminder')
+        .and()
+        .timestampGreaterThan(now)
+        .sortByTimestamp()
+        .findFirst();
+
+    // Last delivered notification (past + unread count)
+    final lastDelivered = await _isar.appNotifications
+        .filter()
+        .timestampLessThan(now)
+        .sortByTimestampDesc()
+        .findFirst();
+
+    return {
+      'permissionStatus': permissionStatus,
+      'pendingOSCount': pendingCount,
+      'nextReminderTime': nextReminder?.timestamp?.toLocal().toString() ?? 'None scheduled',
+      'nextReminderType': nextReminder?.type ?? '--',
+      'lastNotificationTitle': lastDelivered?.title ?? 'None',
+      'lastNotificationTime': lastDelivered?.timestamp.toLocal().toString() ?? '--',
+      'appState': AppStateObserver.instance.state.toString().split('.').last.toUpperCase(),
+      'dartTimerCount': _activeTimers.length,
+    };
+  }
+
+  /// Sends a test notification immediately, routing via the correct path based on app state.
+  /// Use this from the Debug Page to verify end-to-end delivery.
+  Future<Map<String, String>> sendTestReminder() async {
+    const title = 'Test Reminder';
+    final deliveryBody = '🧪 Test notification fired at ${DateTime.now().toLocal().toString().substring(0, 19)}';
+
+    final notifId = await saveNotification(title, deliveryBody, 'test_reminder');
+    final appState = AppStateObserver.instance.state.toString().split('.').last.toUpperCase();
+
+    if (AppStateObserver.instance.isForeground) {
+      AppStateObserver.instance.suppressedCount++;
+      showInAppBanner(title, deliveryBody);
+      return {
+        'appState': appState,
+        'deliveryPath': 'IN-APP SNACKBAR',
+        'expected': 'Snackbar shown above ↑',
+      };
+    } else {
+      AppStateObserver.instance.backgroundCount++;
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'daily_mood_channel_id',
+        'Daily Mood Check-In',
+        importance: Importance.max,
+        priority: Priority.high,
+      );
+      const NotificationDetails platformDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: DarwinNotificationDetails(),
+      );
+      await flutterLocalNotificationsPlugin.show(
+        id: notifId,
+        title: title,
+        body: deliveryBody,
+        notificationDetails: platformDetails,
+      );
+      return {
+        'appState': appState,
+        'deliveryPath': 'OS NOTIFICATION',
+        'expected': 'Android notification in status bar',
+      };
+    }
   }
 }

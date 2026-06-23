@@ -167,9 +167,28 @@ class ReflectionEngine {
     double rollingAvg = vector.rollingMoodAverage7Days ?? 3.0; // 1-5 scale
     double rawTrendImpact = ((5.0 - rollingAvg) / 4.0 * 100.0);
 
-    // 3. Chat Analysis (15%): derived from chat sentiment.
-    double chatSentimentVal = vector.chatCount > 0 ? (vector.chatSentiment ?? 0.0) : 0.0;
-    double rawChatImpact = ((1.0 - chatSentimentVal) / 2.0) * 100.0;
+    // 3. Chat Analysis (15%): weighted blend of sentiment, stress, and emotional intensity.
+    //    Each sub-signal falls back to neutral (50) when no chat data is available for that dimension.
+    final hasChatData = vector.chatCount > 0;
+    final chatSentimentVal = hasChatData ? (vector.chatSentiment ?? 0.0) : 0.0;
+    final chatStressVal    = hasChatData ? (vector.chatStressScore ?? 0.5) : 0.5;
+    final chatEnergyVal    = hasChatData ? (vector.chatEnergyScore ?? 0.5) : 0.5;
+
+    // sentimentImpact: 0 = very positive, 100 = very negative
+    final chatSentimentImpact = ((1.0 - chatSentimentVal) / 2.0) * 100.0;
+    // stressImpact: 0 = no stress, 100 = extreme stress
+    final chatStressImpact = chatStressVal * 100.0;
+    // energyImpact: emotionalIntensity 0 = energized (low burnout), 1 = depleted (high burnout)
+    final chatEnergyImpact = chatEnergyVal * 100.0;
+
+    double rawChatImpact;
+    if (hasChatData) {
+      rawChatImpact = (chatSentimentImpact * 0.40) +
+                      (chatStressImpact    * 0.40) +
+                      (chatEnergyImpact   * 0.20);
+    } else {
+      rawChatImpact = 50.0; // neutral baseline when no chat data
+    }
 
     // 4. Activity Pattern (5%): derived from session count, time spent, and interventions.
     double sessionScore = (1.0 - (vector.sessionCount / 3.0).clamp(0.0, 1.0)) * 100.0;
@@ -325,7 +344,13 @@ class ReflectionEngine {
           "stress: ${(vector.journalStressScore ?? 0.5).toStringAsFixed(2)}, "
           "energy: ${(vector.journalEnergyScore ?? 0.5).toStringAsFixed(2)}"
         : "None";
-    String cContrib = vector.chatCount > 0 ? "sentiment: ${(vector.chatSentiment ?? 0.0).toStringAsFixed(2)}" : "None";
+    String cContrib = vector.chatCount > 0
+        ? "sentiment: ${(vector.chatSentiment ?? 0.0).toStringAsFixed(3)}, "
+          "stress: ${(vector.chatStressScore ?? 0.0).toStringAsFixed(3)}, "
+          "energy_intensity: ${(vector.chatEnergyScore ?? 0.0).toStringAsFixed(3)}, "
+          "neg_msgs: ${vector.negativeChatCount}, "
+          "raw_impact: ${rawChatImpact.toStringAsFixed(1)}"
+        : "None";
     String tContrib = "Avg ${rollingAvg.toStringAsFixed(1)}";
 
     return ReflectionResult(

@@ -4,6 +4,7 @@ import '../../domain/repositories/journal_repository.dart';
 import '../../domain/models/archive_models.dart' as archive;
 import '../../domain/models/journal_entry.dart';
 import '../../domain/models/chat_message.dart';
+import '../../services/ml/journal_sentiment_analyzer.dart';
 
 class ArchiveProvider extends ChangeNotifier {
   final ChatRepository _chatRepository;
@@ -183,7 +184,17 @@ class ArchiveProvider extends ChangeNotifier {
       ..message = text
       ..role = isUser ? 'user' : 'ai'
       ..createdAt = DateTime.now();
-      
+
+    // Run on-device sentiment analysis only for user messages.
+    // AI responses are excluded to avoid polluting emotional signal.
+    if (isUser && text.trim().isNotEmpty) {
+      final analysis = JournalSentimentAnalyzer.instance.analyzeText(text);
+      isarMsg.sentimentScore = analysis.sentimentScore;
+      isarMsg.stressScore = analysis.stressScore;
+      // emotionalIntensity: high stress + low energy = most depleted (1.0)
+      isarMsg.emotionalIntensity = (1.0 - analysis.energyScore).clamp(0.0, 1.0);
+    }
+
     await _chatRepository.create(isarMsg);
 
     notifyListeners();

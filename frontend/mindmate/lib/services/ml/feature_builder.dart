@@ -86,12 +86,29 @@ class FeatureBuilder {
     vector.chatCount = chats.length;
     double chatSentimentSum = 0;
     int chatSentimentCount = 0;
+    double chatStressSum = 0;
+    int chatStressCount = 0;
+    double chatEnergySum = 0;
+    int chatEnergyCount = 0;
+    int negativeChatCount = 0;
     List<double>? chatAvgEmbedding;
 
     for (var chat in chats) {
-      if (chat.sentimentScore != null) {
+      // Only user messages carry emotional signals; skip AI responses
+      final isUserMsg = chat.role == 'user';
+
+      if (isUserMsg && chat.sentimentScore != null) {
         chatSentimentSum += chat.sentimentScore!;
         chatSentimentCount++;
+        if (chat.sentimentScore! <= -0.3) negativeChatCount++;
+      }
+      if (isUserMsg && chat.stressScore != null) {
+        chatStressSum += chat.stressScore!;
+        chatStressCount++;
+      }
+      if (isUserMsg && chat.emotionalIntensity != null) {
+        chatEnergySum += chat.emotionalIntensity!;
+        chatEnergyCount++;
       }
       if (chat.embeddingId != null) {
         final emb = await extractor.getEmbedding('chat', chat.id);
@@ -104,6 +121,13 @@ class FeatureBuilder {
     if (chatSentimentCount > 0) {
       vector.chatSentiment = chatSentimentSum / chatSentimentCount;
     }
+    if (chatStressCount > 0) {
+      vector.chatStressScore = chatStressSum / chatStressCount;
+    }
+    if (chatEnergyCount > 0) {
+      vector.chatEnergyScore = chatEnergySum / chatEnergyCount;
+    }
+    vector.negativeChatCount = negativeChatCount;
     if (chatAvgEmbedding != null && vector.chatCount > 0) {
       vector.chatEmbeddingAverage = _divideVector(chatAvgEmbedding, vector.chatCount);
     }

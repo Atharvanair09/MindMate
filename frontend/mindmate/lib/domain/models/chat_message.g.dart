@@ -37,19 +37,29 @@ const ChatMessageSchema = CollectionSchema(
       name: r'embeddingId',
       type: IsarType.long,
     ),
-    r'message': PropertySchema(
+    r'emotionalIntensity': PropertySchema(
       id: 4,
+      name: r'emotionalIntensity',
+      type: IsarType.double,
+    ),
+    r'message': PropertySchema(
+      id: 5,
       name: r'message',
       type: IsarType.string,
     ),
     r'role': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'role',
       type: IsarType.string,
     ),
     r'sentimentScore': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'sentimentScore',
+      type: IsarType.double,
+    ),
+    r'stressScore': PropertySchema(
+      id: 8,
+      name: r'stressScore',
       type: IsarType.double,
     )
   },
@@ -116,9 +126,11 @@ void _chatMessageSerialize(
   writer.writeDateTime(offsets[1], object.createdAt);
   writer.writeBool(offsets[2], object.embeddingGenerated);
   writer.writeLong(offsets[3], object.embeddingId);
-  writer.writeString(offsets[4], object.message);
-  writer.writeString(offsets[5], object.role);
-  writer.writeDouble(offsets[6], object.sentimentScore);
+  writer.writeDouble(offsets[4], object.emotionalIntensity);
+  writer.writeString(offsets[5], object.message);
+  writer.writeString(offsets[6], object.role);
+  writer.writeDouble(offsets[7], object.sentimentScore);
+  writer.writeDouble(offsets[8], object.stressScore);
 }
 
 ChatMessage _chatMessageDeserialize(
@@ -132,10 +144,12 @@ ChatMessage _chatMessageDeserialize(
   object.createdAt = reader.readDateTime(offsets[1]);
   object.embeddingGenerated = reader.readBool(offsets[2]);
   object.embeddingId = reader.readLongOrNull(offsets[3]);
+  object.emotionalIntensity = reader.readDoubleOrNull(offsets[4]);
   object.id = id;
-  object.message = reader.readString(offsets[4]);
-  object.role = reader.readString(offsets[5]);
-  object.sentimentScore = reader.readDoubleOrNull(offsets[6]);
+  object.message = reader.readString(offsets[5]);
+  object.role = reader.readString(offsets[6]);
+  object.sentimentScore = reader.readDoubleOrNull(offsets[7]);
+  object.stressScore = reader.readDoubleOrNull(offsets[8]);
   return object;
 }
 
@@ -155,10 +169,14 @@ P _chatMessageDeserializeProp<P>(
     case 3:
       return (reader.readLongOrNull(offset)) as P;
     case 4:
-      return (reader.readString(offset)) as P;
+      return (reader.readDoubleOrNull(offset)) as P;
     case 5:
       return (reader.readString(offset)) as P;
     case 6:
+      return (reader.readString(offset)) as P;
+    case 7:
+      return (reader.readDoubleOrNull(offset)) as P;
+    case 8:
       return (reader.readDoubleOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -678,6 +696,90 @@ extension ChatMessageQueryFilter
     });
   }
 
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      emotionalIntensityIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'emotionalIntensity',
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      emotionalIntensityIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'emotionalIntensity',
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      emotionalIntensityEqualTo(
+    double? value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'emotionalIntensity',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      emotionalIntensityGreaterThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'emotionalIntensity',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      emotionalIntensityLessThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'emotionalIntensity',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      emotionalIntensityBetween(
+    double? lower,
+    double? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'emotionalIntensity',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
   QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition> idEqualTo(
       Id value) {
     return QueryBuilder.apply(this, (query) {
@@ -1079,6 +1181,90 @@ extension ChatMessageQueryFilter
       ));
     });
   }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      stressScoreIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'stressScore',
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      stressScoreIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'stressScore',
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      stressScoreEqualTo(
+    double? value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'stressScore',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      stressScoreGreaterThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'stressScore',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      stressScoreLessThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'stressScore',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      stressScoreBetween(
+    double? lower,
+    double? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'stressScore',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
+      ));
+    });
+  }
 }
 
 extension ChatMessageQueryObject
@@ -1140,6 +1326,20 @@ extension ChatMessageQuerySortBy
     });
   }
 
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy>
+      sortByEmotionalIntensity() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'emotionalIntensity', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy>
+      sortByEmotionalIntensityDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'emotionalIntensity', Sort.desc);
+    });
+  }
+
   QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> sortByMessage() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'message', Sort.asc);
@@ -1174,6 +1374,18 @@ extension ChatMessageQuerySortBy
       sortBySentimentScoreDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'sentimentScore', Sort.desc);
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> sortByStressScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stressScore', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> sortByStressScoreDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stressScore', Sort.desc);
     });
   }
 }
@@ -1231,6 +1443,20 @@ extension ChatMessageQuerySortThenBy
     });
   }
 
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy>
+      thenByEmotionalIntensity() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'emotionalIntensity', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy>
+      thenByEmotionalIntensityDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'emotionalIntensity', Sort.desc);
+    });
+  }
+
   QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -1279,6 +1505,18 @@ extension ChatMessageQuerySortThenBy
       return query.addSortBy(r'sentimentScore', Sort.desc);
     });
   }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> thenByStressScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stressScore', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> thenByStressScoreDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stressScore', Sort.desc);
+    });
+  }
 }
 
 extension ChatMessageQueryWhereDistinct
@@ -1310,6 +1548,13 @@ extension ChatMessageQueryWhereDistinct
     });
   }
 
+  QueryBuilder<ChatMessage, ChatMessage, QDistinct>
+      distinctByEmotionalIntensity() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'emotionalIntensity');
+    });
+  }
+
   QueryBuilder<ChatMessage, ChatMessage, QDistinct> distinctByMessage(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1327,6 +1572,12 @@ extension ChatMessageQueryWhereDistinct
   QueryBuilder<ChatMessage, ChatMessage, QDistinct> distinctBySentimentScore() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'sentimentScore');
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QDistinct> distinctByStressScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'stressScore');
     });
   }
 }
@@ -1364,6 +1615,13 @@ extension ChatMessageQueryProperty
     });
   }
 
+  QueryBuilder<ChatMessage, double?, QQueryOperations>
+      emotionalIntensityProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'emotionalIntensity');
+    });
+  }
+
   QueryBuilder<ChatMessage, String, QQueryOperations> messageProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'message');
@@ -1380,6 +1638,12 @@ extension ChatMessageQueryProperty
       sentimentScoreProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'sentimentScore');
+    });
+  }
+
+  QueryBuilder<ChatMessage, double?, QQueryOperations> stressScoreProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'stressScore');
     });
   }
 }

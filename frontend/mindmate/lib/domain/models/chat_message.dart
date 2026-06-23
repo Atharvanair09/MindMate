@@ -18,6 +18,13 @@ class ChatMessage {
 
   double? sentimentScore;
 
+  /// Stress level: 0.0 (no stress) to 1.0 (extreme stress). Only set for user messages.
+  double? stressScore;
+
+  /// Emotional intensity: 0.0 (high energy / positive) to 1.0 (depleted / negative).
+  /// Derived from inverted energy score. Only set for user messages.
+  double? emotionalIntensity;
+
   bool embeddingGenerated = false;
 
   int? embeddingId;

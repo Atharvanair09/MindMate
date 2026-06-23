@@ -14,6 +14,8 @@ class AiInsightResult {
   final List<String> signalsUsed;
   final List<String> availableSignals;
   final Map<String, double> confidenceContributions;
+  final List<String> signalAcceptanceReasons;
+  final List<String> signalRejectionReasons;
 
   AiInsightResult({
     required this.homeCardInsight,
@@ -29,6 +31,8 @@ class AiInsightResult {
     this.signalsUsed = const [],
     this.availableSignals = const [],
     this.confidenceContributions = const {},
+    this.signalAcceptanceReasons = const [],
+    this.signalRejectionReasons = const [],
   });
 
   // Fallback state when there is insufficient data
@@ -47,6 +51,8 @@ class AiInsightResult {
       signalsUsed: ["None"],
       availableSignals: ["None"],
       confidenceContributions: {},
+      signalAcceptanceReasons: [],
+      signalRejectionReasons: ["Not enough data to generate insights"],
     );
   }
 }

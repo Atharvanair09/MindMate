@@ -32,108 +32,123 @@ const MoodFeatureVectorSchema = CollectionSchema(
       name: r'chatEmbeddingAverage',
       type: IsarType.doubleList,
     ),
-    r'chatSentiment': PropertySchema(
+    r'chatEnergyScore': PropertySchema(
       id: 3,
+      name: r'chatEnergyScore',
+      type: IsarType.double,
+    ),
+    r'chatSentiment': PropertySchema(
+      id: 4,
       name: r'chatSentiment',
       type: IsarType.double,
     ),
+    r'chatStressScore': PropertySchema(
+      id: 5,
+      name: r'chatStressScore',
+      type: IsarType.double,
+    ),
     r'createdAt': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
     r'currentMood': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'currentMood',
       type: IsarType.string,
     ),
     r'currentMoodSource': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'currentMoodSource',
       type: IsarType.string,
     ),
     r'currentMoodValue': PropertySchema(
-      id: 7,
+      id: 9,
       name: r'currentMoodValue',
       type: IsarType.double,
     ),
     r'date': PropertySchema(
-      id: 8,
+      id: 10,
       name: r'date',
       type: IsarType.dateTime,
     ),
     r'dayOfWeek': PropertySchema(
-      id: 9,
+      id: 11,
       name: r'dayOfWeek',
       type: IsarType.long,
     ),
     r'featureVersion': PropertySchema(
-      id: 10,
+      id: 12,
       name: r'featureVersion',
       type: IsarType.string,
     ),
     r'hourOfDay': PropertySchema(
-      id: 11,
+      id: 13,
       name: r'hourOfDay',
       type: IsarType.long,
     ),
     r'interventionCount': PropertySchema(
-      id: 12,
+      id: 14,
       name: r'interventionCount',
       type: IsarType.long,
     ),
     r'journalCount': PropertySchema(
-      id: 13,
+      id: 15,
       name: r'journalCount',
       type: IsarType.long,
     ),
     r'journalEmbedding': PropertySchema(
-      id: 14,
+      id: 16,
       name: r'journalEmbedding',
       type: IsarType.doubleList,
     ),
     r'journalEnergyScore': PropertySchema(
-      id: 15,
+      id: 17,
       name: r'journalEnergyScore',
       type: IsarType.double,
     ),
     r'journalSentiment': PropertySchema(
-      id: 16,
+      id: 18,
       name: r'journalSentiment',
       type: IsarType.double,
     ),
     r'journalStressScore': PropertySchema(
-      id: 17,
+      id: 19,
       name: r'journalStressScore',
       type: IsarType.double,
     ),
     r'manualMoodExists': PropertySchema(
-      id: 18,
+      id: 20,
       name: r'manualMoodExists',
       type: IsarType.bool,
     ),
+    r'negativeChatCount': PropertySchema(
+      id: 21,
+      name: r'negativeChatCount',
+      type: IsarType.long,
+    ),
     r'previousMood': PropertySchema(
-      id: 19,
+      id: 22,
       name: r'previousMood',
       type: IsarType.long,
     ),
     r'rollingMoodAverage7Days': PropertySchema(
-      id: 20,
+      id: 23,
       name: r'rollingMoodAverage7Days',
       type: IsarType.double,
     ),
     r'rollingMoodStd7Days': PropertySchema(
-      id: 21,
+      id: 24,
       name: r'rollingMoodStd7Days',
       type: IsarType.double,
     ),
     r'sessionCount': PropertySchema(
-      id: 22,
+      id: 25,
       name: r'sessionCount',
       type: IsarType.long,
     ),
     r'timeSpentMinutes': PropertySchema(
-      id: 23,
+      id: 26,
       name: r'timeSpentMinutes',
       type: IsarType.long,
     )
@@ -209,27 +224,30 @@ void _moodFeatureVectorSerialize(
   writer.writeLong(offsets[0], object.actualMood);
   writer.writeLong(offsets[1], object.chatCount);
   writer.writeDoubleList(offsets[2], object.chatEmbeddingAverage);
-  writer.writeDouble(offsets[3], object.chatSentiment);
-  writer.writeDateTime(offsets[4], object.createdAt);
-  writer.writeString(offsets[5], object.currentMood);
-  writer.writeString(offsets[6], object.currentMoodSource);
-  writer.writeDouble(offsets[7], object.currentMoodValue);
-  writer.writeDateTime(offsets[8], object.date);
-  writer.writeLong(offsets[9], object.dayOfWeek);
-  writer.writeString(offsets[10], object.featureVersion);
-  writer.writeLong(offsets[11], object.hourOfDay);
-  writer.writeLong(offsets[12], object.interventionCount);
-  writer.writeLong(offsets[13], object.journalCount);
-  writer.writeDoubleList(offsets[14], object.journalEmbedding);
-  writer.writeDouble(offsets[15], object.journalEnergyScore);
-  writer.writeDouble(offsets[16], object.journalSentiment);
-  writer.writeDouble(offsets[17], object.journalStressScore);
-  writer.writeBool(offsets[18], object.manualMoodExists);
-  writer.writeLong(offsets[19], object.previousMood);
-  writer.writeDouble(offsets[20], object.rollingMoodAverage7Days);
-  writer.writeDouble(offsets[21], object.rollingMoodStd7Days);
-  writer.writeLong(offsets[22], object.sessionCount);
-  writer.writeLong(offsets[23], object.timeSpentMinutes);
+  writer.writeDouble(offsets[3], object.chatEnergyScore);
+  writer.writeDouble(offsets[4], object.chatSentiment);
+  writer.writeDouble(offsets[5], object.chatStressScore);
+  writer.writeDateTime(offsets[6], object.createdAt);
+  writer.writeString(offsets[7], object.currentMood);
+  writer.writeString(offsets[8], object.currentMoodSource);
+  writer.writeDouble(offsets[9], object.currentMoodValue);
+  writer.writeDateTime(offsets[10], object.date);
+  writer.writeLong(offsets[11], object.dayOfWeek);
+  writer.writeString(offsets[12], object.featureVersion);
+  writer.writeLong(offsets[13], object.hourOfDay);
+  writer.writeLong(offsets[14], object.interventionCount);
+  writer.writeLong(offsets[15], object.journalCount);
+  writer.writeDoubleList(offsets[16], object.journalEmbedding);
+  writer.writeDouble(offsets[17], object.journalEnergyScore);
+  writer.writeDouble(offsets[18], object.journalSentiment);
+  writer.writeDouble(offsets[19], object.journalStressScore);
+  writer.writeBool(offsets[20], object.manualMoodExists);
+  writer.writeLong(offsets[21], object.negativeChatCount);
+  writer.writeLong(offsets[22], object.previousMood);
+  writer.writeDouble(offsets[23], object.rollingMoodAverage7Days);
+  writer.writeDouble(offsets[24], object.rollingMoodStd7Days);
+  writer.writeLong(offsets[25], object.sessionCount);
+  writer.writeLong(offsets[26], object.timeSpentMinutes);
 }
 
 MoodFeatureVector _moodFeatureVectorDeserialize(
@@ -242,28 +260,31 @@ MoodFeatureVector _moodFeatureVectorDeserialize(
   object.actualMood = reader.readLongOrNull(offsets[0]);
   object.chatCount = reader.readLong(offsets[1]);
   object.chatEmbeddingAverage = reader.readDoubleList(offsets[2]);
-  object.chatSentiment = reader.readDoubleOrNull(offsets[3]);
-  object.createdAt = reader.readDateTime(offsets[4]);
-  object.currentMood = reader.readStringOrNull(offsets[5]);
-  object.currentMoodSource = reader.readStringOrNull(offsets[6]);
-  object.currentMoodValue = reader.readDoubleOrNull(offsets[7]);
-  object.date = reader.readDateTime(offsets[8]);
-  object.dayOfWeek = reader.readLong(offsets[9]);
-  object.featureVersion = reader.readString(offsets[10]);
-  object.hourOfDay = reader.readLong(offsets[11]);
+  object.chatEnergyScore = reader.readDoubleOrNull(offsets[3]);
+  object.chatSentiment = reader.readDoubleOrNull(offsets[4]);
+  object.chatStressScore = reader.readDoubleOrNull(offsets[5]);
+  object.createdAt = reader.readDateTime(offsets[6]);
+  object.currentMood = reader.readStringOrNull(offsets[7]);
+  object.currentMoodSource = reader.readStringOrNull(offsets[8]);
+  object.currentMoodValue = reader.readDoubleOrNull(offsets[9]);
+  object.date = reader.readDateTime(offsets[10]);
+  object.dayOfWeek = reader.readLong(offsets[11]);
+  object.featureVersion = reader.readString(offsets[12]);
+  object.hourOfDay = reader.readLong(offsets[13]);
   object.id = id;
-  object.interventionCount = reader.readLong(offsets[12]);
-  object.journalCount = reader.readLong(offsets[13]);
-  object.journalEmbedding = reader.readDoubleList(offsets[14]);
-  object.journalEnergyScore = reader.readDoubleOrNull(offsets[15]);
-  object.journalSentiment = reader.readDoubleOrNull(offsets[16]);
-  object.journalStressScore = reader.readDoubleOrNull(offsets[17]);
-  object.manualMoodExists = reader.readBool(offsets[18]);
-  object.previousMood = reader.readLongOrNull(offsets[19]);
-  object.rollingMoodAverage7Days = reader.readDoubleOrNull(offsets[20]);
-  object.rollingMoodStd7Days = reader.readDoubleOrNull(offsets[21]);
-  object.sessionCount = reader.readLong(offsets[22]);
-  object.timeSpentMinutes = reader.readLong(offsets[23]);
+  object.interventionCount = reader.readLong(offsets[14]);
+  object.journalCount = reader.readLong(offsets[15]);
+  object.journalEmbedding = reader.readDoubleList(offsets[16]);
+  object.journalEnergyScore = reader.readDoubleOrNull(offsets[17]);
+  object.journalSentiment = reader.readDoubleOrNull(offsets[18]);
+  object.journalStressScore = reader.readDoubleOrNull(offsets[19]);
+  object.manualMoodExists = reader.readBool(offsets[20]);
+  object.negativeChatCount = reader.readLong(offsets[21]);
+  object.previousMood = reader.readLongOrNull(offsets[22]);
+  object.rollingMoodAverage7Days = reader.readDoubleOrNull(offsets[23]);
+  object.rollingMoodStd7Days = reader.readDoubleOrNull(offsets[24]);
+  object.sessionCount = reader.readLong(offsets[25]);
+  object.timeSpentMinutes = reader.readLong(offsets[26]);
   return object;
 }
 
@@ -283,44 +304,50 @@ P _moodFeatureVectorDeserializeProp<P>(
     case 3:
       return (reader.readDoubleOrNull(offset)) as P;
     case 4:
-      return (reader.readDateTime(offset)) as P;
-    case 5:
-      return (reader.readStringOrNull(offset)) as P;
-    case 6:
-      return (reader.readStringOrNull(offset)) as P;
-    case 7:
       return (reader.readDoubleOrNull(offset)) as P;
-    case 8:
+    case 5:
+      return (reader.readDoubleOrNull(offset)) as P;
+    case 6:
       return (reader.readDateTime(offset)) as P;
+    case 7:
+      return (reader.readStringOrNull(offset)) as P;
+    case 8:
+      return (reader.readStringOrNull(offset)) as P;
     case 9:
-      return (reader.readLong(offset)) as P;
+      return (reader.readDoubleOrNull(offset)) as P;
     case 10:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 11:
       return (reader.readLong(offset)) as P;
     case 12:
-      return (reader.readLong(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 13:
       return (reader.readLong(offset)) as P;
     case 14:
-      return (reader.readDoubleList(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 15:
-      return (reader.readDoubleOrNull(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 16:
-      return (reader.readDoubleOrNull(offset)) as P;
+      return (reader.readDoubleList(offset)) as P;
     case 17:
       return (reader.readDoubleOrNull(offset)) as P;
     case 18:
-      return (reader.readBool(offset)) as P;
+      return (reader.readDoubleOrNull(offset)) as P;
     case 19:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readDoubleOrNull(offset)) as P;
     case 20:
-      return (reader.readDoubleOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 21:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 22:
       return (reader.readLong(offset)) as P;
+    case 22:
+      return (reader.readLongOrNull(offset)) as P;
     case 23:
+      return (reader.readDoubleOrNull(offset)) as P;
+    case 24:
+      return (reader.readDoubleOrNull(offset)) as P;
+    case 25:
+      return (reader.readLong(offset)) as P;
+    case 26:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -828,6 +855,90 @@ extension MoodFeatureVectorQueryFilter
   }
 
   QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      chatEnergyScoreIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'chatEnergyScore',
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      chatEnergyScoreIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'chatEnergyScore',
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      chatEnergyScoreEqualTo(
+    double? value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'chatEnergyScore',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      chatEnergyScoreGreaterThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'chatEnergyScore',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      chatEnergyScoreLessThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'chatEnergyScore',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      chatEnergyScoreBetween(
+    double? lower,
+    double? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'chatEnergyScore',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
       chatSentimentIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -902,6 +1013,90 @@ extension MoodFeatureVectorQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
         property: r'chatSentiment',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      chatStressScoreIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'chatStressScore',
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      chatStressScoreIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'chatStressScore',
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      chatStressScoreEqualTo(
+    double? value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'chatStressScore',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      chatStressScoreGreaterThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'chatStressScore',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      chatStressScoreLessThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'chatStressScore',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      chatStressScoreBetween(
+    double? lower,
+    double? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'chatStressScore',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -2267,6 +2462,62 @@ extension MoodFeatureVectorQueryFilter
   }
 
   QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      negativeChatCountEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'negativeChatCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      negativeChatCountGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'negativeChatCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      negativeChatCountLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'negativeChatCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
+      negativeChatCountBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'negativeChatCount',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterFilterCondition>
       previousMoodIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -2658,6 +2909,20 @@ extension MoodFeatureVectorQuerySortBy
   }
 
   QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
+      sortByChatEnergyScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'chatEnergyScore', Sort.asc);
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
+      sortByChatEnergyScoreDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'chatEnergyScore', Sort.desc);
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
       sortByChatSentiment() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'chatSentiment', Sort.asc);
@@ -2668,6 +2933,20 @@ extension MoodFeatureVectorQuerySortBy
       sortByChatSentimentDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'chatSentiment', Sort.desc);
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
+      sortByChatStressScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'chatStressScore', Sort.asc);
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
+      sortByChatStressScoreDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'chatStressScore', Sort.desc);
     });
   }
 
@@ -2868,6 +3147,20 @@ extension MoodFeatureVectorQuerySortBy
   }
 
   QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
+      sortByNegativeChatCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'negativeChatCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
+      sortByNegativeChatCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'negativeChatCount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
       sortByPreviousMood() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'previousMood', Sort.asc);
@@ -2969,6 +3262,20 @@ extension MoodFeatureVectorQuerySortThenBy
   }
 
   QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
+      thenByChatEnergyScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'chatEnergyScore', Sort.asc);
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
+      thenByChatEnergyScoreDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'chatEnergyScore', Sort.desc);
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
       thenByChatSentiment() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'chatSentiment', Sort.asc);
@@ -2979,6 +3286,20 @@ extension MoodFeatureVectorQuerySortThenBy
       thenByChatSentimentDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'chatSentiment', Sort.desc);
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
+      thenByChatStressScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'chatStressScore', Sort.asc);
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
+      thenByChatStressScoreDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'chatStressScore', Sort.desc);
     });
   }
 
@@ -3192,6 +3513,20 @@ extension MoodFeatureVectorQuerySortThenBy
   }
 
   QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
+      thenByNegativeChatCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'negativeChatCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
+      thenByNegativeChatCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'negativeChatCount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QAfterSortBy>
       thenByPreviousMood() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'previousMood', Sort.asc);
@@ -3286,9 +3621,23 @@ extension MoodFeatureVectorQueryWhereDistinct
   }
 
   QueryBuilder<MoodFeatureVector, MoodFeatureVector, QDistinct>
+      distinctByChatEnergyScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'chatEnergyScore');
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QDistinct>
       distinctByChatSentiment() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'chatSentiment');
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QDistinct>
+      distinctByChatStressScore() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'chatStressScore');
     });
   }
 
@@ -3400,6 +3749,13 @@ extension MoodFeatureVectorQueryWhereDistinct
   }
 
   QueryBuilder<MoodFeatureVector, MoodFeatureVector, QDistinct>
+      distinctByNegativeChatCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'negativeChatCount');
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, MoodFeatureVector, QDistinct>
       distinctByPreviousMood() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'previousMood');
@@ -3463,9 +3819,23 @@ extension MoodFeatureVectorQueryProperty
   }
 
   QueryBuilder<MoodFeatureVector, double?, QQueryOperations>
+      chatEnergyScoreProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'chatEnergyScore');
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, double?, QQueryOperations>
       chatSentimentProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'chatSentiment');
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, double?, QQueryOperations>
+      chatStressScoreProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'chatStressScore');
     });
   }
 
@@ -3568,6 +3938,13 @@ extension MoodFeatureVectorQueryProperty
       manualMoodExistsProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'manualMoodExists');
+    });
+  }
+
+  QueryBuilder<MoodFeatureVector, int, QQueryOperations>
+      negativeChatCountProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'negativeChatCount');
     });
   }
 

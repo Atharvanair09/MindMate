@@ -21,6 +21,15 @@ class MoodFeatureVector {
   
   double? chatSentiment;
 
+  /// Average stress score across user chat messages (0.0–1.0).
+  double? chatStressScore;
+
+  /// Average emotional intensity across user chat messages (0.0–1.0, higher = more depleted).
+  double? chatEnergyScore;
+
+  /// Count of user messages with sentimentScore <= -0.3 today.
+  int negativeChatCount = 0;
+
   int? previousMood;
 
   double? rollingMoodAverage7Days;
