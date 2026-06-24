@@ -88,19 +88,39 @@ class WeeklyReflectionService {
     // ── Patterns ──────────────────────────────────────────────────────────
     final keyPatterns = _detectPatterns(journals, chats, moodValues);
 
+    // ── Influential Factors ───────────────────────────────────────────────
+    final influenceData = _computeMostInfluentialFactors(
+      journals: journals,
+      chats: chats,
+      followUps: followUps,
+      moodValues: moodValues,
+      moodTrend: moodTrend,
+      burnoutTrend: burnoutTrend,
+    );
+
     // ── Summary & Suggestion ──────────────────────────────────────────────
     final summary =
         _buildSummary(moodTrend, burnoutTrend, avgMood, avgBurnout);
-    final suggestion = _buildSuggestion(moodTrend, burnoutTrend);
+    final suggestion = _buildSuggestion(influenceData, moodTrend, burnoutTrend);
 
     // ── Confidence ────────────────────────────────────────────────────────
-    final confidence = _computeConfidence(
+    final confidenceBreakdown = _computeConfidenceBreakdown(
       moodCheckIns: moodCheckIns,
       journals: journals,
       chats: chats,
       burnoutScores: burnoutScores,
       followUps: followUps,
     );
+    final confidence = confidenceBreakdown['total']!;
+
+    final String historySufficiency;
+    if (moodCheckIns.length < 3) {
+      historySufficiency = 'LOW';
+    } else if (moodCheckIns.length < 7) {
+      historySufficiency = 'MODERATE';
+    } else {
+      historySufficiency = 'HIGH';
+    }
 
     // ── Persist ───────────────────────────────────────────────────────────
     final reflection = WeeklyReflection()
@@ -116,6 +136,23 @@ class WeeklyReflectionService {
       ..summary = summary
       ..suggestion = suggestion
       ..confidence = confidence
+      ..rawConfidence = confidenceBreakdown['rawConfidence']!
+      ..confidenceCap = confidenceBreakdown['confidenceCap']!
+      ..baseConfidence = confidenceBreakdown['baseConfidence']!
+      ..daysContribution = confidenceBreakdown['daysContribution']!
+      ..moodContribution = confidenceBreakdown['moodContribution']!
+      ..journalContribution = confidenceBreakdown['journalContribution']!
+      ..chatContribution = confidenceBreakdown['chatContribution']!
+      ..burnoutContribution = confidenceBreakdown['burnoutContribution']!
+      ..followUpContribution = confidenceBreakdown['followUpContribution']!
+      ..historySufficiency = historySufficiency
+      ..mostPositiveInfluence = influenceData['mostPositiveInfluence'] as String
+      ..positiveInfluenceReason = influenceData['positiveInfluenceReason'] as String
+      ..mostNegativeInfluence = influenceData['mostNegativeInfluence'] as String
+      ..negativeInfluenceReason = influenceData['negativeInfluenceReason'] as String
+      ..topPositiveScore = influenceData['topPositiveScore'] as double
+      ..topNegativeScore = influenceData['topNegativeScore'] as double
+      ..influenceScores = influenceData['influenceScores'] as List<String>
       ..generatedAt = DateTime.now();
 
     await isar.writeTxn(() async {
@@ -220,30 +257,217 @@ class WeeklyReflectionService {
     return scores;
   }
 
-  /// Compares first-3 vs last-3 mood averages.
+  /// Compares first half vs second half averages based on available days.
   String _computeMoodTrend(List<double> values) {
-    if (values.length < 4) return 'Stable';
-    final first = values.take(3).toList();
-    final last = values.reversed.take(3).toList();
+    int days = values.length;
+    if (days < 3) return 'Insufficient Data';
+    
+    int takeCount = days >= 6 ? 3 : days ~/ 2;
+    final first = values.take(takeCount).toList();
+    final last = values.reversed.take(takeCount).toList();
+    
     final firstAvg = first.reduce((a, b) => a + b) / first.length;
     final lastAvg = last.reduce((a, b) => a + b) / last.length;
     final delta = lastAvg - firstAvg;
-    if (delta > 0.4) return 'Improving';
-    if (delta < -0.4) return 'Declining';
-    return 'Stable';
+    
+    String trend;
+    if (delta > 0.4) {
+      trend = 'Improving';
+    } else if (delta < -0.4) {
+      trend = 'Declining';
+    } else {
+      trend = 'Stable';
+    }
+    
+    if (days < 7) {
+      return 'Preliminary $trend';
+    }
+    return trend;
   }
 
-  /// Compares first-3 vs last-3 burnout averages.
+  /// Compares first half vs second half averages based on available days.
   String _computeBurnoutTrend(List<double> scores) {
-    if (scores.length < 4) return 'Stable';
-    final first = scores.take(3).toList();
-    final last = scores.reversed.take(3).toList();
+    int days = scores.length;
+    if (days < 3) return 'Insufficient Data';
+    
+    int takeCount = days >= 6 ? 3 : days ~/ 2;
+    final first = scores.take(takeCount).toList();
+    final last = scores.reversed.take(takeCount).toList();
+    
     final firstAvg = first.reduce((a, b) => a + b) / first.length;
     final lastAvg = last.reduce((a, b) => a + b) / last.length;
     final delta = lastAvg - firstAvg;
-    if (delta < -5) return 'Improving';
-    if (delta > 5) return 'Increasing';
-    return 'Stable';
+    
+    String trend;
+    if (delta < -5) {
+      trend = 'Improving';
+    } else if (delta > 5) {
+      trend = 'Increasing';
+    } else {
+      trend = 'Stable';
+    }
+    
+    if (days < 7) {
+      return 'Preliminary $trend';
+    }
+    return trend;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  Influential Factors
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Map<String, dynamic> _computeMostInfluentialFactors({
+    required List<JournalEntry> journals,
+    required List<ChatMessage> chats,
+    required List<ReflectionFollowUp> followUps,
+    required List<double> moodValues,
+    required String moodTrend,
+    required String burnoutTrend,
+  }) {
+    // POSITIVE SCORING
+    final posScores = <String, double>{};
+    final posReasons = <String, String>{};
+
+    // Resolved Mood Conflicts
+    final resolvedConflicts = followUps.where((f) => f.resolved).length;
+    if (resolvedConflicts > 0) {
+      posScores['Resolved Mood Conflicts'] = resolvedConflicts * 25.0;
+      posReasons['Resolved Mood Conflicts'] = 'Mentioned in follow-up response.';
+    }
+
+    // Positive Journals
+    final posJournals = journals.where((j) => (j.sentimentScore ?? 0) > 0.3).length;
+    if (posJournals > 0) {
+      posScores['Positive Journals'] = posJournals * 20.0;
+      posReasons['Positive Journals'] = 'Detected in multiple journals.';
+    }
+
+    // Positive Chats
+    final posChatsCount = chats.where((c) => (c.sentimentScore ?? 0) > 0.3).length;
+    if (posChatsCount > 0) {
+      posScores['Positive Chats'] = posChatsCount * 15.0;
+      posReasons['Positive Chats'] = 'Positive sentiment detected in conversations.';
+    }
+
+    // Social Activity Mentions
+    final socialJournals = journals.where((j) => _containsAny(j.content.toLowerCase(), ['friend', 'family', 'social', 'hang out', 'coffee', 'dinner'])).length;
+    if (socialJournals > 0) {
+      posScores['Social Interaction Mentions'] = socialJournals * 20.0;
+      posReasons['Social Interaction Mentions'] = 'Associated with positive mood mentions.';
+    }
+
+    // Exercise Mentions
+    final exerciseJournals = journals.where((j) => _containsAny(j.content.toLowerCase(), ['gym', 'walk', 'run', 'exercise', 'workout', 'jog', 'sport'])).length;
+    if (exerciseJournals > 0) {
+      posScores['Exercise'] = exerciseJournals * 6.0;
+      posReasons['Exercise'] = 'Physical activity appears correlated with better mood.';
+    }
+
+    // Mood Recovery / Burnout Reduction
+    if (moodTrend.contains('Improving')) {
+      posScores['Mood Recovery Events'] = 20.0;
+      posReasons['Mood Recovery Events'] = 'Overall mood trend showed strong improvement.';
+    }
+    if (burnoutTrend.contains('Improving')) {
+      posScores['Burnout Improvement'] = 25.0;
+      posReasons['Burnout Improvement'] = 'Overall burnout trend showed strong improvement.';
+    }
+
+    // NEGATIVE SCORING
+    final negScores = <String, double>{};
+    final negReasons = <String, String>{};
+
+    // Repeated LOW Mood
+    final lowDays = moodValues.where((v) => v <= 2).length;
+    if (lowDays > 0) {
+      negScores['Repeated LOW Mood'] = lowDays * 15.0;
+      negReasons['Repeated LOW Mood'] = 'Detected across multiple days.';
+    }
+
+    // Negative Journals
+    final negJournals = journals.where((j) => (j.sentimentScore ?? 0) < -0.3 || (j.stressScore ?? 0) > 0.6).length;
+    if (negJournals > 0) {
+      negScores['Negative Journals'] = negJournals * 20.0;
+      negReasons['Negative Journals'] = 'High stress or negative sentiment in journals.';
+    }
+
+    // Negative Chats
+    final negChatsCount = chats.where((c) => (c.sentimentScore ?? 0) < -0.3).length;
+    if (negChatsCount > 0) {
+      negScores['Negative Chats'] = negChatsCount * 20.0;
+      negReasons['Negative Chats'] = 'Elevated emotional stress in conversations.';
+    }
+
+    // Sleep Issues
+    final sleepJournals = journals.where((j) => _containsAny(j.content.toLowerCase(), ['sleep', 'tired', 'exhausted', 'insomnia', 'rest', 'fatigue'])).length;
+    if (sleepJournals > 0) {
+      negScores['Sleep Disruption'] = sleepJournals * 15.0;
+      negReasons['Sleep Disruption'] = 'Associated with lower mood.';
+    }
+
+    // Academic Stress
+    final academicJournals = journals.where((j) => _containsAny(j.content.toLowerCase(), ['deadline', 'exam', 'assignment', 'test', 'study', 'project'])).length;
+    if (academicJournals > 0) {
+      negScores['Academic Stress'] = academicJournals * 15.0;
+      negReasons['Academic Stress'] = 'Academic pressure noted in journal entries.';
+    }
+
+    // Work Stress
+    final workJournals = journals.where((j) => _containsAny(j.content.toLowerCase(), ['work', 'job', 'boss', 'office', 'meeting', 'shift'])).length;
+    if (workJournals > 0) {
+      negScores['Work Stress'] = workJournals * 15.0;
+      negReasons['Work Stress'] = 'Work pressure noted in journal entries.';
+    }
+
+    // Burnout Spikes
+    if (burnoutTrend.contains('Increasing')) {
+      negScores['Burnout Spikes'] = 20.0;
+      negReasons['Burnout Spikes'] = 'Significant increase in burnout risk.';
+    }
+
+    // Unresolved Follow-Ups
+    final unresolved = followUps.where((f) => !f.resolved && !f.dismissed).length;
+    if (unresolved > 0) {
+      negScores['Unresolved Follow-Ups'] = unresolved * 8.0;
+      negReasons['Unresolved Follow-Ups'] = 'Unresolved mood conflicts this week.';
+    }
+
+    String topPos = 'No strong positive factor detected.';
+    String topPosReason = 'Not enough positive data detected.';
+    double maxPos = 0.0;
+    posScores.forEach((k, v) {
+      if (v > maxPos) {
+        maxPos = v;
+        topPos = k;
+        topPosReason = posReasons[k]!;
+      }
+    });
+
+    String topNeg = 'No strong negative factor detected.';
+    String topNegReason = 'Not enough negative data detected.';
+    double maxNeg = 0.0;
+    negScores.forEach((k, v) {
+      if (v > maxNeg) {
+        maxNeg = v;
+        topNeg = k;
+        topNegReason = negReasons[k]!;
+      }
+    });
+
+    final influenceScores = <String>[];
+    posScores.forEach((k, v) => influenceScores.add('$k: ${v.toStringAsFixed(1)}'));
+    negScores.forEach((k, v) => influenceScores.add('$k: ${v.toStringAsFixed(1)}'));
+
+    return {
+      'mostPositiveInfluence': topPos,
+      'positiveInfluenceReason': topPosReason,
+      'mostNegativeInfluence': topNeg,
+      'negativeInfluenceReason': topNegReason,
+      'topPositiveScore': maxPos,
+      'topNegativeScore': maxNeg,
+      'influenceScores': influenceScores,
+    };
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -465,29 +689,59 @@ class WeeklyReflectionService {
             ? 'moderate'
             : 'high';
 
-    if (moodTrend == 'Improving' && burnoutTrend != 'Increasing') {
+    final isMoodImproving = moodTrend.contains('Improving');
+    final isMoodDeclining = moodTrend.contains('Declining');
+    final isBurnoutIncreasing = burnoutTrend.contains('Increasing');
+
+    if (isMoodImproving && !isBurnoutIncreasing) {
       return 'This week showed $moodLabel wellness levels with encouraging signs of '
           'recovery. Mood improved toward the end of the week and burnout risk '
           'remained $burnoutLabel.';
-    } else if (moodTrend == 'Declining' || burnoutTrend == 'Increasing') {
+    } else if (isMoodDeclining || isBurnoutIncreasing) {
+      final moodStr = moodTrend == 'Insufficient Data' ? 'stable' : moodTrend.toLowerCase();
+      final burnoutStr = burnoutTrend == 'Insufficient Data' ? 'stable' : burnoutTrend.toLowerCase();
       return 'This week showed $burnoutLabel burnout risk with some stress signals. '
-          'Mood trended $moodTrend and burnout risk was $burnoutTrend toward the '
+          'Mood trended $moodStr and burnout risk was $burnoutStr toward the '
           'end of the week. Focus on rest and recovery.';
     } else {
+      final moodStr = moodTrend == 'Insufficient Data' ? 'stable' : moodTrend.toLowerCase();
       return 'This week showed $moodLabel stress levels with a relatively stable '
-          'pattern. Mood was $moodTrend and burnout risk remained $burnoutLabel '
+          'pattern. Mood was $moodStr and burnout risk remained $burnoutLabel '
           'throughout the week.';
     }
   }
 
-  String _buildSuggestion(String moodTrend, String burnoutTrend) {
-    if (burnoutTrend == 'Increasing') {
+  String _buildSuggestion(Map<String, dynamic> influenceData, String moodTrend, String burnoutTrend) {
+    final topPosScore = influenceData['topPositiveScore'] as double;
+    final topNegScore = influenceData['topNegativeScore'] as double;
+    final mostPos = influenceData['mostPositiveInfluence'] as String;
+    final mostNeg = influenceData['mostNegativeInfluence'] as String;
+
+    String highestInfluence = topPosScore >= topNegScore ? mostPos : mostNeg;
+
+    if (highestInfluence == 'Social Interaction Mentions') {
+      return 'Continue making time for meaningful social interactions, as they appear associated with improved mood.';
+    }
+    if (highestInfluence == 'Positive Journals') {
+      return 'Activities that create enjoyment and a sense of accomplishment appear beneficial. Consider continuing these routines.';
+    }
+    if (highestInfluence == 'Sleep Disruption') {
+      return 'Improving sleep consistency may help support mood stability and reduce stress.';
+    }
+    if (highestInfluence == 'Academic Stress') {
+      return 'Consider breaking large tasks into smaller steps and scheduling recovery periods during demanding weeks.';
+    }
+    if (highestInfluence == 'Negative Chats') {
+      return 'Recent conversations show signs of emotional strain. Consider taking breaks and reaching out for support when needed.';
+    }
+
+    if (burnoutTrend.contains('Increasing')) {
       return 'Consider prioritising rest and reducing stressors where possible.';
     }
-    if (moodTrend == 'Improving') {
+    if (moodTrend.contains('Improving')) {
       return 'Continue the routines that have supported recent progress.';
     }
-    if (moodTrend == 'Declining') {
+    if (moodTrend.contains('Declining')) {
       return 'Reconnect with activities that have helped your mood in the past.';
     }
     return 'Maintain consistency and continue daily check-ins.';
@@ -497,22 +751,65 @@ class WeeklyReflectionService {
   //  Confidence
   // ─────────────────────────────────────────────────────────────────────────
 
-  double _computeConfidence({
+  Map<String, double> _computeConfidenceBreakdown({
     required List<DailyMoodCheckIn> moodCheckIns,
     required List<JournalEntry> journals,
     required List<ChatMessage> chats,
     required List<double> burnoutScores,
     required List<ReflectionFollowUp> followUps,
   }) {
-    double confidence = 40.0;
-    if (moodCheckIns.length >= 7) confidence += 10;
-    if (journals.isNotEmpty) confidence += 10;
-    if (chats.isNotEmpty) confidence += 10;
-    if (burnoutScores.length >= 3) confidence += 10;
-    if (followUps.any((f) => f.resolved && f.userResponse != null)) {
-      confidence += 10;
+    int days = moodCheckIns.length;
+    double daysContrib = 0.0;
+    if (days >= 1 && days <= 2) {
+      daysContrib = 10.0;
+    } else if (days >= 3 && days <= 4) {
+      daysContrib = 20.0;
+    } else if (days >= 5 && days <= 6) {
+      daysContrib = 30.0;
+    } else if (days >= 7) {
+      daysContrib = 40.0;
     }
-    return confidence.clamp(40.0, 90.0);
+
+    double moodContrib = moodCheckIns.isNotEmpty ? 10.0 : 0.0;
+    double journalContrib = journals.isNotEmpty ? 10.0 : 0.0;
+    double chatContrib = chats.isNotEmpty ? 10.0 : 0.0;
+    double burnoutContrib = burnoutScores.isNotEmpty ? 10.0 : 0.0;
+    double followUpContrib = followUps.isNotEmpty ? 10.0 : 0.0;
+
+    double totalConfidence = 20.0 +
+        daysContrib +
+        moodContrib +
+        journalContrib +
+        chatContrib +
+        burnoutContrib +
+        followUpContrib;
+
+    double cap = 90.0;
+    if (days >= 1 && days <= 2) {
+      cap = 60.0;
+    } else if (days >= 3 && days <= 4) {
+      cap = 75.0;
+    } else if (days >= 5 && days <= 6) {
+      cap = 85.0;
+    } else if (days >= 7) {
+      cap = 90.0;
+    }
+
+    double rawConfidence = totalConfidence.clamp(20.0, 90.0);
+    double finalConfidence = rawConfidence > cap ? cap : rawConfidence;
+
+    return {
+      'baseConfidence': 20.0,
+      'daysContribution': daysContrib,
+      'moodContribution': moodContrib,
+      'journalContribution': journalContrib,
+      'chatContribution': chatContrib,
+      'burnoutContribution': burnoutContrib,
+      'followUpContribution': followUpContrib,
+      'rawConfidence': rawConfidence,
+      'confidenceCap': cap,
+      'total': finalConfidence,
+    };
   }
 
   // ─────────────────────────────────────────────────────────────────────────

@@ -89,11 +89,15 @@ class _WeeklyReflectionPageState extends State<WeeklyReflectionPage> {
                     const SizedBox(height: 20),
                     _buildTrendSection(),
                     const SizedBox(height: 20),
+                    _buildInfluentialFactorsSection(),
+                    const SizedBox(height: 20),
                     _buildIndicatorsSection(),
                     const SizedBox(height: 20),
                     _buildPatternsSection(),
                     const SizedBox(height: 20),
                     _buildRecommendationSection(),
+                    const SizedBox(height: 20),
+                    _buildDebugSection(),
                     const SizedBox(height: 20),
                   ],
                   _buildGenerateButton(),
@@ -157,10 +161,10 @@ class _WeeklyReflectionPageState extends State<WeeklyReflectionPage> {
         children: [
           _buildKvRow('Period', dateRange),
           _buildKvRow(
-              'Avg Mood', '${r.averageMoodScore.toStringAsFixed(1)} / 5.0'),
+              'Avg Mood', '${r.averageMoodScore.isNaN ? "0.0" : r.averageMoodScore.toStringAsFixed(1)} / 5.0'),
           _buildKvRow(
-              'Avg Burnout', '${r.averageBurnoutScore.toStringAsFixed(0)} / 100'),
-          _buildKvRow('Confidence', '${r.confidence.toStringAsFixed(0)}%'),
+              'Avg Burnout', '${r.averageBurnoutScore.isNaN ? "0" : r.averageBurnoutScore.toStringAsFixed(0)} / 100'),
+          _buildKvRow('Confidence', '${r.confidence.isNaN ? "0" : r.confidence.toStringAsFixed(0)}%'),
           _buildKvRow('Generated', genDate),
           const SizedBox(height: 8),
           Text(
@@ -222,6 +226,56 @@ class _WeeklyReflectionPageState extends State<WeeklyReflectionPage> {
               fontSize: 24,
               color: color,
               letterSpacing: 1.0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Influential Factors ───────────────────────────────────────────────────
+
+  Widget _buildInfluentialFactorsSection() {
+    final r = _reflection!;
+    return _buildCard(
+      header: 'MOST INFLUENTIAL FACTORS',
+      headerTextColor: Colors.black,
+      headerBgColor: const Color(0xFFFFD600),
+      cardBgColor: Colors.black,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Positive:\n${_getFriendlyFactorName(r.mostPositiveInfluence)}',
+            style: GoogleFonts.spaceMono(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF00C853),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            r.positiveInfluenceReason,
+            style: GoogleFonts.spaceMono(
+              fontSize: 14,
+              color: const Color(0xFFFFD600),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Negative:\n${_getFriendlyFactorName(r.mostNegativeInfluence)}',
+            style: GoogleFonts.spaceMono(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.redAccent,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            r.negativeInfluenceReason,
+            style: GoogleFonts.spaceMono(
+              fontSize: 14,
+              color: const Color(0xFFFFD600),
             ),
           ),
         ],
@@ -308,6 +362,100 @@ class _WeeklyReflectionPageState extends State<WeeklyReflectionPage> {
     );
   }
 
+  // ── Debug Page ────────────────────────────────────────────────────────────
+
+  Widget _buildDebugSection() {
+    final sum = _reflection!.baseConfidence +
+        _reflection!.daysContribution +
+        _reflection!.moodContribution +
+        _reflection!.journalContribution +
+        _reflection!.chatContribution +
+        _reflection!.burnoutContribution +
+        _reflection!.followUpContribution;
+    final mismatch = (sum - _reflection!.rawConfidence).abs() > 0.1;
+
+    return _buildCard(
+      header: 'DEBUG PAGE',
+      headerTextColor: const Color(0xFFFFD600),
+      headerBgColor: Colors.black,
+      cardBgColor: const Color(0xFFFFD600),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildKvRow('History Sufficiency', _reflection!.historySufficiency),
+          const SizedBox(height: 12),
+          Text(
+            'CONFIDENCE BREAKDOWN',
+            style: GoogleFonts.anton(
+              fontSize: 18,
+              color: Colors.black,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (mismatch)
+            Container(
+              padding: const EdgeInsets.all(8),
+              margin: const EdgeInsets.only(bottom: 8),
+              color: Colors.redAccent.withOpacity(0.2),
+              child: Text(
+                '⚠️ Confidence breakdown mismatch detected.',
+                style: GoogleFonts.spaceMono(
+                  fontSize: 12,
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          _buildKvRow('Base Confidence', '${_formatPercent(_reflection!.baseConfidence)}'),
+          _buildKvRow('Days Contribution', '${_formatPercent(_reflection!.daysContribution)}'),
+          _buildKvRow('Mood Contribution', '${_formatPercent(_reflection!.moodContribution)}'),
+          _buildKvRow('Journal Contribution', '${_formatPercent(_reflection!.journalContribution)}'),
+          _buildKvRow('Chat Contribution', '${_formatPercent(_reflection!.chatContribution)}'),
+          _buildKvRow('Burnout Contribution', '${_formatPercent(_reflection!.burnoutContribution)}'),
+          _buildKvRow('Follow-Up Contribution', '${_formatPercent(_reflection!.followUpContribution)}'),
+          const Divider(color: Colors.black, thickness: 1),
+          _buildKvRow('Raw Confidence', '${_formatPercent(_reflection!.rawConfidence)}'),
+          _buildKvRow('Confidence Cap', '${_formatPercent(_reflection!.confidenceCap)}'),
+          _buildKvRow('Final Confidence', '${_formatPercent(_reflection!.confidence)}'),
+          const SizedBox(height: 16),
+          Text(
+            'INFLUENCE SCORES',
+            style: GoogleFonts.anton(
+              fontSize: 18,
+              color: Colors.black,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (_reflection!.influenceScores.isNotEmpty)
+            ..._reflection!.influenceScores.map((score) {
+              final parts = score.split(':');
+              return _buildKvRow(parts[0].trim(), parts.length > 1 ? parts[1].trim() : '');
+            }),
+          if (_reflection!.influenceScores.isEmpty)
+            _buildEmptyNote('No influence scores calculated.'),
+          const SizedBox(height: 16),
+          _buildKvRow(
+            'Top Positive Factor',
+            _reflection!.topPositiveScore > 0 
+                ? '${_reflection!.mostPositiveInfluence} (${_reflection!.topPositiveScore.toStringAsFixed(1)})' 
+                : _reflection!.mostPositiveInfluence,
+          ),
+          _buildKvRow('Reason Selected', _reflection!.positiveInfluenceReason),
+          const SizedBox(height: 8),
+          _buildKvRow(
+            'Top Negative Factor',
+            _reflection!.topNegativeScore > 0 
+                ? '${_reflection!.mostNegativeInfluence} (${_reflection!.topNegativeScore.toStringAsFixed(1)})' 
+                : _reflection!.mostNegativeInfluence,
+          ),
+          _buildKvRow('Reason Selected', _reflection!.negativeInfluenceReason),
+        ],
+      ),
+    );
+  }
+
   // ── Generate Button ───────────────────────────────────────────────────────
 
   Widget _buildGenerateButton() {
@@ -345,6 +493,40 @@ class _WeeklyReflectionPageState extends State<WeeklyReflectionPage> {
   }
 
   // ── Shared Widgets ────────────────────────────────────────────────────────
+
+  String _getFriendlyFactorName(String internalName) {
+    switch (internalName) {
+      case 'Resolved Mood Conflicts':
+        return 'Social Recovery';
+      case 'Negative Chats':
+        return 'Stressful Conversations';
+      case 'Negative Journals':
+        return 'Emotional Strain';
+      case 'Repeated LOW Mood':
+        return 'Persistent Low Mood';
+      case 'Burnout Spikes':
+        return 'Periods of Increased Stress';
+      case 'Sleep Disruption':
+        return 'Sleep Challenges';
+      case 'Academic Stress':
+        return 'Academic Pressure';
+      case 'Work Stress':
+        return 'Workload Pressure';
+      case 'Academic/Work Stress':
+        return 'Academic / Workload Pressure';
+      case 'Positive Journals':
+        return 'Positive Reflection';
+      case 'Positive Chats':
+        return 'Supportive Interactions';
+      default:
+        return internalName;
+    }
+  }
+
+  String _formatPercent(double? value) {
+    if (value == null || value.isNaN) return '0';
+    return value.toStringAsFixed(0);
+  }
 
   Widget _buildCard({
     required String header,
@@ -389,6 +571,7 @@ class _WeeklyReflectionPageState extends State<WeeklyReflectionPage> {
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             key,
@@ -399,12 +582,16 @@ class _WeeklyReflectionPageState extends State<WeeklyReflectionPage> {
               letterSpacing: 1,
             ),
           ),
-          Text(
-            value,
-            style: GoogleFonts.spaceMono(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: textColor,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: GoogleFonts.spaceMono(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
             ),
           ),
         ],
@@ -459,46 +646,42 @@ class _WeeklyReflectionPageState extends State<WeeklyReflectionPage> {
   // ── Colour / Icon helpers ─────────────────────────────────────────────────
 
   Color _moodTrendColor(String trend) {
-    switch (trend) {
-      case 'Improving':
-        return const Color(0xFF00C853);
-      case 'Declining':
-        return Colors.redAccent;
-      default:
-        return const Color(0xFFFFD600);
+    if (trend.contains('Improving')) {
+      return const Color(0xFF00C853);
+    } else if (trend.contains('Declining')) {
+      return Colors.redAccent;
     }
+    return const Color(0xFFFFD600);
   }
 
   String _moodTrendIcon(String trend) {
-    switch (trend) {
-      case 'Improving':
-        return '📈';
-      case 'Declining':
-        return '📉';
-      default:
-        return '➡️';
+    if (trend.contains('Improving')) {
+      return '📈';
+    } else if (trend.contains('Declining')) {
+      return '📉';
+    } else if (trend == 'Insufficient Data') {
+      return '❓';
     }
+    return '➡️';
   }
 
   Color _burnoutTrendColor(String trend) {
-    switch (trend) {
-      case 'Improving':
-        return const Color(0xFF00C853);
-      case 'Increasing':
-        return Colors.redAccent;
-      default:
-        return const Color(0xFFFFD600);
+    if (trend.contains('Improving')) {
+      return const Color(0xFF00C853);
+    } else if (trend.contains('Increasing')) {
+      return Colors.redAccent;
     }
+    return const Color(0xFFFFD600);
   }
 
   String _burnoutTrendIcon(String trend) {
-    switch (trend) {
-      case 'Improving':
-        return '✅';
-      case 'Increasing':
-        return '🔥';
-      default:
-        return '⚖️';
+    if (trend.contains('Improving')) {
+      return '✅';
+    } else if (trend.contains('Increasing')) {
+      return '🔥';
+    } else if (trend == 'Insufficient Data') {
+      return '❓';
     }
+    return '⚖️';
   }
 }

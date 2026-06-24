@@ -567,7 +567,11 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
                     .map((s) => _buildValueRow("  * $s")),
               _buildDivider(),
               _buildValueRow(
-                  "Confidence: ${_weeklyReflection?.confidence.toStringAsFixed(0) ?? '--'}%"),
+                  "Raw Confidence: ${_weeklyReflection?.rawConfidence.toStringAsFixed(0) ?? '--'}%"),
+              _buildValueRow(
+                  "Confidence Cap: ${_weeklyReflection?.confidenceCap.toStringAsFixed(0) ?? '--'}%"),
+              _buildValueRow(
+                  "Final Confidence: ${_weeklyReflection?.confidence.toStringAsFixed(0) ?? '--'}%"),
               _buildValueRow(_weeklyReflection?.generatedAt != null
                   ? "Generated At: ${DateFormat('MMM d, h:mm a').format(_weeklyReflection!.generatedAt.toLocal())}"
                   : "Generated At: —"),
