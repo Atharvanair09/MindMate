@@ -9,6 +9,7 @@ import 'presentation/pages/insights_page.dart';
 import 'presentation/pages/chat_page.dart';
 import 'presentation/pages/profile_page.dart';
 import 'presentation/pages/animated_splash_page.dart';
+import 'presentation/pages/weekly_reflection_page.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/journal_repository_impl.dart';
 import 'data/repositories/chat_repository_impl.dart';
@@ -97,6 +98,7 @@ class MindMateApp extends StatelessWidget {
         '/chat': (context) => const ChatPage(),
         '/profile-page': (context) => const ProfilePage(),
         '/memory-vault': (context) => const MemoryVaultPage(),
+        '/weekly-reflection': (context) => const WeeklyReflectionPage(),
       },
     );
   }

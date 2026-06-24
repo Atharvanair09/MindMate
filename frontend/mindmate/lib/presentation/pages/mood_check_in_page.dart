@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/bottom_nav.dart';
 import 'daily_diary_page.dart';
+import 'weekly_reflection_page.dart';
+import '../../domain/models/weekly_reflection.dart';
+import '../../services/weekly_reflection/weekly_reflection_service.dart';
 
 class MoodCheckInPage extends StatefulWidget {
   const MoodCheckInPage({super.key});
@@ -11,35 +14,19 @@ class MoodCheckInPage extends StatefulWidget {
 }
 
 class _MoodCheckInPageState extends State<MoodCheckInPage> {
-  String? _selectedMood = 'GOOD'; // Pre-selected in the image
+  WeeklyReflection? _weeklyReflection;
 
-  final List<Map<String, dynamic>> _moods = [
-    {
-      'emoji': '⚡️',
-      'title': 'GREAT',
-      'description': 'UNSTOPPABLE ENERGY',
-    },
-    {
-      'emoji': '✨',
-      'title': 'GOOD',
-      'description': 'POSITIVE VIBES',
-    },
-    {
-      'emoji': '😐',
-      'title': 'OKAY',
-      'description': 'MAINTAINING LEVEL',
-    },
-    {
-      'emoji': '☁️',
-      'title': 'LOW',
-      'description': 'FEELING DRAINED',
-    },
-    {
-      'emoji': '🚨',
-      'title': 'STRUGGLING',
-      'description': 'NEED SUPPORT',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadWeeklyReflection();
+  }
+
+  Future<void> _loadWeeklyReflection() async {
+    final r = await WeeklyReflectionService.instance.getLatestReflection();
+    if (mounted) setState(() => _weeklyReflection = r);
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +98,7 @@ class _MoodCheckInPageState extends State<MoodCheckInPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "HOW ARE YOU\nDOING?",
+                    "HOW ARE YOU DOING?",
                     style: GoogleFonts.anton(
                       fontSize: 48,
                       color: Colors.black,
@@ -120,16 +107,23 @@ class _MoodCheckInPageState extends State<MoodCheckInPage> {
                   ),
                   const SizedBox(height: 32),
                   
-                  ..._moods.map((mood) => _buildMoodCard(
-                        emoji: mood['emoji'],
-                        title: mood['title'],
-                        description: mood['description'],
-                        isSelected: _selectedMood == mood['title'],
-                        onTap: () => setState(() => _selectedMood = mood['title']),
-                      )),
+                  if (_weeklyReflection != null)
+                    _buildWeeklyStatusCard()
+                  else
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        "No reflection generated yet.\nKeep logging your mood!",
+                        style: GoogleFonts.spaceMono(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ),
                 ],
               ),
-            ),            
+            ),
+            const SizedBox(height: 32),
             Padding(
               padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
               child: Column(
@@ -138,7 +132,7 @@ class _MoodCheckInPageState extends State<MoodCheckInPage> {
                   Text(
                     "WHAT'S GOING ON?",
                     style: GoogleFonts.anton(
-                      fontSize: 30,
+                      fontSize: 48,
                       color: Colors.black,
                       letterSpacing: 0.5,
                     ),
@@ -195,20 +189,45 @@ class _MoodCheckInPageState extends State<MoodCheckInPage> {
     );
   }
 
-  Widget _buildMoodCard({
-    required String emoji,
-    required String title,
-    required String description,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildWeeklyStatusCard() {
+    final r = _weeklyReflection!;
+
+    Color moodColor;
+    switch (r.moodTrend) {
+      case 'Improving':
+        moodColor = const Color(0xFF00C853);
+        break;
+      case 'Declining':
+        moodColor = Colors.redAccent;
+        break;
+      default:
+        moodColor = Colors.orange;
+    }
+
+    Color burnoutColor;
+    switch (r.burnoutTrend) {
+      case 'Improving':
+        burnoutColor = const Color(0xFF00C853);
+        break;
+      case 'Increasing':
+        burnoutColor = Colors.redAccent;
+        break;
+      default:
+        burnoutColor = Colors.orange;
+    }
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const WeeklyReflectionPage(),
+          ),
+        );
+      },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFFD600) : Colors.white,
+          color: const Color(0xFFFFD600),
           border: Border.all(color: Colors.black, width: 2),
           boxShadow: const [
             BoxShadow(
@@ -218,29 +237,98 @@ class _MoodCheckInPageState extends State<MoodCheckInPage> {
             ),
           ],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Text(emoji, style: const TextStyle(fontSize: 24)),
-                const SizedBox(width: 16),
-                Text(
-                  title,
-                  style: GoogleFonts.anton(
-                    fontSize: 24,
-                    color: Colors.black,
-                    letterSpacing: 1.0,
+            // Header
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              color: Colors.black,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'WEEKLY REFLECTION',
+                    style: GoogleFonts.anton(
+                      color: const Color(0xFFFFD600),
+                      fontSize: 20,
+                      letterSpacing: 1,
+                    ),
                   ),
-                ),
-              ],
+                  Text(
+                    'view full →',
+                    style: GoogleFonts.spaceMono(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            Text(
-              description,
-              style: GoogleFonts.spaceMono(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.black87 : Colors.grey[600],
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  // Mood Trend
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'MOOD TREND',
+                          style: GoogleFonts.spaceMono(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black54,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          r.moodTrend.toUpperCase(),
+                          style: GoogleFonts.anton(
+                            fontSize: 20,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Divider
+                  Container(
+                    width: 4,
+                    height: 40,
+                    color: Colors.black,
+                    margin: const EdgeInsets.symmetric(horizontal: 28),
+                  ),
+                  // Burnout Trend
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'BURNOUT TREND',
+                          style: GoogleFonts.spaceMono(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black54,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          r.burnoutTrend.toUpperCase(),
+                          style: GoogleFonts.anton(
+                            fontSize: 20,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

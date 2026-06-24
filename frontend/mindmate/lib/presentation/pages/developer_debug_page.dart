@@ -17,6 +17,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../core/state/app_state_observer.dart';
 import '../../domain/models/ai_insight_result.dart';
 import '../../services/ml/ai_insight_generator.dart';
+import '../../domain/models/weekly_reflection.dart';
+import '../../services/weekly_reflection/weekly_reflection_service.dart';
+import 'package:intl/intl.dart';
 
 class DeveloperDebugPage extends StatefulWidget {
   const DeveloperDebugPage({super.key});
@@ -61,6 +64,11 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
   // Test mode state
   Map<String, String>? _testResult;
   bool _isSendingTest = false;
+
+  // Weekly Reflection debug
+  WeeklyReflection? _weeklyReflection;
+  int _weeklyDaysAnalysed = 0;
+  bool _isGeneratingWeekly = false;
 
   @override
   void initState() {
@@ -177,12 +185,22 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
       _appBackgroundCount = backgroundCount;
       _appSuppressedCount = suppressedCount;
 
-      _notifPermission = notifDebugInfo['permissionStatus'] as String? ?? 'Unknown';
+      _notifPermission = notifDebugInfo['permissionStatus'] as String? ?? '—';
       _nextReminderTime = notifDebugInfo['nextReminderTime'] as String? ?? '—';
       _nextReminderType = notifDebugInfo['nextReminderType'] as String? ?? '—';
       _lastNotifTitle = notifDebugInfo['lastNotificationTitle'] as String? ?? '—';
       _lastNotifTime = notifDebugInfo['lastNotificationTime'] as String? ?? '—';
       _dartTimerCount = notifDebugInfo['dartTimerCount'] as int? ?? 0;
+    });
+
+    // Weekly reflection (fetched after main setState to avoid async-in-setState)
+    final weeklyReflection =
+        await WeeklyReflectionService.instance.getLatestReflection();
+    final weeklyDaysAnalysed = await isar.dailyMoodCheckIns.count();
+
+    setState(() {
+      _weeklyReflection = weeklyReflection;
+      _weeklyDaysAnalysed = weeklyDaysAnalysed.clamp(0, 7);
     });
   }
 
@@ -506,6 +524,95 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
               ] else ...[
                 _buildValueRow("No AI Insight Generated Yet", isCyan: true),
               ],
+            ]),
+            _buildDashedLine(),
+            const SizedBox(height: 20),
+
+            // ── Weekly Reflection Status ──────────────────────────
+            _buildSection("Weekly Reflection Status", [
+              _buildValueRow("Days Analysed: $_weeklyDaysAnalysed / 7"),
+              _buildValueRow(
+                  "Avg Mood: ${_weeklyReflection?.averageMoodScore.toStringAsFixed(1) ?? '--'} / 5.0"),
+              _buildValueRow(
+                  "Avg Burnout: ${_weeklyReflection?.averageBurnoutScore.toStringAsFixed(0) ?? '--'} / 100"),
+              _buildValueRow(
+                  "Mood Trend: ${_weeklyReflection?.moodTrend ?? '--'}",
+                  isCyan: true),
+              _buildValueRow(
+                  "Burnout Trend: ${_weeklyReflection?.burnoutTrend ?? '--'}",
+                  isCyan: true),
+              _buildDivider(),
+              _buildValueRow("Positive Indicators:", isCyan: true),
+              if (_weeklyReflection == null ||
+                  _weeklyReflection!.positiveIndicators.isEmpty)
+                _buildValueRow("  None")
+              else
+                ..._weeklyReflection!.positiveIndicators
+                    .map((s) => _buildValueRow("  + $s")),
+              const SizedBox(height: 6),
+              _buildValueRow("Negative Indicators:", isCyan: true),
+              if (_weeklyReflection == null ||
+                  _weeklyReflection!.negativeIndicators.isEmpty)
+                _buildValueRow("  None")
+              else
+                ..._weeklyReflection!.negativeIndicators
+                    .map((s) => _buildValueRow("  - $s")),
+              const SizedBox(height: 6),
+              _buildValueRow("Patterns Detected:", isCyan: true),
+              if (_weeklyReflection == null ||
+                  _weeklyReflection!.keyPatterns.isEmpty)
+                _buildValueRow("  None")
+              else
+                ..._weeklyReflection!.keyPatterns
+                    .map((s) => _buildValueRow("  * $s")),
+              _buildDivider(),
+              _buildValueRow(
+                  "Confidence: ${_weeklyReflection?.confidence.toStringAsFixed(0) ?? '--'}%"),
+              _buildValueRow(_weeklyReflection?.generatedAt != null
+                  ? "Generated At: ${DateFormat('MMM d, h:mm a').format(_weeklyReflection!.generatedAt.toLocal())}"
+                  : "Generated At: —"),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: _isGeneratingWeekly
+                    ? null
+                    : () async {
+                        setState(() => _isGeneratingWeekly = true);
+                        try {
+                          final r = await WeeklyReflectionService.instance
+                              .generateReflection();
+                          setState(() {
+                            _weeklyReflection = r;
+                            _isGeneratingWeekly = false;
+                          });
+                        } catch (e) {
+                          setState(() => _isGeneratingWeekly = false);
+                        }
+                      },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: _isGeneratingWeekly
+                        ? Colors.grey[800]
+                        : Colors.cyanAccent,
+                    border: Border.all(color: Colors.cyanAccent, width: 2),
+                  ),
+                  child: _isGeneratingWeekly
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                              color: Colors.black, strokeWidth: 2))
+                      : Text(
+                          "TRIGGER WEEKLY REFLECTION",
+                          style: GoogleFonts.vt323(
+                            color: Colors.black,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ),
             ]),
           ],
         ),

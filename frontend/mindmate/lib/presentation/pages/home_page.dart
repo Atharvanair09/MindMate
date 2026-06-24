@@ -19,6 +19,9 @@ import '../../domain/models/reflection_follow_up.dart';
 import '../../domain/models/ai_insight_result.dart';
 import '../../domain/models/app_notification.dart';
 import 'package:intl/intl.dart';
+import '../../domain/models/weekly_reflection.dart';
+import '../../services/weekly_reflection/weekly_reflection_service.dart';
+import 'weekly_reflection_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -31,6 +34,7 @@ class _HomePageState extends State<HomePage> {
   int _selectedMoodIndex = -1;
   ReflectionResult? _reflection;
   AiInsightResult? _aiInsight;
+  WeeklyReflection? _weeklyReflection;
   bool _isLoading = true;
   DailyMoodCheckIn? _todayMood;
   ReflectionFollowUp? _activeFollowUp;
@@ -93,12 +97,28 @@ class _HomePageState extends State<HomePage> {
         );
       }
 
+      // Load weekly reflection (non-blocking, best-effort)
+      WeeklyReflection? weeklyReflection;
+      try {
+        // Auto-generate if conditions are met
+        if (await WeeklyReflectionService.instance.shouldAutoGenerate()) {
+          weeklyReflection =
+              await WeeklyReflectionService.instance.generateReflection();
+        } else {
+          weeklyReflection =
+              await WeeklyReflectionService.instance.getLatestReflection();
+        }
+      } catch (e) {
+        debugPrint('Error loading weekly reflection: $e');
+      }
+
       if (mounted) {
         setState(() {
           _todayMood = todayMood;
           _activeFollowUp = activePrompt;
           _reflection = reflection;
           _aiInsight = aiInsight;
+          _weeklyReflection = weeklyReflection;
           _isLoading = false;
           
           if (todayMood != null) {
