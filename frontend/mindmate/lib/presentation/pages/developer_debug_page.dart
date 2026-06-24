@@ -24,6 +24,7 @@ import '../../services/ml/recovery_detection_service.dart';
 import 'package:intl/intl.dart';
 import '../../domain/models/pattern_insight.dart';
 import '../../services/pattern/pattern_discovery_service.dart';
+import '../../services/timeline/timeline_service.dart';
 
 class DeveloperDebugPage extends StatefulWidget {
   const DeveloperDebugPage({super.key});
@@ -81,6 +82,13 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
   // Pattern Discovery debug
   List<PatternInsight> _patternInsights = [];
   bool _isDiscoveringPatterns = false;
+
+  // Timeline Events debug
+  int _timelineTotalEvents = 0;
+  int _timelinePatternEvents = 0;
+  int _timelineRecoveryEvents = 0;
+  int _timelineConflictEvents = 0;
+  int _timelineWeeklyEvents = 0;
 
   @override
   void initState() {
@@ -219,11 +227,20 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
     // Pattern Insights
     final patterns = await PatternDiscoveryService.instance.getPatterns();
 
+    // Timeline Events
+    final timelineEvents = await TimelineService.instance.getTimelineEvents();
+
     setState(() {
       _weeklyReflection = weeklyReflection;
       _weeklyDaysAnalysed = weeklyDaysAnalysed.clamp(0, 7);
       _recoveryEvents = recoveryEvents;
       _patternInsights = patterns;
+      
+      _timelineTotalEvents = timelineEvents.length;
+      _timelinePatternEvents = timelineEvents.where((e) => e.eventType == 'Personal Pattern Learned').length;
+      _timelineRecoveryEvents = timelineEvents.where((e) => e.eventType == 'Recovery Milestone').length;
+      _timelineConflictEvents = timelineEvents.where((e) => e.eventType == 'Check-In Mismatch Detected' || e.eventType == 'Mood Clarified').length;
+      _timelineWeeklyEvents = timelineEvents.where((e) => e.eventType == 'Weekly Reflection Generated').length;
     });
   }
 
@@ -709,7 +726,7 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
             _buildSection("Pattern Discovery Engine", [
               _buildValueRow("Pattern Candidates", isCyan: true),
               if (PatternDiscoveryService.lastDebugInfo.isEmpty)
-                _buildValueRow("  Run discovery to see candidates")
+                _buildValueRow("Run discovery to see candidates")
               else
                 ...PatternDiscoveryService.lastDebugInfo.map((info) => Padding(
                   padding: const EdgeInsets.only(bottom: 12, left: 8),
@@ -787,6 +804,17 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
                         ),
                 ),
               ),
+            ]),
+            _buildDashedLine(),
+            const SizedBox(height: 20),
+
+            // ── Timeline Events Debug ────────────────────────────
+            _buildSection("Timeline Events Debug", [
+              _buildValueRow("Timeline Events Generated: $_timelineTotalEvents", isCyan: true),
+              _buildValueRow("Pattern Events: $_timelinePatternEvents"),
+              _buildValueRow("Recovery Events: $_timelineRecoveryEvents"),
+              _buildValueRow("Conflict Events: $_timelineConflictEvents"),
+              _buildValueRow("Weekly Reflection Events: $_timelineWeeklyEvents"),
             ]),
           ],
         ),

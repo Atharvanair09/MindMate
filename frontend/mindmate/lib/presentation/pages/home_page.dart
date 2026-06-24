@@ -22,6 +22,7 @@ import 'package:intl/intl.dart';
 import '../../domain/models/weekly_reflection.dart';
 import '../../services/weekly_reflection/weekly_reflection_service.dart';
 import 'weekly_reflection_page.dart';
+import 'wellness_timeline_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -823,60 +824,110 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildActionButtons() {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.yellow,
-              border: Border.all(color: Colors.black, width: 2),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black,
-                  offset: Offset(4, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const DeveloperDebugPage(),
-                      ),
-                    );
-                  },
-                  child: Text(
-                    "CHAT",
-                    style: GoogleFonts.inter(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.yellow,
+                  border: Border.all(color: Colors.black, width: 2),
+                  boxShadow: const [
+                    BoxShadow(
                       color: Colors.black,
+                      offset: Offset(4, 4),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  "talk to someone →",
-                  style: GoogleFonts.vt323(
-                    fontSize: 18,
-                    color: Colors.black,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const DeveloperDebugPage(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        "CHAT",
+                        style: GoogleFonts.inter(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "talk to someone →",
+                      style: GoogleFonts.vt323(
+                        fontSize: 18,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  border: Border.all(color: Colors.black, width: 2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black,
+                      offset: Offset(4, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "JOURNAL",
+                      style: GoogleFonts.inter(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.yellow,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "private. on-device →",
+                      style: GoogleFonts.vt323(
+                        fontSize: 15,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 16),
-        Expanded(
+        const SizedBox(height: 16),
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const WellnessTimelinePage(),
+              ),
+            );
+          },
           child: Container(
+            width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.black,
+              color: Colors.white,
               border: Border.all(color: Colors.black, width: 2),
               boxShadow: const [
                 BoxShadow(
@@ -889,19 +940,19 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "JOURNAL",
+                  "WELLNESS TIMELINE",
                   style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
-                    color: Colors.yellow,
+                    color: Colors.black,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "private. on-device →",
+                  "view your emotional journey →",
                   style: GoogleFonts.vt323(
-                    fontSize: 15,
-                    color: Colors.white,
+                    fontSize: 18,
+                    color: Colors.black,
                   ),
                 ),
               ],
