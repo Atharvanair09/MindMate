@@ -19,7 +19,11 @@ import '../../domain/models/ai_insight_result.dart';
 import '../../services/ml/ai_insight_generator.dart';
 import '../../domain/models/weekly_reflection.dart';
 import '../../services/weekly_reflection/weekly_reflection_service.dart';
+import '../../domain/models/recovery_event.dart';
+import '../../services/ml/recovery_detection_service.dart';
 import 'package:intl/intl.dart';
+import '../../domain/models/pattern_insight.dart';
+import '../../services/pattern/pattern_discovery_service.dart';
 
 class DeveloperDebugPage extends StatefulWidget {
   const DeveloperDebugPage({super.key});
@@ -69,6 +73,14 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
   WeeklyReflection? _weeklyReflection;
   int _weeklyDaysAnalysed = 0;
   bool _isGeneratingWeekly = false;
+
+  // Recovery Detection debug
+  List<RecoveryEvent> _recoveryEvents = [];
+  bool _isDetectingRecovery = false;
+
+  // Pattern Discovery debug
+  List<PatternInsight> _patternInsights = [];
+  bool _isDiscoveringPatterns = false;
 
   @override
   void initState() {
@@ -198,9 +210,20 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
         await WeeklyReflectionService.instance.getLatestReflection();
     final weeklyDaysAnalysed = await isar.dailyMoodCheckIns.count();
 
+    // Recovery events
+    final recoveryEvents = await isar.recoveryEvents
+        .where()
+        .sortByGeneratedAtDesc()
+        .findAll();
+
+    // Pattern Insights
+    final patterns = await PatternDiscoveryService.instance.getPatterns();
+
     setState(() {
       _weeklyReflection = weeklyReflection;
       _weeklyDaysAnalysed = weeklyDaysAnalysed.clamp(0, 7);
+      _recoveryEvents = recoveryEvents;
+      _patternInsights = patterns;
     });
   }
 
@@ -528,6 +551,67 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
             _buildDashedLine(),
             const SizedBox(height: 20),
 
+            // ── Phase 3.2A Recovery Detection Engine ─────────────
+            _buildSection("Recovery Detection Engine", [
+              _buildValueRow("Detected Events: ${_recoveryEvents.length}"),
+              if (_recoveryEvents.isEmpty)
+                _buildValueRow("No recovery events detected", isCyan: true)
+              else ...[
+                ..._recoveryEvents.take(3).map((event) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildValueRow("Recovery Event: ${event.summary}", isCyan: true),
+                      _buildValueRow("  Strength: ${event.recoveryStrength}"),
+                      _buildValueRow("  Triggers: ${event.possibleTriggers.join(', ')}"),
+                      _buildValueRow("  Mood Improvement: ${_moodValueToLevelString(event.startMood)} → ${_moodValueToLevelString(event.endMood)}"),
+                      _buildValueRow("  Burnout Improvement: ${event.startBurnout.toStringAsFixed(0)} → ${event.endBurnout.toStringAsFixed(0)}"),
+                      _buildValueRow("  Date: ${DateFormat('MMM d').format(event.startDate.toLocal())} to ${DateFormat('MMM d').format(event.endDate.toLocal())}"),
+                    ],
+                  ),
+                )),
+              ],
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: _isDetectingRecovery
+                    ? null
+                    : () async {
+                        setState(() => _isDetectingRecovery = true);
+                        try {
+                          await RecoveryDetectionService.instance.detectRecoveryEvents();
+                          await _loadData();
+                        } finally {
+                          if (mounted) {
+                            setState(() => _isDetectingRecovery = false);
+                          }
+                        }
+                      },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: _isDetectingRecovery ? Colors.grey[800] : Colors.purpleAccent,
+                    border: Border.all(color: Colors.purpleAccent, width: 2),
+                  ),
+                  child: _isDetectingRecovery
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                      : Text(
+                          "TRIGGER RECOVERY DETECTION",
+                          style: GoogleFonts.vt323(
+                            color: Colors.black,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ),
+            ]),
+            _buildDashedLine(),
+            const SizedBox(height: 20),
+
             // ── Weekly Reflection Status ──────────────────────────
             _buildSection("Weekly Reflection Status", [
               _buildValueRow("Days Analysed: $_weeklyDaysAnalysed / 7"),
@@ -618,6 +702,92 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
                 ),
               ),
             ]),
+            _buildDashedLine(),
+            const SizedBox(height: 20),
+
+            // ── Phase 3.2B Pattern Discovery Engine ─────────────
+            _buildSection("Pattern Discovery Engine", [
+              _buildValueRow("Pattern Candidates", isCyan: true),
+              if (PatternDiscoveryService.lastDebugInfo.isEmpty)
+                _buildValueRow("  Run discovery to see candidates")
+              else
+                ...PatternDiscoveryService.lastDebugInfo.map((info) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12, left: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildValueRow("Candidate: ${info.category}", isCyan: true),
+                      _buildValueRow("  History Days Available: ${info.historyDaysAvailable}"),
+                      _buildValueRow("  Required Occurrences: ${info.requiredOccurrences}"),
+                      _buildValueRow("  Actual Occurrences: ${info.count}"),
+                      _buildValueRow("  Acceptance Result: ${info.accepted ? 'ACCEPTED' : 'REJECTED'}"),
+                      _buildValueRow("  Confidence: ${info.confidence}"),
+                      _buildDivider(),
+                      _buildValueRow("  Mood Evidence Available: ${info.mood != null ? 'Yes' : 'No'}"),
+                      _buildValueRow("  Burnout Evidence Available: ${info.burnout != null ? 'Yes' : 'No'}"),
+                      _buildValueRow("  Associated Mood Change: ${info.mood != null ? info.mood!.toStringAsFixed(1) : 'Insufficient Data'}"),
+                      _buildValueRow("  Associated Burnout Change: ${info.burnout != null ? info.burnout!.toStringAsFixed(2) : 'Insufficient Data'}"),
+                      _buildValueRow("  Reason: ${info.reason}"),
+                    ],
+                  ),
+                )),
+              _buildDivider(),
+              _buildValueRow("Patterns Detected: ${_patternInsights.length}"),
+              if (_patternInsights.isEmpty)
+                _buildValueRow("No patterns detected (Need >= 2 evidence)", isCyan: true)
+              else ...[
+                ..._patternInsights.map((pattern) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildValueRow("Pattern: ${pattern.patternName}", isCyan: true),
+                      _buildValueRow("  Description: ${pattern.description}"),
+                      _buildValueRow("  Evidence Count: ${pattern.supportingEvidence} occurrences"),
+                      _buildValueRow("  Confidence: ${pattern.confidence}"),
+                      _buildValueRow("  Associated Outcome: ${pattern.associationType}"),
+                      _buildValueRow("  Generated At: ${DateFormat('MMM d, h:mm a').format(pattern.generatedAt.toLocal())}"),
+                    ],
+                  ),
+                )),
+              ],
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: _isDiscoveringPatterns
+                    ? null
+                    : () async {
+                        setState(() => _isDiscoveringPatterns = true);
+                        try {
+                          await PatternDiscoveryService.instance.discoverPatterns();
+                          await _loadData();
+                        } finally {
+                          if (mounted) {
+                            setState(() => _isDiscoveringPatterns = false);
+                          }
+                        }
+                      },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: _isDiscoveringPatterns ? Colors.grey[800] : Colors.blueAccent,
+                    border: Border.all(color: Colors.blueAccent, width: 2),
+                  ),
+                  child: _isDiscoveringPatterns
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                      : Text(
+                          "TRIGGER PATTERN DISCOVERY",
+                          style: GoogleFonts.vt323(
+                            color: Colors.black,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ),
+            ]),
           ],
         ),
       ),
@@ -627,6 +797,15 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
         child: const Icon(Icons.refresh, color: Colors.black),
       ),
     );
+  }
+
+  String _moodValueToLevelString(double val) {
+    if (val >= 5) return 'GREAT';
+    if (val >= 4) return 'GOOD';
+    if (val >= 3) return 'OKAY';
+    if (val >= 2) return 'LOW';
+    if (val >= 1) return 'STRUGGLING';
+    return 'UNKNOWN';
   }
 
   Widget _buildDashedLine() {

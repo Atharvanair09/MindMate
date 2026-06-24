@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:isar/isar.dart';
+import 'package:intl/intl.dart';
 import '../widgets/bottom_nav.dart';
 import 'daily_diary_page.dart';
 import 'weekly_reflection_page.dart';
 import '../../domain/models/weekly_reflection.dart';
 import '../../services/weekly_reflection/weekly_reflection_service.dart';
+import '../../data/database/isar_database.dart';
+import '../../domain/models/recovery_event.dart';
+import '../../services/ml/recovery_detection_service.dart';
 
 class MoodCheckInPage extends StatefulWidget {
   const MoodCheckInPage({super.key});
@@ -15,16 +20,30 @@ class MoodCheckInPage extends StatefulWidget {
 
 class _MoodCheckInPageState extends State<MoodCheckInPage> {
   WeeklyReflection? _weeklyReflection;
+  List<RecoveryEvent> _recoveryEvents = [];
+  bool _isDetectingRecovery = false;
 
   @override
   void initState() {
     super.initState();
     _loadWeeklyReflection();
+    _loadRecoveryEvents();
   }
 
   Future<void> _loadWeeklyReflection() async {
     final r = await WeeklyReflectionService.instance.getLatestReflection();
     if (mounted) setState(() => _weeklyReflection = r);
+  }
+
+  Future<void> _loadRecoveryEvents() async {
+    final isar = IsarDatabase.instance;
+    final recoveryEvents = await isar.recoveryEvents
+        .where()
+        .sortByGeneratedAtDesc()
+        .findAll();
+    if (mounted) {
+      setState(() => _recoveryEvents = recoveryEvents);
+    }
   }
 
 
@@ -100,7 +119,7 @@ class _MoodCheckInPageState extends State<MoodCheckInPage> {
                   Text(
                     "HOW ARE YOU DOING?",
                     style: GoogleFonts.anton(
-                      fontSize: 48,
+                      fontSize: 46,
                       color: Colors.black,
                       height: 1.0,
                     ),
@@ -123,6 +142,7 @@ class _MoodCheckInPageState extends State<MoodCheckInPage> {
                 ],
               ),
             ),
+            _buildRecoverySection(),
             const SizedBox(height: 32),
             Padding(
               padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
@@ -335,5 +355,160 @@ class _MoodCheckInPageState extends State<MoodCheckInPage> {
         ),
       ),
     );
+  }
+
+  Widget _buildRecoverySection() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 24.0, bottom: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "RECOVERY DETECTION",
+            style: GoogleFonts.anton(
+              fontSize: 48,
+              color: Colors.black,
+              height: 1.0,
+            ),
+          ),
+          const SizedBox(height: 24),
+          if (_recoveryEvents.isEmpty)
+            Text(
+              "No recovery events detected",
+              style: GoogleFonts.spaceMono(
+                fontSize: 14,
+                color: Colors.black54,
+              ),
+            )
+          else ...[
+            ..._recoveryEvents.take(3).map((event) => Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.black, width: 2),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black,
+                    offset: Offset(4, 4),
+                    blurRadius: 0,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    event.summary.toUpperCase(),
+                    style: GoogleFonts.anton(
+                      fontSize: 24,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildRecoveryDetailRow("STRENGTH", event.recoveryStrength),
+                  _buildRecoveryDetailRow("TRIGGERS", event.possibleTriggers.join(', ')),
+                  _buildRecoveryDetailRow("MOOD", "${_moodValueToLevelString(event.startMood)} → ${_moodValueToLevelString(event.endMood)}"),
+                  _buildRecoveryDetailRow("BURNOUT", "${event.startBurnout.toStringAsFixed(0)} → ${event.endBurnout.toStringAsFixed(0)}"),
+                  _buildRecoveryDetailRow("DATE", "${DateFormat('MMM d').format(event.startDate.toLocal())} - ${DateFormat('MMM d').format(event.endDate.toLocal())}"),
+                ],
+              ),
+            )),
+          ],
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: _isDetectingRecovery
+                ? null
+                : () async {
+                    setState(() => _isDetectingRecovery = true);
+                    try {
+                      await RecoveryDetectionService.instance.detectRecoveryEvents();
+                      await _loadRecoveryEvents();
+                    } finally {
+                      if (mounted) {
+                        setState(() => _isDetectingRecovery = false);
+                      }
+                    }
+                  },
+            child: Container(
+              height: 60,
+              decoration: BoxDecoration(
+                color: _isDetectingRecovery ? Colors.grey[400] : const Color(0xFFB388FF), // Purple accent
+                border: Border.all(color: Colors.black, width: 2),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black, // Shadow
+                    offset: Offset(4, 4),
+                    blurRadius: 0,
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_isDetectingRecovery)
+                    const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2),
+                    )
+                  else
+                    Text(
+                      "TRIGGER RECOVERY DETECTION",
+                      style: GoogleFonts.anton(
+                        color: Colors.black,
+                        fontSize: 20,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecoveryDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: GoogleFonts.spaceMono(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.black54,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.spaceMono(
+                fontSize: 12,
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _moodValueToLevelString(double val) {
+    if (val >= 5) return 'GREAT';
+    if (val >= 4) return 'GOOD';
+    if (val >= 3) return 'OKAY';
+    if (val >= 2) return 'LOW';
+    if (val >= 1) return 'STRUGGLING';
+    return 'UNKNOWN';
   }
 }
