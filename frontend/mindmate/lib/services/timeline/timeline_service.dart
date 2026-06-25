@@ -190,10 +190,10 @@ class TimelineService {
         eventType: 'Stress Increase Observed',
         title: 'Stress Increase Observed',
         description: 'Recent signals suggest elevated stress levels.',
-        eventDate: n.timestamp,
+        eventDate: n.createdAt,
         importance: 'HIGH',
         sourceId: n.id.toString(),
-        generatedAt: n.timestamp,
+        generatedAt: n.createdAt,
       ));
     }
 

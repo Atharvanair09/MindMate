@@ -60,10 +60,11 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
 
   // Enhanced notification debug
   String _notifPermission = "Checking...";
-  String _nextReminderTime = "—";
+  int _notifScheduled = 0;
   String _nextReminderType = "—";
-  String _lastNotifTitle = "—";
-  String _lastNotifTime = "—";
+  String _notifTriggerTime = "—";
+  String _lastNotifSent = "—";
+  String _bgDeliveryEnabled = "Checking...";
   int _dartTimerCount = 0;
 
   // Test mode state
@@ -205,11 +206,16 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
       _appBackgroundCount = backgroundCount;
       _appSuppressedCount = suppressedCount;
 
-      _notifPermission = notifDebugInfo['permissionStatus'] as String? ?? '—';
-      _nextReminderTime = notifDebugInfo['nextReminderTime'] as String? ?? '—';
-      _nextReminderType = notifDebugInfo['nextReminderType'] as String? ?? '—';
-      _lastNotifTitle = notifDebugInfo['lastNotificationTitle'] as String? ?? '—';
-      _lastNotifTime = notifDebugInfo['lastNotificationTime'] as String? ?? '—';
+      _notifPermission = notifDebugInfo['Notification Permission Granted'] as String? ?? '—';
+      _notifScheduled = notifDebugInfo['Notification Scheduled'] as int? ?? 0;
+      _nextReminderType = notifDebugInfo['Next Scheduled Reminder'] as String? ?? '—';
+      _notifTriggerTime = notifDebugInfo['Notification Trigger Time'] as String? ?? '—';
+      
+      final lastTitle = notifDebugInfo['Last Notification Sent'] as String? ?? 'None';
+      final lastTime = notifDebugInfo['lastNotificationTime'] as String? ?? '--';
+      _lastNotifSent = lastTitle != 'None' ? '$lastTitle ($lastTime)' : 'None';
+      
+      _bgDeliveryEnabled = notifDebugInfo['Background Delivery Enabled'] as String? ?? '—';
       _dartTimerCount = notifDebugInfo['dartTimerCount'] as int? ?? 0;
     });
 
@@ -253,6 +259,22 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
     setState(() {
       _isSendingTest = false;
       _testResult = result;
+    });
+  }
+
+  Future<void> _sendTestReminder10s() async {
+    setState(() {
+      _isSendingTest = true;
+      _testResult = null;
+    });
+    await NotificationService.instance.scheduleTestReminder10s();
+    setState(() {
+      _isSendingTest = false;
+      _testResult = {
+        'appState': AppStateObserver.instance.state.toString().split('.').last.toUpperCase(),
+        'deliveryPath': 'SCHEDULED (10s)',
+        'expected': 'Wait 10 seconds for notification',
+      };
     });
   }
 
@@ -419,15 +441,14 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
 
             // ── Notifications Debug (Enhanced) ───────────────────
             _buildSection("Notification Scheduler Status", [
-              _buildValueRow("Permission Status: $_notifPermission", isCyan: true),
-              _buildValueRow("Pending OS Notifications: $_scheduledRemindersCount"),
+              _buildValueRow("Notification Permission Granted: $_notifPermission", isCyan: true),
+              _buildValueRow("Notification Scheduled: $_notifScheduled"),
+              _buildValueRow("Next Scheduled Reminder: $_nextReminderType"),
+              _buildValueRow("Notification Trigger Time: $_notifTriggerTime"),
+              _buildValueRow("Last Notification Sent: $_lastNotifSent"),
+              _buildValueRow("Background Delivery Enabled: $_bgDeliveryEnabled", isCyan: true),
+              _buildDivider(),
               _buildValueRow("Active Dart Timers: $_dartTimerCount"),
-              _buildDivider(),
-              _buildValueRow("Next Reminder Time: $_nextReminderTime"),
-              _buildValueRow("Next Reminder Type: $_nextReminderType"),
-              _buildDivider(),
-              _buildValueRow("Last Notification Title: $_lastNotifTitle"),
-              _buildValueRow("Last Notification Time: $_lastNotifTime"),
               _buildDivider(),
               _buildValueRow("Total Notifications (Isar): $_totalNotificationsCount"),
               _buildValueRow("Unread: $_unreadNotificationsCount"),
@@ -463,6 +484,25 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
                   ),
                   child: Text(
                     _isSendingTest ? "SENDING..." : "SEND TEST REMINDER",
+                    style: GoogleFonts.vt323(
+                      color: Colors.black,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: _isSendingTest ? null : _sendTestReminder10s,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: _isSendingTest ? Colors.grey[800] : Colors.greenAccent,
+                    border: Border.all(color: Colors.greenAccent, width: 2),
+                  ),
+                  child: Text(
+                    _isSendingTest ? "SENDING..." : "SEND TEST REMINDER (10s)",
                     style: GoogleFonts.vt323(
                       color: Colors.black,
                       fontSize: 22,

@@ -1170,7 +1170,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                               Row(
                                 children: [
-                                  if (notifications.any((n) => !n.isRead))
+                                  if (notifications.any((n) => !n.read))
                                     GestureDetector(
                                       onTap: () async {
                                         await NotificationService.instance.markAllAsRead();
@@ -1249,13 +1249,33 @@ class _HomePageState extends State<HomePage> {
                                         iconData = Icons.info_outline;
                                         iconColor = Colors.blueAccent;
                                         break;
+                                      case 'conflict_reminder':
+                                        iconData = Icons.compare_arrows;
+                                        iconColor = Colors.orangeAccent;
+                                        break;
+                                      case 'recovery_event':
+                                        iconData = Icons.trending_up;
+                                        iconColor = Colors.green;
+                                        break;
+                                      case 'pattern_discovery':
+                                        iconData = Icons.psychology;
+                                        iconColor = Colors.purpleAccent;
+                                        break;
+                                      case 'weekly_reflection_ready':
+                                        iconData = Icons.calendar_today;
+                                        iconColor = Colors.cyanAccent;
+                                        break;
+                                      case 'group_recommendation':
+                                        iconData = Icons.group;
+                                        iconColor = Colors.blue;
+                                        break;
                                     }
 
-                                    final timeStr = DateFormat('h:mm a').format(notification.timestamp);
+                                    final timeStr = DateFormat('h:mm a').format(notification.createdAt);
 
                                     return InkWell(
                                       onTap: () async {
-                                        if (!notification.isRead) {
+                                        if (!notification.read) {
                                           await NotificationService.instance.markAsRead(notification.id);
                                           if (context.mounted) {
                                             Navigator.of(context).pop();
@@ -1281,7 +1301,7 @@ class _HomePageState extends State<HomePage> {
                                                       Text(
                                                         notification.title.toUpperCase(),
                                                         style: GoogleFonts.vt323(
-                                                          color: notification.isRead ? Colors.grey : Colors.white,
+                                                          color: notification.read ? Colors.grey : Colors.white,
                                                           fontSize: 16,
                                                           fontWeight: FontWeight.bold,
                                                         ),
@@ -1297,16 +1317,16 @@ class _HomePageState extends State<HomePage> {
                                                   ),
                                                   const SizedBox(height: 2),
                                                   Text(
-                                                    notification.message,
+                                                    notification.description,
                                                     style: GoogleFonts.inter(
-                                                      color: notification.isRead ? Colors.grey[600] : Colors.grey[300],
+                                                      color: notification.read ? Colors.grey[600] : Colors.grey[300],
                                                       fontSize: 12,
                                                     ),
                                                   ),
                                                 ],
                                               ),
                                             ),
-                                            if (!notification.isRead) ...[
+                                            if (!notification.read) ...[
                                               const SizedBox(width: 6),
                                               Container(
                                                 width: 8,

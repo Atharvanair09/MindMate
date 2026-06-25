@@ -17,20 +17,20 @@ const AppNotificationSchema = CollectionSchema(
   name: r'AppNotification',
   id: 7576332975032865864,
   properties: {
-    r'isRead': PropertySchema(
+    r'createdAt': PropertySchema(
       id: 0,
-      name: r'isRead',
-      type: IsarType.bool,
+      name: r'createdAt',
+      type: IsarType.dateTime,
     ),
-    r'message': PropertySchema(
+    r'description': PropertySchema(
       id: 1,
-      name: r'message',
+      name: r'description',
       type: IsarType.string,
     ),
-    r'timestamp': PropertySchema(
+    r'read': PropertySchema(
       id: 2,
-      name: r'timestamp',
-      type: IsarType.dateTime,
+      name: r'read',
+      type: IsarType.bool,
     ),
     r'title': PropertySchema(
       id: 3,
@@ -63,7 +63,7 @@ int _appNotificationEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
-  bytesCount += 3 + object.message.length * 3;
+  bytesCount += 3 + object.description.length * 3;
   bytesCount += 3 + object.title.length * 3;
   bytesCount += 3 + object.type.length * 3;
   return bytesCount;
@@ -75,9 +75,9 @@ void _appNotificationSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeBool(offsets[0], object.isRead);
-  writer.writeString(offsets[1], object.message);
-  writer.writeDateTime(offsets[2], object.timestamp);
+  writer.writeDateTime(offsets[0], object.createdAt);
+  writer.writeString(offsets[1], object.description);
+  writer.writeBool(offsets[2], object.read);
   writer.writeString(offsets[3], object.title);
   writer.writeString(offsets[4], object.type);
 }
@@ -89,10 +89,10 @@ AppNotification _appNotificationDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = AppNotification();
+  object.createdAt = reader.readDateTime(offsets[0]);
+  object.description = reader.readString(offsets[1]);
   object.id = id;
-  object.isRead = reader.readBool(offsets[0]);
-  object.message = reader.readString(offsets[1]);
-  object.timestamp = reader.readDateTime(offsets[2]);
+  object.read = reader.readBool(offsets[2]);
   object.title = reader.readString(offsets[3]);
   object.type = reader.readString(offsets[4]);
   return object;
@@ -106,11 +106,11 @@ P _appNotificationDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readBool(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 1:
       return (reader.readString(offset)) as P;
     case 2:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 3:
       return (reader.readString(offset)) as P;
     case 4:
@@ -216,6 +216,198 @@ extension AppNotificationQueryWhere
 extension AppNotificationQueryFilter
     on QueryBuilder<AppNotification, AppNotification, QFilterCondition> {
   QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
+      createdAtEqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'createdAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
+      createdAtGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'createdAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
+      createdAtLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'createdAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
+      createdAtBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'createdAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
+      descriptionEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'description',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
+      descriptionGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'description',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
+      descriptionLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'description',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
+      descriptionBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'description',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
+      descriptionStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'description',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
+      descriptionEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'description',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
+      descriptionContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'description',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
+      descriptionMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'description',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
+      descriptionIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'description',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
+      descriptionIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'description',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
       idEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -272,203 +464,11 @@ extension AppNotificationQueryFilter
   }
 
   QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
-      isReadEqualTo(bool value) {
+      readEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'isRead',
+        property: r'read',
         value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
-      messageEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'message',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
-      messageGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'message',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
-      messageLessThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'message',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
-      messageBetween(
-    String lower,
-    String upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'message',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
-      messageStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'message',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
-      messageEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'message',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
-      messageContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'message',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
-      messageMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'message',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
-      messageIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'message',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
-      messageIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'message',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
-      timestampEqualTo(DateTime value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'timestamp',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
-      timestampGreaterThan(
-    DateTime value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'timestamp',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
-      timestampLessThan(
-    DateTime value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'timestamp',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
-      timestampBetween(
-    DateTime lower,
-    DateTime upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'timestamp',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
       ));
     });
   }
@@ -754,43 +754,44 @@ extension AppNotificationQueryLinks
 
 extension AppNotificationQuerySortBy
     on QueryBuilder<AppNotification, AppNotification, QSortBy> {
-  QueryBuilder<AppNotification, AppNotification, QAfterSortBy> sortByIsRead() {
+  QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
+      sortByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'isRead', Sort.asc);
+      return query.addSortBy(r'createdAt', Sort.asc);
     });
   }
 
   QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
-      sortByIsReadDesc() {
+      sortByCreatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'isRead', Sort.desc);
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterSortBy> sortByMessage() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'message', Sort.asc);
+      return query.addSortBy(r'createdAt', Sort.desc);
     });
   }
 
   QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
-      sortByMessageDesc() {
+      sortByDescription() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'message', Sort.desc);
+      return query.addSortBy(r'description', Sort.asc);
     });
   }
 
   QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
-      sortByTimestamp() {
+      sortByDescriptionDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timestamp', Sort.asc);
+      return query.addSortBy(r'description', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterSortBy> sortByRead() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'read', Sort.asc);
     });
   }
 
   QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
-      sortByTimestampDesc() {
+      sortByReadDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timestamp', Sort.desc);
+      return query.addSortBy(r'read', Sort.desc);
     });
   }
 
@@ -823,6 +824,34 @@ extension AppNotificationQuerySortBy
 
 extension AppNotificationQuerySortThenBy
     on QueryBuilder<AppNotification, AppNotification, QSortThenBy> {
+  QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
+      thenByCreatedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'createdAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
+      thenByCreatedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'createdAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
+      thenByDescription() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'description', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
+      thenByDescriptionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'description', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppNotification, AppNotification, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -835,43 +864,16 @@ extension AppNotificationQuerySortThenBy
     });
   }
 
-  QueryBuilder<AppNotification, AppNotification, QAfterSortBy> thenByIsRead() {
+  QueryBuilder<AppNotification, AppNotification, QAfterSortBy> thenByRead() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'isRead', Sort.asc);
+      return query.addSortBy(r'read', Sort.asc);
     });
   }
 
   QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
-      thenByIsReadDesc() {
+      thenByReadDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'isRead', Sort.desc);
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterSortBy> thenByMessage() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'message', Sort.asc);
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
-      thenByMessageDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'message', Sort.desc);
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
-      thenByTimestamp() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timestamp', Sort.asc);
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
-      thenByTimestampDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timestamp', Sort.desc);
+      return query.addSortBy(r'read', Sort.desc);
     });
   }
 
@@ -904,23 +906,23 @@ extension AppNotificationQuerySortThenBy
 
 extension AppNotificationQueryWhereDistinct
     on QueryBuilder<AppNotification, AppNotification, QDistinct> {
-  QueryBuilder<AppNotification, AppNotification, QDistinct> distinctByIsRead() {
+  QueryBuilder<AppNotification, AppNotification, QDistinct>
+      distinctByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'isRead');
-    });
-  }
-
-  QueryBuilder<AppNotification, AppNotification, QDistinct> distinctByMessage(
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'message', caseSensitive: caseSensitive);
+      return query.addDistinctBy(r'createdAt');
     });
   }
 
   QueryBuilder<AppNotification, AppNotification, QDistinct>
-      distinctByTimestamp() {
+      distinctByDescription({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'timestamp');
+      return query.addDistinctBy(r'description', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QDistinct> distinctByRead() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'read');
     });
   }
 
@@ -947,22 +949,23 @@ extension AppNotificationQueryProperty
     });
   }
 
-  QueryBuilder<AppNotification, bool, QQueryOperations> isReadProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'isRead');
-    });
-  }
-
-  QueryBuilder<AppNotification, String, QQueryOperations> messageProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'message');
-    });
-  }
-
   QueryBuilder<AppNotification, DateTime, QQueryOperations>
-      timestampProperty() {
+      createdAtProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'timestamp');
+      return query.addPropertyName(r'createdAt');
+    });
+  }
+
+  QueryBuilder<AppNotification, String, QQueryOperations>
+      descriptionProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'description');
+    });
+  }
+
+  QueryBuilder<AppNotification, bool, QQueryOperations> readProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'read');
     });
   }
 

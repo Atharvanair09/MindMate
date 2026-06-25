@@ -57,86 +57,37 @@ class NotificationService {
   }
 
   Future<void> handleAppForeground() async {
-    // App is now actively visible. Cancel OS scheduled notifications to prevent system popups
-    // and replace them with internal Dart timers.
-    await flutterLocalNotificationsPlugin.cancelAll();
-
+    // App is now actively visible. Do not cancel OS notifications.
+    // Instead, schedule an interceptor timer 500ms before the OS notification to suppress it and show an in-app banner.
     final now = DateTime.now();
     final pendingNotifications = await _isar.appNotifications
         .filter()
-        .isReadEqualTo(false)
+        .readEqualTo(false)
         .and()
-        .timestampGreaterThan(now)
+        .createdAtGreaterThan(now)
         .findAll();
 
     for (var notification in pendingNotifications) {
-      final delay = notification.timestamp.difference(now);
+      final delay = notification.createdAt.difference(now) - const Duration(milliseconds: 500);
       if (delay.inMilliseconds > 0) {
         _activeTimers[notification.id]?.cancel();
-        _activeTimers[notification.id] = Timer(delay, () {
-          // Timer fired while in foreground!
+        _activeTimers[notification.id] = Timer(delay, () async {
+          // Timer fired while in foreground! Cancel OS notification just before it appears.
+          await flutterLocalNotificationsPlugin.cancel(id: notification.id);
           AppStateObserver.instance.suppressedCount++;
-          showInAppBanner(notification.title, notification.message);
+          showInAppBanner(notification.title, notification.description);
         });
       }
     }
   }
 
   Future<void> handleAppBackground() async {
-    // App is entering background. Cancel Dart timers and delegate to OS via zonedSchedule.
+    // App is entering background. Cancel Dart timers.
+    // OS notifications remain scheduled and will trigger automatically.
     for (var timer in _activeTimers.values) {
       timer.cancel();
     }
     _activeTimers.clear();
-
-    final now = DateTime.now();
-    final pendingNotifications = await _isar.appNotifications
-        .filter()
-        .isReadEqualTo(false)
-        .and()
-        .timestampGreaterThan(now)
-        .findAll();
-
-    for (var notification in pendingNotifications) {
-      final tzDate = tz.TZDateTime.from(notification.timestamp, tz.local);
-      
-      String channelId = 'daily_mood_channel_id';
-      String channelName = 'Reminders';
-      if (notification.type == 'reflection_follow_up') {
-        channelId = 'follow_up_reminder_channel_id';
-        channelName = 'Reflection Follow-Ups';
-      } else if (notification.type == 'burnout_alert') {
-        channelId = 'burnout_alert_channel_id';
-        channelName = 'Burnout Alerts';
-      } else if (notification.type == 'ai_insight') {
-        channelId = 'ai_insight_channel_id';
-        channelName = 'AI Insights';
-      } else if (notification.type == 'mood_reminder') {
-        channelId = 'daily_mood_channel_id';
-        channelName = 'Daily Mood Check-In';
-      }
-
-      final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-        channelId,
-        channelName,
-        importance: Importance.max,
-        priority: Priority.high,
-      );
-      
-      final NotificationDetails platformDetails = NotificationDetails(
-        android: androidDetails,
-        iOS: const DarwinNotificationDetails(),
-      );
-
-      await flutterLocalNotificationsPlugin.zonedSchedule(
-        id: notification.id,
-        title: notification.title,
-        body: notification.message,
-        scheduledDate: tzDate,
-        notificationDetails: platformDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      );
-    }
   }
 
   Future<void> initialize() async {
@@ -236,6 +187,7 @@ class NotificationService {
 
     if (androidImplementation != null) {
       granted = await androidImplementation.requestNotificationsPermission() ?? false;
+      await androidImplementation.requestExactAlarmsPermission();
     }
 
     // iOS
@@ -256,13 +208,13 @@ class NotificationService {
 
   // --- LOCAL ISAR STORAGE CRUD ---
 
-  Future<int> saveNotification(String title, String message, String type, {DateTime? scheduledTime}) async {
+  Future<int> saveNotification(String title, String description, String type, {DateTime? scheduledTime}) async {
     final notification = AppNotification()
       ..title = title
-      ..message = message
-      ..timestamp = scheduledTime ?? DateTime.now()
+      ..description = description
+      ..createdAt = scheduledTime ?? DateTime.now()
       ..type = type
-      ..isRead = false;
+      ..read = false;
 
     await _isar.writeTxn(() async {
       await _isar.appNotifications.put(notification);
@@ -275,8 +227,8 @@ class NotificationService {
     final now = DateTime.now();
     return await _isar.appNotifications
         .filter()
-        .timestampLessThan(now)
-        .sortByTimestampDesc()
+        .createdAtLessThan(now)
+        .sortByCreatedAtDesc()
         .findAll();
   }
 
@@ -284,9 +236,9 @@ class NotificationService {
     final now = DateTime.now();
     return await _isar.appNotifications
         .filter()
-        .isReadEqualTo(false)
+        .readEqualTo(false)
         .and()
-        .timestampLessThan(now)
+        .createdAtLessThan(now)
         .count();
   }
 
@@ -294,7 +246,7 @@ class NotificationService {
     await _isar.writeTxn(() async {
       final notification = await _isar.appNotifications.get(id);
       if (notification != null) {
-        notification.isRead = true;
+        notification.read = true;
         await _isar.appNotifications.put(notification);
       }
     });
@@ -304,15 +256,15 @@ class NotificationService {
     final now = DateTime.now();
     final unread = await _isar.appNotifications
         .filter()
-        .isReadEqualTo(false)
+        .readEqualTo(false)
         .and()
-        .timestampLessThan(now)
+        .createdAtLessThan(now)
         .findAll();
 
     if (unread.isNotEmpty) {
       await _isar.writeTxn(() async {
         for (var notification in unread) {
-          notification.isRead = true;
+          notification.read = true;
           await _isar.appNotifications.put(notification);
         }
       });
@@ -347,7 +299,7 @@ class NotificationService {
         .filter()
         .typeEqualTo('mood_reminder')
         .and()
-        .timestampEqualTo(scheduledDate)
+        .createdAtEqualTo(scheduledDate)
         .findFirst();
 
     if (existing == null) {
@@ -361,8 +313,6 @@ class NotificationService {
 
       final tzDate = tz.TZDateTime.from(scheduledDate, tz.local);
 
-      // ALWAYS register the OS zonedSchedule so the alarm survives app termination.
-      // This is the primary delivery path for background / terminated state.
       try {
         await flutterLocalNotificationsPlugin.cancel(id: notifId);
         await flutterLocalNotificationsPlugin.zonedSchedule(
@@ -375,27 +325,30 @@ class NotificationService {
         );
       } catch (_) {
         // Fallback: inexact alarm if exact scheduling is unavailable (some Android 12+ devices)
-        await flutterLocalNotificationsPlugin.zonedSchedule(
-          id: notifId,
-          title: 'Mood Check-In',
-          body: 'How are you feeling right now?',
-          scheduledDate: tzDate,
-          notificationDetails: platformDetails,
-          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        );
+        try {
+          await flutterLocalNotificationsPlugin.zonedSchedule(
+            id: notifId,
+            title: 'Mood Check-In',
+            body: 'How are you feeling right now?',
+            scheduledDate: tzDate,
+            notificationDetails: platformDetails,
+            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          );
+        } catch (_) {}
       }
 
       // ADDITIONALLY, when the app is currently in the foreground, set a Dart timer
-      // so we can show an in-app snackbar instead of an OS popup at 7 PM.
+      // 500ms early so we can intercept and cancel the OS popup at 7 PM.
       if (AppStateObserver.instance.isForeground) {
-        final delay = scheduledDate.difference(now);
-        _activeTimers[notifId]?.cancel();
-        _activeTimers[notifId] = Timer(delay, () {
-          // Cancel the OS notification (app is open) and show snackbar instead
-          flutterLocalNotificationsPlugin.cancel(id: notifId);
-          AppStateObserver.instance.suppressedCount++;
-          showInAppBanner('Mood Check-In', 'How are you feeling right now?');
-        });
+        final delay = scheduledDate.difference(now) - const Duration(milliseconds: 500);
+        if (delay.inMilliseconds > 0) {
+          _activeTimers[notifId]?.cancel();
+          _activeTimers[notifId] = Timer(delay, () async {
+            await flutterLocalNotificationsPlugin.cancel(id: notifId);
+            AppStateObserver.instance.suppressedCount++;
+            showInAppBanner('Mood Check-In', 'How are you feeling right now?');
+          });
+        }
       }
     }
   }
@@ -407,7 +360,7 @@ class NotificationService {
         .filter()
         .typeEqualTo('mood_reminder')
         .and()
-        .timestampGreaterThan(now)
+        .createdAtGreaterThan(now)
         .findAll();
     for (final r in reminders) {
       await flutterLocalNotificationsPlugin.cancel(id: r.id);
@@ -454,19 +407,9 @@ class NotificationService {
       scheduledTime: time2,
     );
 
-    if (AppStateObserver.instance.isForeground) {
-      // Start dart timers
-      _activeTimers[nid1] = Timer(time1.difference(now), () {
-        AppStateObserver.instance.suppressedCount++;
-        showInAppBanner('Reflection Follow-Up', followUp.message);
-      });
-      _activeTimers[nid2] = Timer(time2.difference(now), () {
-        AppStateObserver.instance.suppressedCount++;
-        showInAppBanner('Reflection Follow-Up', followUp.message);
-      });
-    } else {
-      // Schedule Android/iOS local notifications
-      final tzDate1 = tz.TZDateTime.from(time1, tz.local);
+    // ALWAYS schedule Android/iOS local notifications
+    final tzDate1 = tz.TZDateTime.from(time1, tz.local);
+    try {
       await flutterLocalNotificationsPlugin.zonedSchedule(
         id: nid1,
         title: 'Reflection Follow-Up',
@@ -475,8 +418,21 @@ class NotificationService {
         notificationDetails: platformDetails,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
+    } catch (_) {
+      try {
+        await flutterLocalNotificationsPlugin.zonedSchedule(
+          id: nid1,
+          title: 'Reflection Follow-Up',
+          body: followUp.message,
+          scheduledDate: tzDate1,
+          notificationDetails: platformDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+      } catch (_) {}
+    }
 
-      final tzDate2 = tz.TZDateTime.from(time2, tz.local);
+    final tzDate2 = tz.TZDateTime.from(time2, tz.local);
+    try {
       await flutterLocalNotificationsPlugin.zonedSchedule(
         id: nid2,
         title: 'Reflection Follow-Up',
@@ -485,6 +441,37 @@ class NotificationService {
         notificationDetails: platformDetails,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
+    } catch (_) {
+      try {
+        await flutterLocalNotificationsPlugin.zonedSchedule(
+          id: nid2,
+          title: 'Reflection Follow-Up',
+          body: followUp.message,
+          scheduledDate: tzDate2,
+          notificationDetails: platformDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+      } catch (_) {}
+    }
+
+    if (AppStateObserver.instance.isForeground) {
+      // Start interceptor dart timers
+      final delay1 = time1.difference(now) - const Duration(milliseconds: 500);
+      if (delay1.inMilliseconds > 0) {
+        _activeTimers[nid1] = Timer(delay1, () async {
+          await flutterLocalNotificationsPlugin.cancel(id: nid1);
+          AppStateObserver.instance.suppressedCount++;
+          showInAppBanner('Reflection Follow-Up', followUp.message);
+        });
+      }
+      final delay2 = time2.difference(now) - const Duration(milliseconds: 500);
+      if (delay2.inMilliseconds > 0) {
+        _activeTimers[nid2] = Timer(delay2, () async {
+          await flutterLocalNotificationsPlugin.cancel(id: nid2);
+          AppStateObserver.instance.suppressedCount++;
+          showInAppBanner('Reflection Follow-Up', followUp.message);
+        });
+      }
     }
   }
 
@@ -494,7 +481,7 @@ class NotificationService {
         .filter()
         .typeEqualTo('reflection_follow_up')
         .and()
-        .timestampGreaterThan(now)
+        .createdAtGreaterThan(now)
         .findAll();
 
     for (var n in toDelete) {
@@ -550,13 +537,9 @@ class NotificationService {
         );
       }
     } else {
-      if (AppStateObserver.instance.isForeground) {
-        _activeTimers[notifId] = Timer(scheduledTime.difference(now), () {
-          AppStateObserver.instance.suppressedCount++;
-          showInAppBanner('Mood Check-In', body);
-        });
-      } else {
-        final tzDate = tz.TZDateTime.from(scheduledTime, tz.local);
+      // Always schedule Android/iOS local notifications
+      final tzDate = tz.TZDateTime.from(scheduledTime, tz.local);
+      try {
         await flutterLocalNotificationsPlugin.zonedSchedule(
           id: notifId,
           title: 'Mood Check-In',
@@ -565,6 +548,28 @@ class NotificationService {
           notificationDetails: platformDetails,
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         );
+      } catch (_) {
+        try {
+          await flutterLocalNotificationsPlugin.zonedSchedule(
+            id: notifId,
+            title: 'Mood Check-In',
+            body: body,
+            scheduledDate: tzDate,
+            notificationDetails: platformDetails,
+            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          );
+        } catch (_) {}
+      }
+
+      if (AppStateObserver.instance.isForeground) {
+        final delay = scheduledTime.difference(now) - const Duration(milliseconds: 500);
+        if (delay.inMilliseconds > 0) {
+          _activeTimers[notifId] = Timer(delay, () async {
+            await flutterLocalNotificationsPlugin.cancel(id: notifId);
+            AppStateObserver.instance.suppressedCount++;
+            showInAppBanner('Mood Check-In', body);
+          });
+        }
       }
     }
   }
@@ -670,24 +675,31 @@ class NotificationService {
         .filter()
         .typeEqualTo('mood_reminder')
         .and()
-        .timestampGreaterThan(now)
-        .sortByTimestamp()
+        .createdAtGreaterThan(now)
+        .sortByCreatedAt()
         .findFirst();
 
     // Last delivered notification (past + unread count)
     final lastDelivered = await _isar.appNotifications
         .filter()
-        .timestampLessThan(now)
-        .sortByTimestampDesc()
+        .createdAtLessThan(now)
+        .sortByCreatedAtDesc()
         .findFirst();
 
+    // Background Delivery Enabled check
+    bool backgroundDeliveryEnabled = true;
+    if (androidImpl != null) {
+      backgroundDeliveryEnabled = await androidImpl.canScheduleExactNotifications() ?? false;
+    }
+
     return {
-      'permissionStatus': permissionStatus,
-      'pendingOSCount': pendingCount,
-      'nextReminderTime': nextReminder?.timestamp?.toLocal().toString() ?? 'None scheduled',
-      'nextReminderType': nextReminder?.type ?? '--',
-      'lastNotificationTitle': lastDelivered?.title ?? 'None',
-      'lastNotificationTime': lastDelivered?.timestamp.toLocal().toString() ?? '--',
+      'Notification Permission Granted': permissionStatus,
+      'Notification Scheduled': pendingCount,
+      'Next Scheduled Reminder': nextReminder?.type ?? '--',
+      'Notification Trigger Time': nextReminder?.createdAt?.toLocal().toString() ?? 'None scheduled',
+      'Last Notification Sent': lastDelivered?.title ?? 'None',
+      'lastNotificationTime': lastDelivered?.createdAt.toLocal().toString() ?? '--',
+      'Background Delivery Enabled': backgroundDeliveryEnabled ? 'YES' : 'NO',
       'appState': AppStateObserver.instance.state.toString().split('.').last.toUpperCase(),
       'dartTimerCount': _activeTimers.length,
     };
@@ -733,6 +745,128 @@ class NotificationService {
         'deliveryPath': 'OS NOTIFICATION',
         'expected': 'Android notification in status bar',
       };
+    }
+  }
+  // --- NEW NOTIFICATION TYPES ---
+
+  Future<void> sendConflictReminder(String body) async {
+    const title = 'Conflict Reminder';
+    await saveNotification(title, body, 'conflict_reminder');
+    if (AppStateObserver.instance.isForeground) {
+      showInAppBanner(title, body);
+    } else {
+      await flutterLocalNotificationsPlugin.show(
+        id: DateTime.now().millisecondsSinceEpoch % 100000,
+        title: title,
+        body: body,
+        notificationDetails: const NotificationDetails(android: AndroidNotificationDetails('daily_mood_channel_id', 'Reminders')),
+      );
+    }
+  }
+
+  Future<void> sendRecoveryEvent(String body) async {
+    const title = 'Recovery Event';
+    await saveNotification(title, body, 'recovery_event');
+    if (AppStateObserver.instance.isForeground) {
+      showInAppBanner(title, body);
+    } else {
+      await flutterLocalNotificationsPlugin.show(
+        id: DateTime.now().millisecondsSinceEpoch % 100000,
+        title: title,
+        body: body,
+        notificationDetails: const NotificationDetails(android: AndroidNotificationDetails('daily_mood_channel_id', 'Reminders')),
+      );
+    }
+  }
+
+  Future<void> sendPatternDiscovery(String body) async {
+    const title = 'Pattern Discovery';
+    await saveNotification(title, body, 'pattern_discovery');
+    if (AppStateObserver.instance.isForeground) {
+      showInAppBanner(title, body);
+    } else {
+      await flutterLocalNotificationsPlugin.show(
+        id: DateTime.now().millisecondsSinceEpoch % 100000,
+        title: title,
+        body: body,
+        notificationDetails: const NotificationDetails(android: AndroidNotificationDetails('daily_mood_channel_id', 'Reminders')),
+      );
+    }
+  }
+
+  Future<void> sendWeeklyReflectionReady(String body) async {
+    const title = 'Weekly Reflection Ready';
+    await saveNotification(title, body, 'weekly_reflection_ready');
+    if (AppStateObserver.instance.isForeground) {
+      showInAppBanner(title, body);
+    } else {
+      await flutterLocalNotificationsPlugin.show(
+        id: DateTime.now().millisecondsSinceEpoch % 100000,
+        title: title,
+        body: body,
+        notificationDetails: const NotificationDetails(android: AndroidNotificationDetails('daily_mood_channel_id', 'Reminders')),
+      );
+    }
+  }
+
+  Future<void> sendGroupRecommendation(String body) async {
+    const title = 'Group Recommendation';
+    await saveNotification(title, body, 'group_recommendation');
+    if (AppStateObserver.instance.isForeground) {
+      showInAppBanner(title, body);
+    } else {
+      await flutterLocalNotificationsPlugin.show(
+        id: DateTime.now().millisecondsSinceEpoch % 100000,
+        title: title,
+        body: body,
+        notificationDetails: const NotificationDetails(android: AndroidNotificationDetails('daily_mood_channel_id', 'Reminders')),
+      );
+    }
+  }
+
+  Future<void> scheduleTestReminder10s() async {
+    final scheduledTime = DateTime.now().add(const Duration(seconds: 10));
+    final notifId = await saveNotification('Test 10s', 'This is a scheduled 10s test notification', 'test_reminder', scheduledTime: scheduledTime);
+    
+    // ALWAYS schedule OS notification
+    final tzDate = tz.TZDateTime.from(scheduledTime, tz.local);
+    try {
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        id: notifId,
+        title: 'Test 10s',
+        body: 'This is a scheduled 10s test notification',
+        scheduledDate: tzDate,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails('daily_mood_channel_id', 'Daily Mood Check-In', importance: Importance.max, priority: Priority.high),
+          iOS: DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    } catch (_) {
+      try {
+        await flutterLocalNotificationsPlugin.zonedSchedule(
+          id: notifId,
+          title: 'Test 10s',
+          body: 'This is a scheduled 10s test notification',
+          scheduledDate: tzDate,
+          notificationDetails: const NotificationDetails(
+            android: AndroidNotificationDetails('daily_mood_channel_id', 'Daily Mood Check-In', importance: Importance.max, priority: Priority.high),
+            iOS: DarwinNotificationDetails(),
+          ),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+      } catch (_) {}
+    }
+
+    if (AppStateObserver.instance.isForeground) {
+      // Setup interceptor timer
+      final delay = scheduledTime.difference(DateTime.now()) - const Duration(milliseconds: 500);
+      if (delay.inMilliseconds > 0) {
+        _activeTimers[notifId] = Timer(delay, () async {
+          await flutterLocalNotificationsPlugin.cancel(id: notifId);
+          showInAppBanner('Test 10s', 'This is a scheduled 10s test notification');
+        });
+      }
     }
   }
 }
