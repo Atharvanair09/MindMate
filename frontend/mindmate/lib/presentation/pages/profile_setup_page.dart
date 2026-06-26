@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 
 import '../../core/state/user_provider.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../services/privacy/username_privacy_service.dart';
+import '../../services/privacy/avatar_privacy_service.dart';
 
 // ---------------------------------------------------------------------------
 // Random fictional username generator
@@ -132,6 +134,30 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         SnackBar(content: Text('Username cannot be empty', style: GoogleFonts.spaceMono(fontSize: 12)), backgroundColor: Colors.redAccent),
       );
       return;
+    }
+
+    final validation = UsernamePrivacyService.instance.validateUsername(username);
+    if (!validation.isValid) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(validation.reason ?? 'Invalid username', style: GoogleFonts.spaceMono(fontSize: 12)),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    if (_customImagePath != null) {
+      final avatarValidation = await AvatarPrivacyService.instance.validateAvatar(_customImagePath!);
+      if (!avatarValidation.isValid) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(avatarValidation.reason ?? 'Invalid avatar', style: GoogleFonts.spaceMono(fontSize: 12)),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        return;
+      }
     }
 
     setState(() => _isSaving = true);

@@ -1,0 +1,136 @@
+--- animated_splash_page.dart ---
+  NO EMAIL STORED. NO NAME COLLECTED. EVER.
+  MINDMATE v1.0
+        STAY AWAKE
+--- chat_page.dart ---
+  NO PAST CONVERSATIONS FOUND.
+  NEW CHAT
+  WE CARE ABOUT YOU
+  MINDMATE
+  WHAT WOULD YOU LIKE TO TALK\nABOUT?
+  YOU
+  HELLO,
+  It sounds like you might be going through a tough time. 
+  PAST CONVERSATIONS
+  I UNDERSTAND
+--- developer_debug_page.dart ---
+  AI DEBUG
+  ------------------------
+    ···
+  TRIGGER RECOVERY DETECTION
+  TRIGGER WEEKLY REFLECTION
+  TRIGGER PATTERN DISCOVERY
+--- home_page.dart ---
+  CANCEL
+  THIS WEEK
+  5 MIN READ •\nSURVIVAL TIPS
+  ALL CLEAR
+  talk to someone →
+  view your emotional journey →
+  JOURNAL
+  EXAM ANXIETY GUIDE
+  private. on-device →
+  CHAT
+  NOTIFICATIONS
+  READ ALL
+  WELLNESS TIMELINE
+--- insights_page.dart ---
+  RELEVANT GROUPS
+  33
+  MESSAGES
+  JOIN
+  ARCHIVED CONVERSATIONS
+  SEARCH CONVERSATIONS...
+  EMERGENCY CRISIS SUPPORT
+--- insight_detail_page.dart ---
+  AI INSIGHT DETAIL
+  FACTORS USED:
+  METADATA
+--- local_journal_view_page.dart ---
+  CONTRIBUTING FACTORS
+  AI REFLECTION
+--- login_page.dart ---
+  SEND CODE →
+  PROVE YOU'RE A STUDENT.
+  We'll send a code. Then forget your\nemail forever.
+  Write down these 12 words. They are\nthe only way to recover your account.
+  RECOVER ACCOUNT.
+  your@college.ac.in
+  VERIFY →
+  THIS CODE IS THE LAST TIME WE SEE YOUR EMAIL.
+  I SAVED IT SAFELY →
+  RECOVER →
+  ENTER CODE
+  DIDN'T GET IT?
+  RESEND
+  VERIFICATION
+  SAVE THIS PHRASE.
+  Enter your 12-word recovery phrase to\nrestore your account access.
+  × NOT STORED × NOT SOLD × NOT SHARED
+--- memory_vault_page.dart ---
+  CHATS
+  JOURNAL DELETED
+  CANCEL
+  ARCHIVE
+  NO JOURNALS FOUND
+  DELETE JOURNAL?
+  NEW
+  This action cannot be undone.
+  NO CHATS FOUND
+  CHAT DELETED
+  JOURNAL
+  VIEW FULL LOG
+  DELETE
+  SEARCH ARCHIVE...
+  CREATE JOURNAL (COMING SOON)
+  DELETE CHAT?
+--- mood_check_in_page.dart ---
+  RECOVERY DETECTION
+  view full →
+  MOOD TREND
+  KEEP GOING
+  LOG IT →
+  BURNOUT TREND
+  No recovery events detected
+  No reflection generated yet.\nKeep logging your mood!
+  WEEKLY REFLECTION
+  JOURNAL
+  TRIGGER RECOVERY DETECTION
+  WHAT'S GOING ON?
+  HOW ARE YOU DOING?
+  🔥 5 DAY STREAK
+--- profile_page.dart ---
+  142h
+  CORE IDENTITY // UNIT 042
+--- profile_setup_page.dart ---
+  Save your 12-word recovery phrase on the next screen.
+--- voice_call_screen.dart ---
+  Speaker
+  Mute
+  MindMate is here.
+  Take your time. This is a safe space for you.
+--- weekly_reflection_page.dart ---
+  WEEKLY REFLECTION
+  📊 NO REFLECTION YET
+  CONFIDENCE BREAKDOWN
+  GENERATE REFLECTION
+  ⚠️ Confidence breakdown mismatch detected.
+  INFLUENCE SCORES
+  Keep logging your mood daily. A weekly reflection generates automatically after 7 days of data, or tap the button below to generate one now.
+--- wellness_timeline_page.dart ---
+  NO EVENTS YET.
+--- activity_heatmap.dart ---
+  MORE
+  LESS
+--- mood_check_in_widgets.dart ---
+  5 Day Streak!
+  Keep it going. You're doing great!
+--- mood_selector.dart ---
+  Full Check-in
+  How are you feeling?
+--- weekly_chart.dart ---
+  Your Week at a Glance
+--- wellness_score_card.dart ---
+   /100
+--- scrapbook_diary_editor.dart ---
+  Dear diary...

@@ -273,6 +273,15 @@ class ProfilePage extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _buildSettingsTile(
+          title: 'PSEUDONYMIZATION TESTER',
+          subtitle: 'Debug Phase 5.3',
+          icon: Icons.bug_report_outlined,
+          onTap: () {
+            Navigator.pushNamed(context, '/pseudonymization-tester');
+          },
+        ),
+        const SizedBox(height: 8),
+        _buildSettingsTile(
           title: 'RESET IDENTITY',
           subtitle: 'Warning: IRREVERSIBLE ACTION',
           icon: Icons.delete_outline,

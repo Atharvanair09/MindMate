@@ -10,6 +10,11 @@ import 'presentation/pages/chat_page.dart';
 import 'presentation/pages/profile_page.dart';
 import 'presentation/pages/animated_splash_page.dart';
 import 'presentation/pages/weekly_reflection_page.dart';
+import 'presentation/pages/username_privacy_tester_page.dart';
+import 'presentation/pages/avatar_privacy_tester_page.dart';
+import 'presentation/pages/pseudonymization_tester_page.dart';
+import 'presentation/pages/sanitized_storage_tester_page.dart';
+import 'presentation/pages/community_recommendation_tester_page.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/journal_repository_impl.dart';
 import 'data/repositories/chat_repository_impl.dart';
@@ -99,6 +104,11 @@ class MindMateApp extends StatelessWidget {
         '/profile-page': (context) => const ProfilePage(),
         '/memory-vault': (context) => const MemoryVaultPage(),
         '/weekly-reflection': (context) => const WeeklyReflectionPage(),
+        '/username-privacy-tester': (context) => const UsernamePrivacyTesterPage(),
+        '/avatar-privacy-tester': (context) => const AvatarPrivacyTesterPage(),
+        '/pseudonymization-tester': (context) => const PseudonymizationTesterPage(),
+        '/sanitized-storage-tester': (context) => const SanitizedStorageTesterPage(),
+        '/community-recommendation-tester': (context) => const CommunityRecommendationTesterPage(),
       },
     );
   }

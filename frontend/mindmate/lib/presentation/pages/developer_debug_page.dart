@@ -856,6 +856,145 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
               _buildValueRow("Conflict Events: $_timelineConflictEvents"),
               _buildValueRow("Weekly Reflection Events: $_timelineWeeklyEvents"),
             ]),
+            // ── Username Privacy ────────────────────────────────
+            _buildSection("Username Privacy", [
+              _buildValueRow("Test real-name filter rules.", isCyan: true),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, '/username-privacy-tester');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.greenAccent,
+                    border: Border.all(color: Colors.greenAccent, width: 2),
+                  ),
+                  child: Text(
+                    "OPEN USERNAME TESTER",
+                    style: GoogleFonts.vt323(
+                      color: Colors.black,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+            _buildDashedLine(),
+            const SizedBox(height: 20),
+
+            // ── Avatar Privacy ────────────────────────────────
+            _buildSection("Avatar Privacy", [
+              _buildValueRow("Test avatar face detection.", isCyan: true),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, '/avatar-privacy-tester');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.greenAccent,
+                    border: Border.all(color: Colors.greenAccent, width: 2),
+                  ),
+                  child: Text(
+                    "OPEN AVATAR TESTER",
+                    style: GoogleFonts.vt323(
+                      color: Colors.black,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+            _buildDashedLine(),
+            const SizedBox(height: 20),
+
+            // ── Pseudonymization Engine ────────────────────────────────
+            _buildSection("Pseudonymization Engine", [
+              _buildValueRow("Test conversation name replacement.", isCyan: true),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, '/pseudonymization-tester');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.greenAccent,
+                    border: Border.all(color: Colors.greenAccent, width: 2),
+                  ),
+                  child: Text(
+                    "OPEN PSEUDONYMIZATION TESTER",
+                    style: GoogleFonts.vt323(
+                      color: Colors.black,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+            _buildDashedLine(),
+            const SizedBox(height: 20),
+
+            // ── Sanitized Storage Engine ────────────────────────────────
+            _buildSection("Sanitized Storage", [
+              _buildValueRow("Test sanitized community post storage.", isCyan: true),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, '/sanitized-storage-tester');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.greenAccent,
+                    border: Border.all(color: Colors.greenAccent, width: 2),
+                  ),
+                  child: Text(
+                    "OPEN SANITIZED STORAGE TESTER",
+                    style: GoogleFonts.vt323(
+                      color: Colors.black,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+            _buildDashedLine(),
+            const SizedBox(height: 20),
+
+            // ── AI Community Recommendation Engine ────────────────────────────────
+            _buildSection("Community Recommendation Engine", [
+              _buildValueRow("Test wellness-based community recommendations.", isCyan: true),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, '/community-recommendation-tester');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.greenAccent,
+                    border: Border.all(color: Colors.greenAccent, width: 2),
+                  ),
+                  child: Text(
+                    "OPEN COMMUNITY REC TESTER",
+                    style: GoogleFonts.vt323(
+                      color: Colors.black,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+            _buildDashedLine(),
+            const SizedBox(height: 20),
           ],
         ),
       ),
