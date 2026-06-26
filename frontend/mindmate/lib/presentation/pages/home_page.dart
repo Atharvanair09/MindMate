@@ -23,6 +23,10 @@ import '../../domain/models/weekly_reflection.dart';
 import '../../services/weekly_reflection/weekly_reflection_service.dart';
 import 'weekly_reflection_page.dart';
 import 'wellness_timeline_page.dart';
+import '../../domain/models/community_wellness.dart';
+import '../../services/community/community_wellness_service.dart';
+import '../../domain/models/wellness_plan.dart';
+import '../../services/ml/wellness_plan_generator.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -41,6 +45,8 @@ class _HomePageState extends State<HomePage> {
   ReflectionFollowUp? _activeFollowUp;
   bool _showReflectionInput = false;
   final TextEditingController _reflectionController = TextEditingController();
+  List<CommunityWellness> _monitoredCommunities = [];
+  WellnessPlan? _wellnessPlan;
 
   @override
   void initState() {
@@ -113,6 +119,16 @@ class _HomePageState extends State<HomePage> {
         debugPrint('Error loading weekly reflection: $e');
       }
 
+      final monitoredCommunities = await CommunityWellnessService.instance.getMonitoredCommunities();
+
+      // Generate daily wellness plan dynamically
+      WellnessPlan? wellnessPlan;
+      try {
+        wellnessPlan = await WellnessPlanGenerator.instance.generatePlan();
+      } catch (e) {
+        debugPrint('Error generating wellness plan: $e');
+      }
+
       if (mounted) {
         setState(() {
           _todayMood = todayMood;
@@ -120,6 +136,8 @@ class _HomePageState extends State<HomePage> {
           _reflection = reflection;
           _aiInsight = aiInsight;
           _weeklyReflection = weeklyReflection;
+          _monitoredCommunities = monitoredCommunities;
+          _wellnessPlan = wellnessPlan;
           _isLoading = false;
           
           if (todayMood != null) {
@@ -223,6 +241,8 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 24),
               _buildBurnoutCard(),
               const SizedBox(height: 24),
+              _buildCommunityWellnessSection(),
+              const SizedBox(height: 24),
               _buildSectionTitle("HOW ARE YOU FEELING?"),
               const SizedBox(height: 12),
               if (_activeFollowUp != null) ...[
@@ -234,6 +254,8 @@ class _HomePageState extends State<HomePage> {
               _buildActionButtons(),
               const SizedBox(height: 24),
               _buildWeeklyChart(),
+              const SizedBox(height: 24),
+              _buildWellnessPlanSection(),
               const SizedBox(height: 24),
               _buildSectionTitle("STUDENT RESOURCES"),
               const SizedBox(height: 12),
@@ -504,6 +526,80 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     ));
+  }
+
+  Widget _buildCommunityWellnessSection() {
+    if (_monitoredCommunities.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle("COMMUNITY WELLNESS"),
+        const SizedBox(height: 12),
+        ..._monitoredCommunities.map((wellness) {
+          Color trendColor = Colors.greenAccent;
+          if (wellness.overallTrend == 'Needs Attention') trendColor = Colors.redAccent;
+          if (wellness.overallTrend == 'Improving') trendColor = Colors.orangeAccent;
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.black, width: 2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black,
+                  offset: Offset(4, 4),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      wellness.communityName.toUpperCase(),
+                      style: GoogleFonts.vt323(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      color: Colors.black,
+                      child: Text(
+                        wellness.overallTrend.toUpperCase(),
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: trendColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (wellness.alertMessage != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    wellness.alertMessage!,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: wellness.overallTrend == 'Needs Attention' ? Colors.red[700] : Colors.black87,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        }),
+      ],
+    );
   }
 
   Widget _buildReflectionFollowUpCard() {
@@ -1353,6 +1449,128 @@ class _HomePageState extends State<HomePage> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildWellnessPlanSection() {
+    if (_wellnessPlan == null || _wellnessPlan!.actions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    Color statusColor = Colors.grey[700]!; // Stable
+    if (_wellnessPlan!.planStatus == "Improving") statusColor = Colors.green[700]!;
+    if (_wellnessPlan!.planStatus == "Needs Attention") statusColor = Colors.red[700]!;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: _buildSectionTitle("TODAY'S WELLNESS PLAN"),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              margin: const EdgeInsets.only(bottom: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.black, width: 2),
+              ),
+              child: Text(
+                _wellnessPlan!.planStatus.toUpperCase(),
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: statusColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.black, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black,
+                offset: Offset(4, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "TARGET: ${_wellnessPlan!.primarySituation.toUpperCase()}",
+                    style: GoogleFonts.vt323(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueAccent[700],
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  Icon(Icons.assignment, color: Colors.blueAccent[700], size: 20),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(height: 2, color: Colors.grey[200]),
+              const SizedBox(height: 12),
+              ..._wellnessPlan!.actions.asMap().entries.map((entry) {
+                int index = entry.key;
+                WellnessAction action = entry.value;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            // Toggle completion status locally
+                            _wellnessPlan!.actions[index] = action.copyWith(isCompleted: !action.isCompleted);
+                          });
+                        },
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          margin: const EdgeInsets.only(right: 12, top: 2),
+                          decoration: BoxDecoration(
+                            color: action.isCompleted ? Colors.blueAccent[700] : Colors.white,
+                            border: Border.all(color: Colors.black, width: 2),
+                          ),
+                          child: action.isCompleted 
+                              ? const Icon(Icons.check, size: 16, color: Colors.white)
+                              : null,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          action.text,
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: action.isCompleted ? Colors.grey[500] : Colors.black87,
+                            decoration: action.isCompleted ? TextDecoration.lineThrough : null,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

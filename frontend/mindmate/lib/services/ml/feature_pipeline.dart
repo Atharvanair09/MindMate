@@ -15,6 +15,7 @@ import 'feature_builder.dart';
 import 'feature_cache.dart';
 import 'reflection_engine.dart';
 import '../../services/notifications/notification_service.dart';
+import '../../services/notifications/smart_check_in_service.dart';
 
 class FeaturePipeline {
   static final FeaturePipeline instance = FeaturePipeline._internal();
@@ -126,8 +127,11 @@ class FeaturePipeline {
         final moodDiff = (vector.currentMoodValue! - vector.rollingMoodAverage7Days!).abs();
         if (moodDiff >= 1.5) {
           triggerCheckIn = true;
-          checkInMessage = "Has your mood changed since your earlier check-in?";
         }
+      }
+
+      if (triggerCheckIn) {
+        checkInMessage = await SmartCheckInService.instance.generateCheckInMessage();
       }
 
       if (triggerCheckIn && checkInMessage != null) {

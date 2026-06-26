@@ -15,6 +15,7 @@ import 'presentation/pages/avatar_privacy_tester_page.dart';
 import 'presentation/pages/pseudonymization_tester_page.dart';
 import 'presentation/pages/sanitized_storage_tester_page.dart';
 import 'presentation/pages/community_recommendation_tester_page.dart';
+import 'presentation/pages/situation_detection_tester_page.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/journal_repository_impl.dart';
 import 'data/repositories/chat_repository_impl.dart';
@@ -109,6 +110,7 @@ class MindMateApp extends StatelessWidget {
         '/pseudonymization-tester': (context) => const PseudonymizationTesterPage(),
         '/sanitized-storage-tester': (context) => const SanitizedStorageTesterPage(),
         '/community-recommendation-tester': (context) => const CommunityRecommendationTesterPage(),
+        '/situation-detection-tester': (context) => const SituationDetectionTesterPage(),
       },
     );
   }

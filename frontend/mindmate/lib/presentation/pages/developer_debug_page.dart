@@ -995,6 +995,34 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
             ]),
             _buildDashedLine(),
             const SizedBox(height: 20),
+
+            // ── AI Situation Detection Engine ────────────────────────────────
+            _buildSection("Situation Detection Engine", [
+              _buildValueRow("Test detection of user wellness situations.", isCyan: true),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, '/situation-detection-tester');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.greenAccent,
+                    border: Border.all(color: Colors.greenAccent, width: 2),
+                  ),
+                  child: Text(
+                    "OPEN SITUATION DETECTION TESTER",
+                    style: GoogleFonts.vt323(
+                      color: Colors.black,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+            _buildDashedLine(),
+            const SizedBox(height: 20),
           ],
         ),
       ),

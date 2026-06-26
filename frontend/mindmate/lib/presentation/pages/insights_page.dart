@@ -4,6 +4,8 @@ import '../widgets/bottom_nav.dart';
 import '../../domain/models/community_recommendation.dart';
 import '../../services/community/community_recommendation_service.dart';
 import 'community_chat_page.dart';
+import '../../domain/models/community_wellness.dart';
+import '../../services/community/community_wellness_service.dart';
 
 class CommunityInfo {
   final String name;
@@ -35,6 +37,7 @@ class InsightsPage extends StatefulWidget {
 
 class _InsightsPageState extends State<InsightsPage> {
   List<CommunityRecommendation> _recommendations = [];
+  Map<String, CommunityWellness> _wellnessMap = {};
   bool _isLoading = true;
 
   @override
@@ -45,9 +48,14 @@ class _InsightsPageState extends State<InsightsPage> {
 
   Future<void> _loadRecommendations() async {
     final recs = await CommunityRecommendationService.instance.generateRecommendations();
+    final Map<String, CommunityWellness> wellnessMap = {};
+    for (var community in allCommunities) {
+      wellnessMap[community.name] = await CommunityWellnessService.instance.getWellnessForCommunity(community.name);
+    }
     if (mounted) {
       setState(() {
         _recommendations = recs;
+        _wellnessMap = wellnessMap;
         _isLoading = false;
       });
     }
@@ -112,6 +120,7 @@ class _InsightsPageState extends State<InsightsPage> {
                           members: info.members,
                           activity: info.activity,
                           backgroundColor: info.color,
+                          wellness: _wellnessMap[info.name],
                         ),
                       );
                     }).toList(),
@@ -134,6 +143,7 @@ class _InsightsPageState extends State<InsightsPage> {
                         members: info.members,
                         activity: info.activity,
                         backgroundColor: info.color,
+                        wellness: _wellnessMap[info.name],
                       ),
                     );
                   }).toList(),
@@ -151,6 +161,7 @@ class _InsightsPageState extends State<InsightsPage> {
     required String members,
     required String activity,
     required Color backgroundColor,
+    CommunityWellness? wellness,
   }) {
     final isDarkBackground = backgroundColor.computeLuminance() < 0.5;
     final textColor = isDarkBackground ? Colors.white : Colors.black;
@@ -258,6 +269,24 @@ class _InsightsPageState extends State<InsightsPage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  if (wellness != null) ...[
+                    const SizedBox(width: 12),
+                    Icon(
+                      wellness.overallTrend == 'Healthy' ? Icons.check_circle :
+                      wellness.overallTrend == 'Needs Attention' ? Icons.warning : Icons.trending_up,
+                      size: 14,
+                      color: textColor,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      wellness.overallTrend,
+                      style: GoogleFonts.spaceGrotesk(
+                        color: textColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             )

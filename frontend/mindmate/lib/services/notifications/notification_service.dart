@@ -9,6 +9,7 @@ import '../../domain/models/app_notification.dart';
 import '../../domain/models/reflection_follow_up.dart';
 import '../../main.dart';
 import '../../core/state/app_state_observer.dart';
+import 'smart_check_in_service.dart';
 
 class NotificationService {
   static final NotificationService instance = NotificationService._internal();
@@ -519,7 +520,7 @@ class NotificationService {
     final notifId = await saveNotification(
       'Mood Check-In',
       body,
-      'mood_reminder',
+      'smart_check_in',
       scheduledTime: scheduledTime,
     );
 
@@ -646,10 +647,13 @@ class NotificationService {
 
   // Wrapper for backward compatibility
   Future<void> sendSmartMoodReminder() async {
-    await sendContextAwareCheckIn(
-      "We noticed some changes in your recent reflections. Would you like to check in today?",
-      immediate: true,
-    );
+    final message = await SmartCheckInService.instance.generateCheckInMessage();
+    if (message != null) {
+      await sendContextAwareCheckIn(
+        message,
+        immediate: true,
+      );
+    }
   }
 
   // --- DEBUG HELPERS ---
