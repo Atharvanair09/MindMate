@@ -12,13 +12,15 @@ class SituationDetectionEngine {
 
   final Map<String, List<String>> _situationKeywords = {
     'Exam Stress': ['exam', 'assignment', 'study', 'college', 'grades', 'test', 'deadline', 'semester'],
-    'Burnout': ['exhausted', 'tired', 'drained', 'overwhelmed', 'burnout', 'give up', 'can\'t keep up', 'no energy'],
-    'Sleep Issues': ['sleep', 'insomnia', 'nightmare', 'awake', 'tired', 'restless', 'can\'t sleep'],
+    'Burnout': ['exhausted', 'tired', 'drained', 'overwhelmed', 'burnout', "give up", "can't keep up", 'no energy'],
+    'Sleep Issues': ['sleep', 'insomnia', 'nightmare', 'awake', 'tired', 'restless', "can't sleep"],
     'Academic Pressure': ['school', 'homework', 'project', 'professor', 'fail', 'class', 'gpa'],
     'Work Pressure': ['work', 'boss', 'meeting', 'shift', 'job', 'manager', 'stress', 'colleague', 'fired'],
-    'Relationship Difficulties': ['argue', 'fight', 'breakup', 'partner', 'friend', 'toxic', 'misunderstand', 'lonely', 'ignore'],
+    'Relationship Issues': ['argue', 'fight', 'breakup', 'partner', 'friend', 'toxic', 'misunderstand', 'lonely', 'ignore'],
     'Social Isolation': ['alone', 'lonely', 'no friends', 'isolated', 'ignored', 'left out', 'nobody'],
     'Low Motivation': ['unmotivated', 'lazy', 'procrastinate', 'pointless', 'bored', 'nothing to do', 'lost interest'],
+    'Financial Stress': ['money', 'broke', 'rent', 'bills', 'expensive', 'debt', 'salary', 'paycheck'],
+    'Decision Fatigue': ['decide', 'choice', 'options', 'too many', "don't know what to do", 'stuck', 'overthinking'],
   };
 
   Future<List<DetectedSituation>> detectSituations() async {
@@ -55,6 +57,11 @@ class SituationDetectionEngine {
     final String burnoutTrend = weeklyReflection?.burnoutTrend ?? 'Stable';
     final String moodTrend = weeklyReflection?.moodTrend ?? 'Stable';
 
+    // Mocked additional input sources
+    final bool hasRecentRecovery = false;
+    final bool hasNegativeHistoricalBehaviour = true; // Just a mocked signal
+    final bool hasNegativePatterns = false;
+
     List<DetectedSituation> detectedSituations = [];
 
     for (var entry in _situationKeywords.entries) {
@@ -63,7 +70,6 @@ class SituationDetectionEngine {
 
       List<String> keywordsTriggered = [];
       for (var kw in keywords) {
-        // simple keyword match
         if (combinedText.contains(kw.toLowerCase())) {
           keywordsTriggered.add(kw);
         }
@@ -71,31 +77,51 @@ class SituationDetectionEngine {
 
       double baseConfidence = keywordsTriggered.length * 15.0; // 15% per keyword match
       List<String> evidenceUsed = [];
+      List<String> supportingFactors = [];
+      List<String> signalsUsed = [];
       String reason = "";
 
       if (keywordsTriggered.isNotEmpty) {
         evidenceUsed.add("${keywordsTriggered.length} keywords matched");
+        signalsUsed.add("Keyword Evidence");
+        if (journals.isNotEmpty) signalsUsed.add("Journal Analysis");
+        if (chats.isNotEmpty) signalsUsed.add("Chat Analysis");
       }
 
       // Add context based on Burnout and Mood
       if (burnoutScore > 60.0) {
-        if (situationName == 'Burnout' || situationName == 'Exam Stress' || situationName == 'Work Pressure' || situationName == 'Academic Pressure') {
+        if (['Burnout', 'Exam Stress', 'Work Pressure', 'Academic Pressure'].contains(situationName)) {
           baseConfidence += 20.0;
           evidenceUsed.add("High Burnout Score ($burnoutScore)");
+          signalsUsed.add("Current Burnout Score");
+          supportingFactors.add("Elevated burnout levels contribute to this situation.");
         }
       }
 
       if (burnoutTrend == 'Increasing') {
-        if (situationName == 'Burnout' || situationName == 'Exam Stress' || situationName == 'Work Pressure') {
+        if (['Burnout', 'Exam Stress', 'Work Pressure', 'Financial Stress'].contains(situationName)) {
           baseConfidence += 15.0;
           evidenceUsed.add("Increasing Burnout Trend");
+          signalsUsed.add("Burnout Trend");
+          signalsUsed.add("Weekly Reflection");
+          supportingFactors.add("Burnout has been getting worse over the week.");
         }
       }
 
       if (moodTrend == 'Decreasing') {
         baseConfidence += 10.0;
         evidenceUsed.add("Declining Mood Trend");
+        signalsUsed.add("Mood Trend");
+        signalsUsed.add("Mood History");
+        supportingFactors.add("Recent decline in overall mood.");
       }
+      
+      if (hasNegativeHistoricalBehaviour) {
+          signalsUsed.add("Historical Behaviour");
+      }
+
+      // Deduplicate signalsUsed
+      signalsUsed = signalsUsed.toSet().toList();
 
       if (baseConfidence > 100.0) baseConfidence = 100.0;
 
@@ -113,6 +139,8 @@ class SituationDetectionEngine {
             evidenceUsed: evidenceUsed,
             reason: reason,
             keywordsTriggered: keywordsTriggered,
+            supportingFactors: supportingFactors,
+            signalsUsed: signalsUsed,
             generatedAt: now,
           )
         );

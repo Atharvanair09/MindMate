@@ -13,4 +13,10 @@ class AppNotification {
   
   // 'ai_insight', 'reflection_follow_up', 'burnout_alert', 'mood_reminder', 'smart_check_in', 'system', 'conflict_reminder', 'recovery_event', 'pattern_discovery', 'weekly_reflection_ready', 'group_recommendation'
   late String type;
+
+  // Fields for Contextual Follow-Up Engine
+  String? followUpCategory;
+  String? followUpSituation;
+  String? followUpHash;
+  bool? responded;
 }

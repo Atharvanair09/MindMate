@@ -4,6 +4,8 @@ class DetectedSituation {
   final List<String> evidenceUsed;
   final String reason;
   final List<String> keywordsTriggered;
+  final List<String> supportingFactors;
+  final List<String> signalsUsed;
   final DateTime generatedAt;
 
   DetectedSituation({
@@ -12,6 +14,8 @@ class DetectedSituation {
     required this.evidenceUsed,
     required this.reason,
     required this.keywordsTriggered,
+    this.supportingFactors = const [],
+    this.signalsUsed = const [],
     required this.generatedAt,
   });
 }

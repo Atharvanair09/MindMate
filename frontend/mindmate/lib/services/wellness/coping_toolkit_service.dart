@@ -33,7 +33,7 @@ class CopingToolkitService {
       return [
         CopingTool(
           id: 'breathing_exercise',
-          name: 'Breathing Exercise',
+          name: 'Guided Breathing',
           description: 'Follow a guided box breathing session to reduce stress.',
           iconName: 'air',
         ),
@@ -63,6 +63,21 @@ class CopingToolkitService {
           name: 'Sleep Hygiene Tips',
           description: 'Learn best practices for a restful night\'s sleep.',
           iconName: 'tips_and_updates',
+        ),
+      ];
+    } else if (nameLower.contains('social') || nameLower.contains('isolation') || nameLower.contains('lonely')) {
+      return [
+        CopingTool(
+          id: 'conversation_starters',
+          name: 'Conversation Starters',
+          description: 'Icebreakers and topics to help you connect with others.',
+          iconName: 'chat_bubble_outline',
+        ),
+        CopingTool(
+          id: 'community_recommendations',
+          name: 'Community Recommendations',
+          description: 'Find support groups and communities that share your interests.',
+          iconName: 'people_outline',
         ),
       ];
     }

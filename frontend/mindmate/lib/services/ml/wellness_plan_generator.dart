@@ -6,6 +6,8 @@ import '../../domain/models/reflection_result.dart';
 import '../../domain/models/mood_feature_vector.dart';
 import 'situation_detection_engine.dart';
 import 'reflection_engine.dart';
+import '../../domain/models/reflection_follow_up.dart';
+import '../../services/community/community_wellness_service.dart';
 
 class WellnessPlanGenerator {
   static final WellnessPlanGenerator instance = WellnessPlanGenerator._internal();
@@ -24,6 +26,7 @@ class WellnessPlanGenerator {
     
     // Evaluate Effectiveness (Yesterday vs Today)
     String planStatus = "Stable";
+    String? effectivenessExplanation;
     try {
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day);
@@ -45,10 +48,35 @@ class WellnessPlanGenerator {
         bool moodImproved = moodScore > prevMood;
         bool moodWorsened = moodScore < prevMood;
 
-        if (burnoutImproved || moodImproved) {
+        // Check recent follow-ups for user feedback on plan
+        bool hasPositiveFollowUp = false;
+        bool hasNegativeFollowUp = false;
+        final recentFollowUp = await IsarDatabase.instance.reflectionFollowUps
+           .filter().resolvedEqualTo(true).sortByResolvedAtDesc().findFirst();
+        if (recentFollowUp != null && recentFollowUp.userResponse != null) {
+            final text = recentFollowUp.userResponse!.toLowerCase();
+            if (text.contains("better") || text.contains("helped") || text.contains("good") || text.contains("improved")) {
+                hasPositiveFollowUp = true;
+            } else if (text.contains("worse") || text.contains("stressed") || text.contains("hard") || text.contains("overwhelmed")) {
+                hasNegativeFollowUp = true;
+            }
+        }
+
+        // Check community wellness for external stressors
+        bool communityDeclining = false;
+        try {
+           final communities = await CommunityWellnessService.instance.getMonitoredCommunities();
+           if (communities.any((c) => c.overallTrend == 'Needs Attention')) {
+               communityDeclining = true;
+           }
+        } catch (_) {}
+
+        if (burnoutImproved || moodImproved || hasPositiveFollowUp) {
           planStatus = "Improving";
-        } else if (burnoutWorsened || moodWorsened) {
+          effectivenessExplanation = "Your mood and burnout levels are better today. Continuing to practice habits like taking breaks and resting seems to be helping!";
+        } else if (burnoutWorsened || moodWorsened || hasNegativeFollowUp || communityDeclining) {
           planStatus = "Needs Attention";
+          effectivenessExplanation = "We noticed some increased stress signals today. We've adjusted your plan to prioritize immediate relief and recovery.";
         }
       }
     } catch (e) {
@@ -76,27 +104,25 @@ class WellnessPlanGenerator {
         case 'Exam Stress':
         case 'Academic Pressure':
           actions = [
-            "Take a 5-minute break.",
-            "Complete one focused study session.",
-            "Avoid multitasking.",
-            "Hydrate."
+            "Complete one Pomodoro session.",
+            "Review one chapter.",
+            "Take a five-minute break every hour.",
+            "Hydrate before studying."
           ];
           break;
         case 'Burnout':
         case 'Work Pressure':
           actions = [
-            "Reduce workload.",
-            "Take regular breaks.",
-            "Prioritize sleep.",
-            "Avoid unnecessary commitments."
+            "Reduce workload where possible.",
+            "Schedule a recovery break.",
+            "Focus on one important task only."
           ];
           break;
         case 'Sleep Issues':
           actions = [
-            "Reduce screen time.",
-            "Maintain consistent bedtime.",
-            "Avoid caffeine late in the day.",
-            "Try a relaxation technique."
+            "Avoid screens thirty minutes before bed.",
+            "Maintain a consistent bedtime.",
+            "Reduce caffeine intake this evening."
           ];
           break;
         case 'Social Isolation':
@@ -125,10 +151,9 @@ class WellnessPlanGenerator {
       if (burnoutScore > 60.0) {
         primarySituation = "Burnout Recovery";
         actions = [
-          "Reduce workload.",
-          "Take regular breaks.",
-          "Prioritize sleep.",
-          "Avoid unnecessary commitments."
+          "Reduce workload where possible.",
+          "Schedule a recovery break.",
+          "Focus on one important task only."
         ];
       } else {
         actions = _getDefaultActions(moodScore, burnoutScore);
@@ -143,6 +168,7 @@ class WellnessPlanGenerator {
       primarySituation: primarySituation,
       generatedAt: DateTime.now(),
       planStatus: planStatus,
+      effectivenessExplanation: effectivenessExplanation,
     );
   }
 

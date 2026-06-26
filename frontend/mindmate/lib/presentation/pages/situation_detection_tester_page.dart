@@ -177,10 +177,22 @@ class _SituationDetectionTesterPageState extends State<SituationDetectionTesterP
                               _buildValueRow("Reason:", isCyan: true),
                               _buildValueRow(situation.reason),
                               const SizedBox(height: 8),
-                              _buildValueRow("Evidence Used:", isCyan: true),
+                              _buildValueRow("Evidence Breakdown:", isCyan: true),
                               ...situation.evidenceUsed.map((e) => _buildValueRow("  + $e")),
                               const SizedBox(height: 8),
-                              _buildValueRow("Keywords Triggered:", isCyan: true),
+                              _buildValueRow("Signals Used:", isCyan: true),
+                              if (situation.signalsUsed.isEmpty)
+                                _buildValueRow("  None")
+                              else
+                                ...situation.signalsUsed.map((s) => _buildValueRow("  > $s")),
+                              const SizedBox(height: 8),
+                              _buildValueRow("Supporting Factors:", isCyan: true),
+                              if (situation.supportingFactors.isEmpty)
+                                _buildValueRow("  None")
+                              else
+                                ...situation.supportingFactors.map((f) => _buildValueRow("  - $f")),
+                              const SizedBox(height: 8),
+                              _buildValueRow("Detected Keywords:", isCyan: true),
                               if (situation.keywordsTriggered.isEmpty)
                                 _buildValueRow("  None")
                               else

@@ -645,6 +645,35 @@ class NotificationService {
     }
   }
 
+  // Send contextual follow up push notification
+  Future<void> sendContextualFollowUpPush(String title, String body, int notifId) async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'follow_up_reminder_channel_id',
+      'Reflection Follow-Ups',
+      channelDescription: 'Contextual follow up questions based on situations',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+    
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(),
+    );
+    
+    if (AppStateObserver.instance.isForeground) {
+      AppStateObserver.instance.suppressedCount++;
+      showInAppBanner(title, body);
+    } else {
+      AppStateObserver.instance.backgroundCount++;
+      await flutterLocalNotificationsPlugin.show(
+        id: notifId,
+        title: title,
+        body: body,
+        notificationDetails: platformDetails,
+      );
+    }
+  }
+
   // Wrapper for backward compatibility
   Future<void> sendSmartMoodReminder() async {
     final message = await SmartCheckInService.instance.generateCheckInMessage();

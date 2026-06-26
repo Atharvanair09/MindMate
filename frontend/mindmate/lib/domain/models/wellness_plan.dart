@@ -23,11 +23,13 @@ class WellnessPlan {
   final String primarySituation;
   final DateTime generatedAt;
   final String planStatus;
+  final String? effectivenessExplanation;
 
   WellnessPlan({
     required this.actions,
     required this.primarySituation,
     required this.generatedAt,
     this.planStatus = "Stable",
+    this.effectivenessExplanation,
   });
 }

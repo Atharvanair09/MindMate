@@ -25,6 +25,7 @@ import 'package:intl/intl.dart';
 import '../../domain/models/pattern_insight.dart';
 import '../../services/pattern/pattern_discovery_service.dart';
 import '../../services/timeline/timeline_service.dart';
+import '../../services/notifications/notification_scheduler_service.dart';
 
 class DeveloperDebugPage extends StatefulWidget {
   const DeveloperDebugPage({super.key});
@@ -1012,6 +1013,35 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
                   ),
                   child: Text(
                     "OPEN SITUATION DETECTION TESTER",
+                    style: GoogleFonts.vt323(
+                      color: Colors.black,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+            _buildDashedLine(),
+            const SizedBox(height: 20),
+
+            // ── Contextual Follow-Up Engine ────────────────────────────────
+            _buildSection("Contextual Follow-Up Engine", [
+              _buildValueRow("Test dynamic follow-up notifications based on situations.", isCyan: true),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () async {
+                  await NotificationSchedulerService.instance.evaluateAndSendContextualFollowUp();
+                  await _loadData(); // Refresh UI to reflect new notifications
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.greenAccent,
+                    border: Border.all(color: Colors.greenAccent, width: 2),
+                  ),
+                  child: Text(
+                    "TRIGGER CONTEXTUAL FOLLOW-UP",
                     style: GoogleFonts.vt323(
                       color: Colors.black,
                       fontSize: 20,

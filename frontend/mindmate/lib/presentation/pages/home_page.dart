@@ -27,6 +27,10 @@ import '../../domain/models/community_wellness.dart';
 import '../../services/community/community_wellness_service.dart';
 import '../../domain/models/wellness_plan.dart';
 import '../../services/ml/wellness_plan_generator.dart';
+import '../../domain/models/coping_tool.dart';
+import '../../services/wellness/coping_toolkit_service.dart';
+import '../../domain/models/detected_situation.dart';
+import '../../services/ml/situation_detection_engine.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -47,6 +51,7 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController _reflectionController = TextEditingController();
   List<CommunityWellness> _monitoredCommunities = [];
   WellnessPlan? _wellnessPlan;
+  List<CopingTool> _recommendedTools = [];
 
   @override
   void initState() {
@@ -123,8 +128,24 @@ class _HomePageState extends State<HomePage> {
 
       // Generate daily wellness plan dynamically
       WellnessPlan? wellnessPlan;
+      List<CopingTool> recommendedTools = [];
       try {
         wellnessPlan = await WellnessPlanGenerator.instance.generatePlan();
+        final situations = await SituationDetectionEngine.instance.detectSituations();
+        if (situations.isNotEmpty) {
+          recommendedTools = CopingToolkitService.instance.getRecommendedTools(situations.first);
+        } else {
+          recommendedTools = CopingToolkitService.instance.getRecommendedTools(
+            DetectedSituation(
+              situationName: "General",
+              confidence: 100,
+              evidenceUsed: [],
+              reason: "",
+              keywordsTriggered: [],
+              generatedAt: DateTime.now(),
+            )
+          );
+        }
       } catch (e) {
         debugPrint('Error generating wellness plan: $e');
       }
@@ -138,6 +159,7 @@ class _HomePageState extends State<HomePage> {
           _weeklyReflection = weeklyReflection;
           _monitoredCommunities = monitoredCommunities;
           _wellnessPlan = wellnessPlan;
+          _recommendedTools = recommendedTools;
           _isLoading = false;
           
           if (todayMood != null) {
@@ -257,9 +279,9 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 24),
               _buildWellnessPlanSection(),
               const SizedBox(height: 24),
-              _buildSectionTitle("STUDENT RESOURCES"),
+              _buildSectionTitle("COPING TOOLKIT"),
               const SizedBox(height: 12),
-              _buildResourceCard(),
+              _buildCopingToolkit(),
               const SizedBox(height: 100), // Space for bottom nav
             ],
           ),
@@ -1156,60 +1178,85 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildResourceCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.black, width: 2),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black,
-            offset: Offset(4, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 80,
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            decoration: const BoxDecoration(
-              color: Color(0xFFE0E0E0),
-              border: Border(right: BorderSide(color: Colors.black, width: 2)),
-            ),
-            child: const Icon(Icons.menu_book, color: Colors.black, size: 32),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "EXAM ANXIETY GUIDE",
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "5 MIN READ •\nSURVIVAL TIPS",
-                    style: GoogleFonts.vt323(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                      letterSpacing: 1.5,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
+  Widget _buildCopingToolkit() {
+    if (_recommendedTools.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      children: _recommendedTools.map((tool) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.black, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black,
+                offset: Offset(4, 4),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+          child: Row(
+            children: [
+              Container(
+                width: 80,
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE0E0E0),
+                  border: Border(right: BorderSide(color: Colors.black, width: 2)),
+                ),
+                child: Icon(_getIconData(tool.iconName), color: Colors.black, size: 32),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tool.name.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        tool.description.toUpperCase(),
+                        style: GoogleFonts.vt323(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                          letterSpacing: 1.5,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
+  }
+
+  IconData _getIconData(String name) {
+    switch (name) {
+      case 'timer': return Icons.timer;
+      case 'list_alt': return Icons.list_alt;
+      case 'self_improvement': return Icons.self_improvement;
+      case 'air': return Icons.air;
+      case 'checklist': return Icons.checklist;
+      case 'book': return Icons.book;
+      case 'nightlight_round': return Icons.nightlight_round;
+      case 'tips_and_updates': return Icons.tips_and_updates;
+      case 'edit_note': return Icons.edit_note;
+      case 'chat_bubble_outline': return Icons.chat_bubble_outline;
+      case 'people_outline': return Icons.people_outline;
+      default: return Icons.build;
+    }
   }
 
   void _showNotificationCenter(BuildContext context) {
@@ -1521,6 +1568,33 @@ class _HomePageState extends State<HomePage> {
                   Icon(Icons.assignment, color: Colors.blueAccent[700], size: 20),
                 ],
               ),
+              if (_wellnessPlan!.effectivenessExplanation != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.yellow[100],
+                    border: Border.all(color: Colors.black, width: 1),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.auto_awesome, color: Colors.black, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _wellnessPlan!.effectivenessExplanation!,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Container(height: 2, color: Colors.grey[200]),
               const SizedBox(height: 12),
