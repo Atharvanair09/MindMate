@@ -1,9 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/bottom_nav.dart';
+import '../../domain/models/community_recommendation.dart';
+import '../../services/community/community_recommendation_service.dart';
+import 'community_chat_page.dart';
 
-class InsightsPage extends StatelessWidget {
+class CommunityInfo {
+  final String name;
+  final String description;
+  final String members;
+  final String activity;
+  final Color color;
+
+  const CommunityInfo(this.name, this.description, this.members, this.activity, this.color);
+}
+
+const List<CommunityInfo> allCommunities = [
+  CommunityInfo('Exam Stress', 'Students supporting students through exams.', '124 Members', 'High Activity', Color(0xFFFFD600)),
+  CommunityInfo('Sleep Recovery', 'Tips and support for better rest.', '89 Members', 'Medium Activity', Color(0xFF0D6EFD)),
+  CommunityInfo('Burnout Recovery', 'Recover from exhaustion and overwork.', '210 Members', 'High Activity', Color(0xFFFF5252)),
+  CommunityInfo('Relationship Support', 'Navigate family and romantic dynamics.', '150 Members', 'High Activity', Color(0xFF4CAF50)),
+  CommunityInfo('Career Pressure', 'Navigating workplace challenges.', '105 Members', 'Medium Activity', Color(0xFF9C27B0)),
+  CommunityInfo('Social Anxiety', 'A safe space for overcoming social fears.', '180 Members', 'High Activity', Color(0xFF00BCD4)),
+  CommunityInfo('Motivation', 'Find purpose and overcome procrastination.', '320 Members', 'Very High Activity', Color(0xFFFF9800)),
+  CommunityInfo('General Wellness', 'Maintain overall well-being and health.', '450 Members', 'Very High Activity', Color(0xFF4A4A4A)),
+];
+
+class InsightsPage extends StatefulWidget {
   const InsightsPage({super.key});
+
+  @override
+  State<InsightsPage> createState() => _InsightsPageState();
+}
+
+class _InsightsPageState extends State<InsightsPage> {
+  List<CommunityRecommendation> _recommendations = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRecommendations();
+  }
+
+  Future<void> _loadRecommendations() async {
+    final recs = await CommunityRecommendationService.instance.generateRecommendations();
+    if (mounted) {
+      setState(() {
+        _recommendations = recs;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +68,7 @@ class InsightsPage extends StatelessWidget {
           },
         ),
         title: Text(
-          "MESSAGES",
+          "COMMUNITIES",
           style: GoogleFonts.anton(
             color: Colors.black,
             fontSize: 24,
@@ -35,334 +83,186 @@ class InsightsPage extends StatelessWidget {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildSearchBar(),
-            const SizedBox(height: 20),
-            _buildArchivedButton(),
-            const SizedBox(height: 20),
-            const Divider(color: Colors.black, thickness: 2),
-            const SizedBox(height: 20),
-            _buildChatItem(
-              name: "JARVIS (AI)",
-              time: "21:56",
-              message: '"I\'ve updated your focu..."',
-              unreadCount: 2,
-              backgroundColor: const Color(0xFFFFD600), // Yellow
-            ),
-            const SizedBox(height: 16),
-            _buildChatItem(
-              name: "SAHIL",
-              time: "21:40",
-              message: "Okay, let's sync up after t...",
-              unreadCount: 0,
-              backgroundColor: Colors.white,
-            ),
-            const SizedBox(height: 30),
-            Text(
-              "RELEVANT GROUPS",
-              style: GoogleFonts.anton(
-                color: Colors.black,
-                fontSize: 20,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: Colors.black))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_recommendations.isNotEmpty) ...[
+                    Text(
+                      "RECOMMENDED FOR YOU",
+                      style: GoogleFonts.anton(
+                        color: Colors.black,
+                        fontSize: 20,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ..._recommendations.map((rec) {
+                      final info = allCommunities.firstWhere(
+                        (c) => c.name == rec.communityName,
+                        orElse: () => allCommunities.last,
+                      );
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: _buildCommunityCard(
+                          title: info.name,
+                          description: info.description,
+                          members: info.members,
+                          activity: info.activity,
+                          backgroundColor: info.color,
+                        ),
+                      );
+                    }).toList(),
+                    const SizedBox(height: 30),
+                  ],
+                  Text(
+                    "BROWSE ALL COMMUNITIES",
+                    style: GoogleFonts.anton(
+                      color: Colors.black,
+                      fontSize: 20,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ...allCommunities.map((info) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: _buildCommunityCard(
+                        title: info.name,
+                        description: info.description,
+                        members: info.members,
+                        activity: info.activity,
+                        backgroundColor: info.color,
+                      ),
+                    );
+                  }).toList(),
+                  const SizedBox(height: 20),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            _buildGroupItem(
-              title: "STUDY SYNC",
-              subtitle: "1.2K MEMBERS • ACTIVE NOW",
-              backgroundColor: const Color(0xFF0D6EFD), // Blue
-              textColor: Colors.white,
-            ),
-            const SizedBox(height: 16),
-            _buildGroupItem(
-              title: "CALM COLLECTIVE",
-              subtitle: "850 MEMBERS • WELLNESS",
-              backgroundColor: const Color(0xFFFFD600), // Yellow
-              textColor: Colors.black,
-            ),
-            const SizedBox(height: 16),
-            _buildGroupItem(
-              title: "NIGHT OWLS",
-              subtitle: "420 MEMBERS • LATE NIGHT",
-              backgroundColor: const Color(0xFF4A4A4A), // Dark grey
-              textColor: Colors.white,
-            ),
-            const SizedBox(height: 40),
-            _buildEmergencyButton(),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
       bottomNavigationBar: const MindMateBottomNav(currentIndex: 3),
     );
   }
 
-  Widget _buildNeoContainer({
-    required Widget child,
-    required Color color,
-    double height = 60,
-    EdgeInsetsGeometry? padding,
-  }) {
-    return Container(
-      height: height,
-      padding: padding,
-      decoration: BoxDecoration(
-        color: color,
-        border: Border.all(color: Colors.black, width: 2),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black,
-            offset: Offset(4, 4),
-            blurRadius: 0,
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return _buildNeoContainer(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: "SEARCH CONVERSATIONS...",
-                hintStyle: GoogleFonts.spaceGrotesk(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-                border: InputBorder.none,
-              ),
-              style: GoogleFonts.spaceGrotesk(
-                color: Colors.black,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const Icon(Icons.search, color: Colors.black, size: 28),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildArchivedButton() {
-    return _buildNeoContainer(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          const Icon(Icons.archive_outlined, color: Colors.black),
-          const SizedBox(width: 12),
-          Text(
-            "ARCHIVED CONVERSATIONS",
-            style: GoogleFonts.spaceGrotesk(
-              color: Colors.black,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            color: Colors.black,
-            child: Text(
-              "33",
-              style: GoogleFonts.spaceGrotesk(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChatItem({
-    required String name,
-    required String time,
-    required String message,
-    required int unreadCount,
+  Widget _buildCommunityCard({
+    required String title,
+    required String description,
+    required String members,
+    required String activity,
     required Color backgroundColor,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        border: Border.all(color: Colors.black, width: 2),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black,
-            offset: Offset(4, 4),
-            blurRadius: 0,
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.black,
-              border: Border.all(color: Colors.black, width: 2),
+    final isDarkBackground = backgroundColor.computeLuminance() < 0.5;
+    final textColor = isDarkBackground ? Colors.white : Colors.black;
+    final subtitleColor = isDarkBackground ? Colors.white.withOpacity(0.9) : Colors.black87;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CommunityChatPage(
+              communityName: title,
+              communityColor: backgroundColor,
             ),
-            child: const Icon(Icons.person, color: Colors.white, size: 30),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          border: Border.all(color: Colors.black, width: 2),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black,
+              offset: Offset(4, 4),
+              blurRadius: 0,
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      name,
-                      style: GoogleFonts.spaceGrotesk(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.anton(
+                          color: textColor,
+                          fontSize: 22,
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
-                    Text(
-                      time,
-                      style: GoogleFonts.spaceGrotesk(
-                        color: Colors.black,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        message,
+                      const SizedBox(height: 8),
+                      Text(
+                        description,
                         style: GoogleFonts.spaceGrotesk(
-                          color: Colors.black87,
-                          fontStyle: FontStyle.italic,
+                          color: subtitleColor,
                           fontSize: 14,
+                          fontWeight: FontWeight.w600,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  color: Colors.black,
+                  child: Text(
+                    "JOIN",
+                    style: GoogleFonts.spaceGrotesk(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
                     ),
-                    if (unreadCount > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        color: Colors.black,
-                        child: Text(
-                          unreadCount.toString(),
-                          style: GoogleFonts.spaceGrotesk(
-                            color: const Color(0xFFFFD600),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGroupItem({
-    required String title,
-    required String subtitle,
-    required Color backgroundColor,
-    required Color textColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        border: Border.all(color: Colors.black, width: 2),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black,
-            offset: Offset(4, 4),
-            blurRadius: 0,
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.anton(
-                  color: textColor,
-                  fontSize: 18,
-                  letterSpacing: 0.5,
-                ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isDarkBackground ? Colors.black.withOpacity(0.2) : Colors.white.withOpacity(0.5),
+                border: Border.all(color: textColor.withOpacity(0.5), width: 1),
               ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: GoogleFonts.spaceGrotesk(
-                  color: textColor.withOpacity(0.9),
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.people, size: 14, color: textColor),
+                  const SizedBox(width: 6),
+                  Text(
+                    members,
+                    style: GoogleFonts.spaceGrotesk(
+                      color: textColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(Icons.local_fire_department, size: 14, color: textColor),
+                  const SizedBox(width: 6),
+                  Text(
+                    activity,
+                    style: GoogleFonts.spaceGrotesk(
+                      color: textColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: Colors.black,
-            child: Text(
-              "JOIN",
-              style: GoogleFonts.spaceGrotesk(
-                color: backgroundColor == Colors.white ? Colors.black : Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmergencyButton() {
-    return _buildNeoContainer(
-      color: const Color(0xFFC62828), // Dark Red
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            "EMERGENCY CRISIS SUPPORT",
-            style: GoogleFonts.anton(
-              color: Colors.white,
-              fontSize: 16,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const Icon(Icons.phone, color: Colors.white),
-        ],
+            )
+          ],
+        ),
       ),
     );
   }
