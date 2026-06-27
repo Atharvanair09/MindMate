@@ -28,7 +28,7 @@ class DotGridPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     const double spacing = 20.0;
-    const double radius = 1.2;
+    const double radius = 3;
 
     for (double x = 0; x < size.width; x += spacing) {
       for (double y = 0; y < size.height; y += spacing) {

@@ -335,6 +335,7 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: const Color(0xFFFAFAFA), // Brighter variant of white
       body: GlobalBackgroundLayer(
         child: SafeArea(
+          top: false,
           child: Column(
             children: [
               _buildTopBar(context),
@@ -351,7 +352,7 @@ class _HomePageState extends State<HomePage> {
                           Expanded(child: _buildGreeting(context)),
                           if (_earlyWarning != null &&
                               _earlyWarning!.level != "Green")
-                            _buildEarlyWarningCard(),
+                             _buildEarlyWarningCard(),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -385,8 +386,9 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildTopBar(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 6),
+      padding: const EdgeInsets.only(left: 20, right: 20, top: 44, bottom: 10),
       decoration: const BoxDecoration(
+        color: Colors.white,
         border: Border(
           bottom: BorderSide(color: Colors.black, width: 3.0),
         ),

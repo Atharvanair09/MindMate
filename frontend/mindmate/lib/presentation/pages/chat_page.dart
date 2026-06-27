@@ -380,8 +380,14 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildTopBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+    return Container(
+      padding: const EdgeInsets.only(left: 20, right: 20, top: 44, bottom: 20),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Colors.black, width: 3.0),
+        ),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -389,6 +395,17 @@ class _ChatPageState extends State<ChatPage> {
             onTap: _showConversationsModal,
             icon: Icons.chat_bubble_outline_rounded,
             color: Colors.white,
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 14.0),
+            child: Text(
+              "CHAT",
+              style: GoogleFonts.anton(
+                color: Colors.black,
+                fontSize: 24,
+                letterSpacing: 1.0,
+              ),
+            ),
           ),
           _buildBrutalistButton(
             onTap: () {
