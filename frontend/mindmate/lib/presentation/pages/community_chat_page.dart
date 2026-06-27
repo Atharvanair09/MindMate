@@ -11,6 +11,7 @@ import '../../data/repositories/anonymous_post_repository_impl.dart';
 import '../widgets/global_background.dart';
 import '../../services/notifications/notification_service.dart';
 import '../../services/community/community_socket_service.dart';
+import '../../services/community/community_membership_service.dart';
 import '../../presentation/viewmodels/auth_viewmodel.dart';
 
 class CommunityChatPage extends StatefulWidget {
@@ -43,6 +44,7 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
   void initState() {
     super.initState();
     CommunitySocketService.instance.setActiveCommunity(widget.communityName);
+    CommunitySocketService.instance.joinCommunity(widget.communityName);
     _loadPosts();
     _subscribeToMessages();
   }
@@ -50,20 +52,24 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
   void _subscribeToMessages() {
     _messageSubscription = CommunitySocketService.instance.messageStream.listen((data) {
       if (data['communityId'] == widget.communityName) {
-        final post = AnonymousPost()
-          ..id = data['messageId'].hashCode // mock isar id
-          ..conversationId = data['communityId']
-          ..sanitizedText = data['sanitizedMessage']
-          ..originalText = '' // don't need original text for others
-          ..timestamp = DateTime.parse(data['timestamp'])
-          ..upvotes = 0
-          ..parentPostId = data['replyTarget'] != null ? data['replyTarget'].hashCode : null
-          ..aliasMappingMetadata = '{"alias": "${data['anonymousAlias']}"}';
+        final newPostId = data['messageId'].hashCode;
           
         if (mounted) {
           setState(() {
-            _posts.add(post);
-            _sortPosts();
+            if (!_posts.any((p) => p.id == newPostId)) {
+              final post = AnonymousPost()
+                ..id = newPostId // mock isar id
+                ..conversationId = data['communityId']
+                ..sanitizedText = data['sanitizedMessage']
+                ..originalText = '' // don't need original text for others
+                ..timestamp = DateTime.parse(data['timestamp'])
+                ..upvotes = 0
+                ..parentPostId = data['replyTarget'] != null ? data['replyTarget'].hashCode : null
+                ..aliasMappingMetadata = '{"alias": "${data['anonymousAlias']}"}';
+              
+              _posts.add(post);
+              _sortPosts();
+            }
           });
           _scrollToBottom();
         }
@@ -136,14 +142,39 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
     final authVm = Provider.of<AuthViewModel>(context, listen: false);
     final senderId = authVm.uuid ?? const Uuid().v4();
 
-    await CommunitySocketService.instance.sendMessage(
+    final response = await CommunitySocketService.instance.sendMessage(
       communityId: widget.communityName,
       senderId: senderId,
       originalText: text,
       replyTarget: parentId,
     );
 
-    // No local repository create. Socket stream will broadcast the message back.
+    if (mounted) {
+      if (response['success'] == true) {
+        final messageId = response['messageId'];
+        // Optimistically add the message to the list
+        setState(() {
+          final post = AnonymousPost()
+            ..id = messageId.hashCode
+            ..conversationId = widget.communityName
+            ..sanitizedText = PseudonymizationService.instance.sanitizeText(text, widget.communityName)
+            ..originalText = text
+            ..timestamp = DateTime.now()
+            ..upvotes = 0
+            ..parentPostId = parentId?.hashCode
+            ..aliasMappingMetadata = '{"alias": "Member"}';
+            
+          _posts.add(post);
+          _sortPosts();
+        });
+        _scrollToBottom();
+      } else {
+        final errorMsg = response['error'] ?? 'Unknown error';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $errorMsg')),
+        );
+      }
+    }
   }
 
   Future<void> _reactToPost(AnonymousPost post) async {
@@ -170,6 +201,15 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
   @override
   void dispose() {
     CommunitySocketService.instance.setActiveCommunity(null);
+    
+    // Only leave the socket room if the user hasn't explicitly joined this community
+    // This allows them to receive background notifications for communities they are part of.
+    CommunityMembershipService.instance.isJoined(widget.communityName).then((isJoined) {
+      if (!isJoined) {
+        CommunitySocketService.instance.leaveCommunity(widget.communityName);
+      }
+    });
+
     _messageSubscription.cancel();
     _messageController.dispose();
     _scrollController.dispose();

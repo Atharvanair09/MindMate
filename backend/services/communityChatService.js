@@ -28,7 +28,7 @@ function initCommunityChatService(io) {
            return;
         }
 
-        const messageId = crypto.randomUUID();
+        const messageId = crypto.randomBytes(16).toString('hex');
         const timestamp = new Date();
 
         const newMsg = new CommunityMessage({

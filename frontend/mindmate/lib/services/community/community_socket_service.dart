@@ -55,9 +55,10 @@ class CommunitySocketService {
     });
 
     _socket!.on('new_message', (data) {
-      _messageController.add(data);
+      final Map<String, dynamic> mappedData = data is Map ? Map<String, dynamic>.from(data) : data;
+      _messageController.add(mappedData);
       
-      String communityId = data['communityId'];
+      String communityId = mappedData['communityId'];
       String alias = data['anonymousAlias'];
       
       // If the user is not actively viewing this community, show a notification
@@ -113,25 +114,39 @@ class CommunitySocketService {
     );
   }
 
-  Future<void> sendMessage({
+  Future<Map<String, dynamic>> sendMessage({
     required String communityId,
     required String senderId, // user's uuid or local generic id
     required String originalText,
     String? replyTarget,
   }) async {
+    if (_socket == null) return {'success': false, 'error': 'Socket is not initialized'};
+    if (_socket!.connected != true) return {'success': false, 'error': 'Not connected to server'};
+
     // Phase 5 & 6: Run existing Privacy Pipeline
     String sanitized = PseudonymizationService.instance.sanitizeText(originalText, communityId);
     
     // We get a simple alias for the sender (this could be enhanced later)
     String alias = 'Member';
     
-    _socket?.emit('send_message', {
+    Completer<Map<String, dynamic>> completer = Completer();
+
+    _socket!.emitWithAck('send_message', {
       'communityId': communityId,
       'senderId': senderId,
       'anonymousAlias': alias,
       'sanitizedMessage': sanitized,
       'replyTarget': replyTarget,
+    }, ack: (dynamic responseData) {
+      dynamic data = (responseData is List && responseData.isNotEmpty) ? responseData.first : responseData;
+      if (data != null && data is Map) {
+        completer.complete(Map<String, dynamic>.from(data));
+      } else {
+        completer.complete({'success': false, 'error': 'Invalid ack response'});
+      }
     });
+
+    return completer.future.timeout(const Duration(seconds: 5), onTimeout: () => {'success': false, 'error': 'Request timed out'});
   }
 
   Future<List<Map<String, dynamic>>> getHistory(String communityId, {int limit = 50}) async {
@@ -142,10 +157,18 @@ class CommunitySocketService {
     _socket!.emitWithAck('get_community_history', {
       'communityId': communityId,
       'limit': limit,
-    }, ack: (data) {
-      if (data['success'] == true) {
-        List<dynamic> rawMessages = data['messages'];
-        completer.complete(rawMessages.cast<Map<String, dynamic>>());
+    }, ack: (dynamic responseData) {
+      dynamic data = (responseData is List && responseData.isNotEmpty) ? responseData.first : responseData;
+      if (data != null && data is Map && data['success'] == true) {
+        List<dynamic> rawMessages = data['messages'] ?? [];
+        // Map dynamic to String keys safely
+        List<Map<String, dynamic>> messages = rawMessages.map((e) {
+          if (e is Map) {
+            return Map<String, dynamic>.from(e);
+          }
+          return <String, dynamic>{};
+        }).toList();
+        completer.complete(messages);
       } else {
         completer.complete([]);
       }
@@ -162,9 +185,10 @@ class CommunitySocketService {
     
     _socket!.emitWithAck('get_community_metrics', {
       'communityId': communityId,
-    }, ack: (data) {
-      if (data['success'] == true) {
-        completer.complete(data['metrics']);
+    }, ack: (dynamic responseData) {
+      dynamic data = (responseData is List && responseData.isNotEmpty) ? responseData.first : responseData;
+      if (data != null && data is Map && data['success'] == true) {
+        completer.complete(Map<String, dynamic>.from(data['metrics'] ?? {}));
       } else {
         completer.complete({});
       }
