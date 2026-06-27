@@ -276,6 +276,13 @@ class ProfilePage extends StatelessWidget {
           title: 'PRIVACY (ON-DEVICE ONLY)',
           subtitle: 'Encryption protocol: RSA-4096',
           icon: Icons.lock_outline,
+          onTap: () {
+            Navigator.pushNamed(context, '/privacy');
+          },
+          backgroundColor: Colors.green, // Primary Green
+          textColor: Colors.black,
+          subtitleColor: Colors.black,
+          iconColor: Colors.black,
         ),
         const SizedBox(height: 8),
         _buildSettingsTile(
@@ -285,15 +292,23 @@ class ProfilePage extends StatelessWidget {
           onTap: () {
             Navigator.pushNamed(context, '/memory-vault');
           },
+          backgroundColor: Colors.blue, // Primary Blue
+          textColor: Colors.black,
+          subtitleColor: Colors.black,
+          iconColor: Colors.black,
         ),
         const SizedBox(height: 8),
         _buildSettingsTile(
-          title: 'PSEUDONYMIZATION TESTER',
-          subtitle: 'Debug Phase 5.3',
-          icon: Icons.bug_report_outlined,
+          title: 'About MindMate',
+          subtitle: 'Know more about us',
+          icon: Icons.info_outline,
           onTap: () {
-            Navigator.pushNamed(context, '/pseudonymization-tester');
+            Navigator.pushNamed(context, '/about');
           },
+          backgroundColor: Colors.purple, // Primary Purple
+          textColor: Colors.black,
+          subtitleColor: Colors.black,
+          iconColor: Colors.black,
         ),
         const SizedBox(height: 8),
         _buildSettingsTile(
@@ -304,6 +319,10 @@ class ProfilePage extends StatelessWidget {
           onTap: () {
             Navigator.pushNamed(context, '/developer-debug');
           },
+          backgroundColor: Colors.red, // Primary Red
+          textColor: Colors.black,
+          subtitleColor: Colors.black,
+          iconColor: Colors.black,
         ),
       ],
     );
@@ -319,34 +338,37 @@ class ProfilePage extends StatelessWidget {
           children: [
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.yellow, // Primary Yellow
                 border: Border.all(color: Colors.black, width: 2),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'DEMO MODE',
-                        style: GoogleFonts.spaceGrotesk(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'DEMO MODE',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.black,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Show simulated realistic timeline',
-                        style: GoogleFonts.spaceGrotesk(
-                          fontSize: 12,
-                          color: Colors.black54,
+                        const SizedBox(height: 2),
+                        Text(
+                          'Show simulated realistic timeline',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 12,
+                            color: Colors.black,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Switch(
                     value: demoMode.isDemoMode,
                     activeColor: const Color(0xFF00E5FF),
@@ -370,6 +392,10 @@ class ProfilePage extends StatelessWidget {
                   );
                 }
               },
+              backgroundColor: Colors.orange, // Primary Orange
+              textColor: Colors.black,
+              subtitleColor: Colors.black,
+              iconColor: Colors.black,
             ),
           ],
         );
@@ -383,47 +409,60 @@ class ProfilePage extends StatelessWidget {
     required IconData icon,
     bool isDestructive = false,
     VoidCallback? onTap,
+    Color? backgroundColor,
+    Color? textColor,
+    Color? subtitleColor,
+    Color? iconColor,
   }) {
+    final effectiveBgColor = backgroundColor ?? Colors.white;
+    final effectiveTextColor = textColor ?? (isDestructive ? const Color(0xFFB81D13) : Colors.black);
+    final effectiveSubtitleColor = subtitleColor ?? Colors.black54;
+    final effectiveIconColor = iconColor ?? effectiveTextColor;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: effectiveBgColor,
           border: Border.all(color: Colors.black, width: 2),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.spaceGrotesk(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: isDestructive ? const Color(0xFFB81D13) : Colors.black,
-                ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: effectiveTextColor,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 14,
+                      color: effectiveSubtitleColor,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: GoogleFonts.spaceGrotesk(
-                  fontSize: 12,
-                  color: Colors.black54,
-                ),
-              ),
-            ],
-          ),
-          Icon(
-            icon,
-            color: isDestructive ? const Color(0xFFB81D13) : Colors.black,
-            size: 20,
-          ),
-        ],
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              icon,
+              color: effectiveIconColor,
+              size: 20,
+            ),
+          ],
+        ),
       ),
-    ));
+    );
   }
 
   Widget _buildLogoutButton(BuildContext context) {
