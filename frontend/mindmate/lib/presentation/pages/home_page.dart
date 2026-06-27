@@ -22,7 +22,9 @@ import 'package:intl/intl.dart';
 import '../../domain/models/weekly_reflection.dart';
 import '../../services/weekly_reflection/weekly_reflection_service.dart';
 import 'weekly_reflection_page.dart';
+import 'daily_diary_page.dart';
 import 'wellness_timeline_page.dart';
+import '../../domain/models/journal_entry.dart';
 import '../../domain/models/community_wellness.dart';
 import '../../services/community/community_wellness_service.dart';
 import '../../domain/models/wellness_plan.dart';
@@ -38,6 +40,7 @@ import '../../domain/models/burnout_forecast.dart';
 import '../../services/wellness/burnout_forecast_engine.dart';
 import '../widgets/explainable_ai_dashboard.dart';
 import '../widgets/expandable_smart_card.dart';
+import '../widgets/continuous_mood_selector.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -64,6 +67,9 @@ class _HomePageState extends State<HomePage> {
   // Explainable AI State
   BurnoutForecast? _burnoutForecast;
   List<DetectedSituation> _detectedSituations = [];
+
+  bool _isTodayJournalWritten = false;
+  List<bool> _weeklyJournalStreak = List.filled(7, false);
 
   @override
   void initState() {
@@ -183,6 +189,38 @@ class _HomePageState extends State<HomePage> {
         debugPrint('Error getting burnout forecast: $e');
       }
 
+      bool isTodayJournalWritten = false;
+      List<bool> weeklyJournalStreak = List.filled(7, false);
+      try {
+        final now = DateTime.now();
+        final todayMidnight = DateTime(now.year, now.month, now.day);
+        
+        // 1. We will use the weekly journal streak to check if today's journal is written.
+
+        // 2. Fetch weekly journal streak (last 7 days, including today)
+        final startLimit = now.subtract(const Duration(days: 6));
+        final startLimitMidnight = DateTime(startLimit.year, startLimit.month, startLimit.day);
+        final weeklyJournals = await isar.journalEntrys
+            .filter()
+            .isDeletedEqualTo(false)
+            .and()
+            .journalDateBetween(startLimitMidnight, now)
+            .findAll();
+
+        weeklyJournalStreak = List.generate(7, (index) {
+          final dateToCheck = startLimitMidnight.add(Duration(days: index));
+          return weeklyJournals.any((j) =>
+              j.journalDate.year == dateToCheck.year &&
+              j.journalDate.month == dateToCheck.month &&
+              j.journalDate.day == dateToCheck.day &&
+              (j.content.trim().isNotEmpty || (j.pagesJson != null && j.pagesJson!.contains('"imagePath"'))));
+        });
+        
+        isTodayJournalWritten = weeklyJournalStreak.last;
+      } catch (e) {
+        debugPrint('Error loading journal streak/status: $e');
+      }
+
       if (mounted) {
         setState(() {
           _todayMood = todayMood;
@@ -196,6 +234,8 @@ class _HomePageState extends State<HomePage> {
           _earlyWarning = earlyWarning;
           _burnoutForecast = burnoutForecast;
           _detectedSituations = situations;
+          _isTodayJournalWritten = isTodayJournalWritten;
+          _weeklyJournalStreak = weeklyJournalStreak;
           _isLoading = false;
 
           if (todayMood != null) {
@@ -326,8 +366,6 @@ class _HomePageState extends State<HomePage> {
                       _buildMoodSelector(),
                       const SizedBox(height: 24),
                       _buildColorfulButtons(),
-                      const SizedBox(height: 24),
-                      _buildCommunityWellnessSection(),
                       const SizedBox(height: 24),
                       ExplainableAiDashboard(
                         burnoutForecast: _burnoutForecast,
@@ -604,85 +642,6 @@ class _HomePageState extends State<HomePage> {
         ));
   }
 
-  Widget _buildCommunityWellnessSection() {
-    if (_monitoredCommunities.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle("COMMUNITY WELLNESS"),
-        const SizedBox(height: 12),
-        ..._monitoredCommunities.map((wellness) {
-          Color trendColor = Colors.greenAccent;
-          if (wellness.overallTrend == 'Needs Attention')
-            trendColor = Colors.redAccent;
-          if (wellness.overallTrend == 'Improving')
-            trendColor = Colors.orangeAccent;
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.black, width: 2),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black,
-                  offset: Offset(4, 4),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      wellness.communityName.toUpperCase(),
-                      style: GoogleFonts.vt323(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      color: Colors.black,
-                      child: Text(
-                        wellness.overallTrend.toUpperCase(),
-                        style: GoogleFonts.spaceGrotesk(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: trendColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (wellness.alertMessage != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    wellness.alertMessage!,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: wellness.overallTrend == 'Needs Attention'
-                          ? Colors.red[700]
-                          : Colors.black87,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          );
-        }),
-      ],
-    );
-  }
-
   Widget _buildReflectionFollowUpCard() {
     String inputPrompt = "What changed since your journal entry?";
     if (_activeFollowUp!.journalNegativeMoodMismatch) {
@@ -925,168 +884,19 @@ class _HomePageState extends State<HomePage> {
           child: CircularProgressIndicator(color: Colors.black));
     }
 
-    final moods = [
-      {"emoji": "😄", "label": "GREAT"},
-      {"emoji": "😊", "label": "GOOD"},
-      {"emoji": "😐", "label": "OKAY"},
-      {"emoji": "😔", "label": "LOW"},
-      {"emoji": "🚨", "label": "BAD"},
-    ];
-
-    if (_todayMood != null) {
-      final currentMood = moods.firstWhere(
-        (m) =>
-            m["label"] == _todayMood!.moodLevel ||
-            (_todayMood!.moodLevel == "STRUGGLING" && m["label"] == "BAD"),
-        orElse: () => moods[2],
-      );
-      final moodLabel = currentMood["label"]!;
-      final containerBg = _getMoodColor(moodLabel);
-      final textColor = _getMoodTextColor(moodLabel);
-      final subTextColor = textColor.withOpacity(0.85);
-
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: containerBg,
-          border: Border.all(color: Colors.black, width: 2),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black,
-              offset: Offset(4, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(currentMood["emoji"]!,
-                    style: const TextStyle(fontSize: 32)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AnimatedDefaultTextStyle(
-                        duration: const Duration(milliseconds: 350),
-                        curve: Curves.easeInOut,
-                        style: GoogleFonts.bebasNeue(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                          letterSpacing: 2,
-                        ),
-                        child: Text("Today's Mood: $moodLabel"),
-                      ),
-                      const SizedBox(height: 4),
-                      AnimatedDefaultTextStyle(
-                        duration: const Duration(milliseconds: 350),
-                        curve: Curves.easeInOut,
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: subTextColor,
-                          height: 1.4,
-                        ),
-                        child: Text(
-                          _reflection?.insight ??
-                              "Thanks for checking in! Your mood has been recorded.",
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _todayMood = null; // Set to null to show selector again
-                  });
-                },
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    border: Border.all(color: Colors.black, width: 2),
-                  ),
-                  child: Center(
-                    child: Text(
-                      "CHANGE MOOD",
-                      style: GoogleFonts.vt323(
-                        fontSize: 20,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(moods.length, (index) {
-        final isSelected = _selectedMoodIndex == index;
-        final label = moods[index]["label"]!;
-        final containerBg = isSelected ? _getMoodColor(label) : Colors.white;
-        final textColor = isSelected ? _getMoodTextColor(label) : Colors.black;
-
-        return GestureDetector(
-            onTap: () {
-              _saveMood(
-                  index, _activeFollowUp != null ? 'smart_prompt' : 'manual');
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              width: (MediaQuery.of(context).size.width - 40 - 48) /
-                  5, // Auto-size based on screen width
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: containerBg,
-                border: Border.all(color: Colors.black, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black,
-                    offset:
-                        isSelected ? const Offset(4, 4) : const Offset(3, 3),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    moods[index]["emoji"]!,
-                    style: const TextStyle(fontSize: 24),
-                  ),
-                  const SizedBox(height: 8),
-                  AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    style: GoogleFonts.vt323(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
-                    child: Text(label),
-                  ),
-                ],
-              ),
-            ));
-      }),
+    return ContinuousMoodSelector(
+      todayMood: _todayMood,
+      insightText: _reflection?.insight ??
+          "Thanks for checking in! Your mood has been recorded.",
+      onMoodSelected: (index) {
+        _saveMood(
+            index, _activeFollowUp != null ? 'smart_prompt' : 'manual');
+      },
+      onChangeMood: () {
+        setState(() {
+          _todayMood = null;
+        });
+      },
     );
   }
 
@@ -1848,6 +1658,77 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildWeeklyStreakGraph() {
+    final now = DateTime.now();
+    final startLimit = now.subtract(const Duration(days: 6));
+    final startLimitMidnight = DateTime(startLimit.year, startLimit.month, startLimit.day);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.3),
+        border: Border.all(color: Colors.black, width: 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "WEEKLY STREAK",
+            style: GoogleFonts.vt323(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(7, (index) {
+              final date = startLimitMidnight.add(Duration(days: index));
+              final dayLabel = DateFormat('E').format(date).toUpperCase().substring(0, 1);
+              final isWritten = _weeklyJournalStreak[index];
+              final isToday = index == 6;
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: isWritten
+                          ? Colors.black
+                          : Colors.white,
+                      border: Border.all(
+                        color: Colors.black,
+                        width: isToday ? 2.5 : 1.5,
+                      ),
+                    ),
+                    child: Center(
+                      child: isWritten
+                          ? const Icon(Icons.check, size: 14, color: Colors.white)
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    dayLabel,
+                    style: GoogleFonts.vt323(
+                      fontSize: 16,
+                      fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                      color: isToday ? Colors.black : Colors.black87,
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildColorfulButtons() {
     return IntrinsicHeight(
       child: Row(
@@ -1870,10 +1751,11 @@ class _HomePageState extends State<HomePage> {
                     Text(
                       "JOURNAL",
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
+                      style: GoogleFonts.bebasNeue(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                         color: Colors.black,
+                        letterSpacing: 1.5,
                       ),
                     ),
                   ],
@@ -1884,29 +1766,49 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "Private Journal",
-                      style: GoogleFonts.bebasNeue(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        letterSpacing: 1.5,
-                      ),
+                    Row(
+                      children: [
+                        const Icon(Icons.book, size: 32, color: Colors.black),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "PRIVATE JOURNAL",
+                            style: GoogleFonts.bebasNeue(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
+                    _buildWeeklyStreakGraph(),
+                    const SizedBox(height: 12),
                     Text(
-                      "Write down your feelings safely. Data never leaves your device.",
+                      _isTodayJournalWritten
+                          ? "Feel like talking more?"
+                          : "What's on your mind today?",
                       style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
                       child: GestureDetector(
                         onTap: () {
-                          // No-op or define entry action
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const DailyDiaryPage(),
+                            ),
+                          ).then((_) {
+                            _loadData();
+                          });
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1916,9 +1818,9 @@ class _HomePageState extends State<HomePage> {
                           ),
                           child: Center(
                             child: Text(
-                              "NEW ENTRY",
+                              _isTodayJournalWritten ? "EDIT ENTRY" : "NEW ENTRY",
                               style: GoogleFonts.vt323(
-                                fontSize: 18,
+                                fontSize: 22,
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -1950,10 +1852,11 @@ class _HomePageState extends State<HomePage> {
                     Text(
                       "COMMUNITY\nWELLNESS",
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
+                      style: GoogleFonts.bebasNeue(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                         color: Colors.black,
+                        letterSpacing: 1.5,
                       ),
                     ),
                   ],
@@ -1973,22 +1876,76 @@ class _HomePageState extends State<HomePage> {
                         letterSpacing: 1.5,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "View collective insights and wellness status of your teams.",
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      "🟢 Engineering: Stable Wellness\n🟡 Operations: High Burnout Risk",
-                      style: GoogleFonts.vt323(
-                        fontSize: 16,
-                        color: Colors.black87,
-                      ),
-                    ),
+                    const SizedBox(height: 12),
+                    ..._monitoredCommunities.map((wellness) {
+                      Color trendColor = Colors.greenAccent;
+                      if (wellness.overallTrend == 'Needs Attention') {
+                        trendColor = Colors.redAccent;
+                      }
+                      if (wellness.overallTrend == 'Improving') {
+                        trendColor = Colors.orangeAccent;
+                      }
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.black, width: 2),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black,
+                              offset: Offset(4, 4),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  wellness.communityName.toUpperCase(),
+                                  style: GoogleFonts.vt323(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                    letterSpacing: 1.5,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  color: Colors.black,
+                                  child: Text(
+                                    wellness.overallTrend.toUpperCase(),
+                                    style: GoogleFonts.spaceGrotesk(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: trendColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (wellness.alertMessage != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                wellness.alertMessage!,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: wellness.overallTrend == 'Needs Attention'
+                                      ? Colors.red[700]
+                                      : Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }).toList(),
                   ],
                 ),
               ),
@@ -2012,10 +1969,11 @@ class _HomePageState extends State<HomePage> {
                     Text(
                       "WELLNESS\nTIMELINE",
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
+                      style: GoogleFonts.bebasNeue(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                         color: Colors.black,
+                        letterSpacing: 1.5,
                       ),
                     ),
                   ],
@@ -2115,10 +2073,11 @@ class _HomePageState extends State<HomePage> {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
+              style: GoogleFonts.bebasNeue(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
                 color: Colors.black,
+                letterSpacing: 1.5,
               ),
             ),
           ],

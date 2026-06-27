@@ -56,6 +56,7 @@ class _ExpandableSmartCardState extends State<ExpandableSmartCard>
 
   bool _isExpanded = false;
   Rect? _originalRect;
+  ModalRoute? _route;
 
   void _onGlobalStateChanged() {
     if (_isExpanded &&
@@ -65,18 +66,52 @@ class _ExpandableSmartCardState extends State<ExpandableSmartCard>
     }
   }
 
+  void _onRouteAnimation() {
+    if (_isExpanded &&
+        _route?.secondaryAnimation?.status == AnimationStatus.forward) {
+      _closeImmediately();
+    }
+  }
+
+  void _closeImmediately() {
+    if (!_isExpanded) return;
+
+    if (mounted) {
+      setState(() {
+        _isExpanded = false;
+      });
+    }
+
+    if (ExpandableSmartCardController.instance.currentlyExpandedId ==
+        widget.id) {
+      ExpandableSmartCardController.instance.collapseAll();
+    }
+
+    _controller.value = 0.0;
+    _removeOverlay();
+  }
+
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 450),
+      duration: const Duration(milliseconds: 900),
     );
     ExpandableSmartCardController.instance.addListener(_onGlobalStateChanged);
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _route?.secondaryAnimation?.removeListener(_onRouteAnimation);
+    _route = ModalRoute.of(context);
+    _route?.secondaryAnimation?.addListener(_onRouteAnimation);
+  }
+
+  @override
   void dispose() {
+    _route?.secondaryAnimation?.removeListener(_onRouteAnimation);
     ExpandableSmartCardController.instance
         .removeListener(_onGlobalStateChanged);
     _controller.dispose();
@@ -87,8 +122,10 @@ class _ExpandableSmartCardState extends State<ExpandableSmartCard>
   void _open() {
     if (_isExpanded) return;
 
-    final RenderBox renderBox =
-        _key.currentContext!.findRenderObject() as RenderBox;
+    final RenderBox? renderBox =
+        _key.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    
     final size = renderBox.size;
     final offset = renderBox.localToGlobal(Offset.zero);
     _originalRect = offset & size;
@@ -327,103 +364,105 @@ class _ExpandableOverlayWidgetState extends State<_ExpandableOverlayWidget> {
                 alignment: isLeft
                     ? Alignment.centerLeft
                     : (isRight ? Alignment.centerRight : Alignment.center),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: widget.backgroundColor,
-                    borderRadius: BorderRadius.circular(borderRadius),
-                    border: widget.borderColor != null
-                        ? Border.all(color: widget.borderColor!, width: 2)
-                        : null,
-                    boxShadow: [
-                      BoxShadow(
-                        color: widget.shadowColor,
-                        offset: Offset(shadowOffset, shadowOffset),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(borderRadius),
-                    child: Stack(
-                      children: [
-                        // Expanded content that fades in and slides up
-                        if (_targetExpandedHeight != null)
-                          Positioned(
-                            top: widget.originalRect.height,
-                            left: 0,
-                            right: 0,
-                            child: Opacity(
-                              opacity: contentFadeAnim.value,
-                              child: Transform.translate(
-                                offset: Offset(
-                                    0, 15.0 * (1 - contentFadeAnim.value)),
-                                child: SizedBox(
-                                  width: currentWidth,
-                                  child: widget.expandedChild,
-                                ),
-                              ),
-                            ),
-                          ),
-
-                        // Hidden expanded content to measure intrinsic size
-                        if (_targetExpandedHeight == null)
-                          Positioned(
-                            top: widget.originalRect.height,
-                            left: 0,
-                            right: 0,
-                            child: Opacity(
-                              opacity: 0.0,
-                              child: Container(
-                                key: _expandedContentKey,
-                                width: currentWidth,
-                                // Hidden content should ignore pointer to prevent interaction
-                                child: IgnorePointer(child: widget.expandedChild),
-                              ),
-                            ),
-                          ),
-
-                        // Original collapsed content stays on top
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          height: widget.originalRect.height,
-                          child: widget.collapsedChild,
-                        ),
-
-                        // Red close button (cross) at top right
-                        Positioned(
-                          top: 12,
-                          right: 12,
-                          child: Opacity(
-                            opacity: contentFadeAnim.value,
-                            child: IgnorePointer(
-                              ignoring: contentFadeAnim.value < 0.5,
-                              child: GestureDetector(
-                                onTap: widget.onClose,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.black, width: 2),
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Colors.black,
-                                        offset: Offset(1.5, 1.5),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 14,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: widget.backgroundColor,
+                      borderRadius: BorderRadius.circular(borderRadius),
+                      border: widget.borderColor != null
+                          ? Border.all(color: widget.borderColor!, width: 2)
+                          : null,
+                      boxShadow: [
+                        BoxShadow(
+                          color: widget.shadowColor,
+                          offset: Offset(shadowOffset, shadowOffset),
                         ),
                       ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(borderRadius),
+                      child: Stack(
+                        children: [
+                          // Expanded content that fades in and slides up
+                          if (_targetExpandedHeight != null)
+                            Positioned(
+                              top: widget.originalRect.height,
+                              left: 0,
+                              right: 0,
+                              child: Opacity(
+                                opacity: contentFadeAnim.value,
+                                child: Transform.translate(
+                                  offset: Offset(
+                                      0, 15.0 * (1 - contentFadeAnim.value)),
+                                  child: SizedBox(
+                                    width: currentWidth,
+                                    child: widget.expandedChild,
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          // Hidden expanded content to measure intrinsic size
+                          if (_targetExpandedHeight == null)
+                            Positioned(
+                              top: widget.originalRect.height,
+                              left: 0,
+                              child: Opacity(
+                                opacity: 0.0,
+                                child: Container(
+                                  key: _expandedContentKey,
+                                  width: maxAvailableWidth,
+                                  // Hidden content should ignore pointer to prevent interaction
+                                  child: IgnorePointer(child: widget.expandedChild),
+                                ),
+                              ),
+                            ),
+
+                          // Original collapsed content stays on top
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: widget.originalRect.height,
+                            child: widget.collapsedChild,
+                          ),
+
+                          // Red close button (cross) at top right
+                          Positioned(
+                            top: 12,
+                            right: 12,
+                            child: Opacity(
+                              opacity: contentFadeAnim.value,
+                              child: IgnorePointer(
+                                ignoring: contentFadeAnim.value < 0.5,
+                                child: GestureDetector(
+                                  onTap: widget.onClose,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.black, width: 2),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.black,
+                                          offset: Offset(1.5, 1.5),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
