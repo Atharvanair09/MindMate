@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../core/state/archive_provider.dart';
 import '../../domain/models/archive_models.dart';
+import '../widgets/global_background.dart';
 
 class LocalChatViewPage extends StatefulWidget {
   final String chatId;
@@ -55,9 +56,9 @@ class _LocalChatViewPageState extends State<LocalChatViewPage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4EFEB),
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4EFEB),
+        backgroundColor: const Color(0xFFFAFAFA),
         elevation: 0,
         centerTitle: false,
         iconTheme: const IconThemeData(color: Colors.black),
@@ -103,8 +104,9 @@ class _LocalChatViewPageState extends State<LocalChatViewPage> {
           ),
         ],
       ),
-      body: ListView.builder(
-        controller: _scrollController,
+      body: GlobalBackgroundLayer(
+        child: ListView.builder(
+          controller: _scrollController,
         padding: const EdgeInsets.all(16),
         itemCount: chat.messages.length,
         itemBuilder: (context, index) {
@@ -112,6 +114,7 @@ class _LocalChatViewPageState extends State<LocalChatViewPage> {
           final isUser = msg.role == 'user';
           return _buildMessageBubble(msg.text, isUser, msg.timestamp);
         },
+      ),
       ),
     );
   }
@@ -196,7 +199,7 @@ class _LocalChatViewPageState extends State<LocalChatViewPage> {
     final newTitle = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFFF2F0E9),
+        backgroundColor: const Color(0xFFFAFAFA),
         shape: const RoundedRectangleBorder(side: BorderSide(color: Colors.black, width: 2)),
         title: Text('RENAME CHAT', style: GoogleFonts.spaceMono(fontWeight: FontWeight.bold)),
         content: TextField(
@@ -229,7 +232,7 @@ class _LocalChatViewPageState extends State<LocalChatViewPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFFF2F0E9),
+        backgroundColor: const Color(0xFFFAFAFA),
         shape: const RoundedRectangleBorder(side: BorderSide(color: Colors.black, width: 2)),
         title: Text('DELETE CHAT?', style: GoogleFonts.spaceMono(fontWeight: FontWeight.bold)),
         content: Text('This action cannot be undone.', style: GoogleFonts.spaceMono()),

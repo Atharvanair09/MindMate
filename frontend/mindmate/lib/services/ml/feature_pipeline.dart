@@ -14,6 +14,7 @@ import 'feature_extractor.dart';
 import 'feature_builder.dart';
 import 'feature_cache.dart';
 import 'reflection_engine.dart';
+import 'ai_insight_generator.dart';
 import '../../services/notifications/notification_service.dart';
 import '../../services/notifications/smart_check_in_service.dart';
 
@@ -59,6 +60,7 @@ class FeaturePipeline {
 
   void _onDataChanged() {
     cache.markDirty();
+    AiInsightGenerator.instance.invalidateCache();
     triggerPipeline();
   }
 

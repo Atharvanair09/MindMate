@@ -19,4 +19,6 @@ class AppNotification {
   String? followUpSituation;
   String? followUpHash;
   bool? responded;
+
+  bool isDemoData = false;
 }

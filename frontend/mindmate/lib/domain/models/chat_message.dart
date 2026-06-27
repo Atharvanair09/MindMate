@@ -28,4 +28,6 @@ class ChatMessage {
   bool embeddingGenerated = false;
 
   int? embeddingId;
+
+  bool isDemoData = false;
 }

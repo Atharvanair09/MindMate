@@ -52,43 +52,48 @@ const JournalEntrySchema = CollectionSchema(
       name: r'isDeleted',
       type: IsarType.bool,
     ),
-    r'journalDate': PropertySchema(
+    r'isDemoData': PropertySchema(
       id: 7,
+      name: r'isDemoData',
+      type: IsarType.bool,
+    ),
+    r'journalDate': PropertySchema(
+      id: 8,
       name: r'journalDate',
       type: IsarType.dateTime,
     ),
     r'pagesJson': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'pagesJson',
       type: IsarType.string,
     ),
     r'preview': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'preview',
       type: IsarType.string,
     ),
     r'sentimentScore': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'sentimentScore',
       type: IsarType.double,
     ),
     r'stressScore': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'stressScore',
       type: IsarType.double,
     ),
     r'title': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'wordCount': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'wordCount',
       type: IsarType.long,
     )
@@ -176,14 +181,15 @@ void _journalEntrySerialize(
   writer.writeString(offsets[4], object.emotionalKeywords);
   writer.writeDouble(offsets[5], object.energyScore);
   writer.writeBool(offsets[6], object.isDeleted);
-  writer.writeDateTime(offsets[7], object.journalDate);
-  writer.writeString(offsets[8], object.pagesJson);
-  writer.writeString(offsets[9], object.preview);
-  writer.writeDouble(offsets[10], object.sentimentScore);
-  writer.writeDouble(offsets[11], object.stressScore);
-  writer.writeString(offsets[12], object.title);
-  writer.writeDateTime(offsets[13], object.updatedAt);
-  writer.writeLong(offsets[14], object.wordCount);
+  writer.writeBool(offsets[7], object.isDemoData);
+  writer.writeDateTime(offsets[8], object.journalDate);
+  writer.writeString(offsets[9], object.pagesJson);
+  writer.writeString(offsets[10], object.preview);
+  writer.writeDouble(offsets[11], object.sentimentScore);
+  writer.writeDouble(offsets[12], object.stressScore);
+  writer.writeString(offsets[13], object.title);
+  writer.writeDateTime(offsets[14], object.updatedAt);
+  writer.writeLong(offsets[15], object.wordCount);
 }
 
 JournalEntry _journalEntryDeserialize(
@@ -201,13 +207,14 @@ JournalEntry _journalEntryDeserialize(
   object.energyScore = reader.readDoubleOrNull(offsets[5]);
   object.id = id;
   object.isDeleted = reader.readBool(offsets[6]);
-  object.journalDate = reader.readDateTime(offsets[7]);
-  object.pagesJson = reader.readStringOrNull(offsets[8]);
-  object.sentimentScore = reader.readDoubleOrNull(offsets[10]);
-  object.stressScore = reader.readDoubleOrNull(offsets[11]);
-  object.title = reader.readStringOrNull(offsets[12]);
-  object.updatedAt = reader.readDateTime(offsets[13]);
-  object.wordCount = reader.readLongOrNull(offsets[14]);
+  object.isDemoData = reader.readBool(offsets[7]);
+  object.journalDate = reader.readDateTime(offsets[8]);
+  object.pagesJson = reader.readStringOrNull(offsets[9]);
+  object.sentimentScore = reader.readDoubleOrNull(offsets[11]);
+  object.stressScore = reader.readDoubleOrNull(offsets[12]);
+  object.title = reader.readStringOrNull(offsets[13]);
+  object.updatedAt = reader.readDateTime(offsets[14]);
+  object.wordCount = reader.readLongOrNull(offsets[15]);
   return object;
 }
 
@@ -233,20 +240,22 @@ P _journalEntryDeserializeProp<P>(
     case 6:
       return (reader.readBool(offset)) as P;
     case 7:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 8:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 9:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 10:
-      return (reader.readDoubleOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 11:
       return (reader.readDoubleOrNull(offset)) as P;
     case 12:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDoubleOrNull(offset)) as P;
     case 13:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 14:
+      return (reader.readDateTime(offset)) as P;
+    case 15:
       return (reader.readLongOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1119,6 +1128,16 @@ extension JournalEntryQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isDeleted',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterFilterCondition>
+      isDemoDataEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isDemoData',
         value: value,
       ));
     });
@@ -2019,6 +2038,19 @@ extension JournalEntryQuerySortBy
     });
   }
 
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> sortByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy>
+      sortByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
   QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> sortByJournalDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'journalDate', Sort.asc);
@@ -2224,6 +2256,19 @@ extension JournalEntryQuerySortThenBy
     });
   }
 
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> thenByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy>
+      thenByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
   QueryBuilder<JournalEntry, JournalEntry, QAfterSortBy> thenByJournalDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'journalDate', Sort.asc);
@@ -2373,6 +2418,12 @@ extension JournalEntryQueryWhereDistinct
     });
   }
 
+  QueryBuilder<JournalEntry, JournalEntry, QDistinct> distinctByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isDemoData');
+    });
+  }
+
   QueryBuilder<JournalEntry, JournalEntry, QDistinct> distinctByJournalDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'journalDate');
@@ -2475,6 +2526,12 @@ extension JournalEntryQueryProperty
   QueryBuilder<JournalEntry, bool, QQueryOperations> isDeletedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isDeleted');
+    });
+  }
+
+  QueryBuilder<JournalEntry, bool, QQueryOperations> isDemoDataProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isDemoData');
     });
   }
 

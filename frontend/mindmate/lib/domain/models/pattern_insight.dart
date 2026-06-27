@@ -23,4 +23,6 @@ class PatternInsight {
 
   /// When this pattern was detected
   late DateTime generatedAt;
+
+  bool isDemoData = false;
 }

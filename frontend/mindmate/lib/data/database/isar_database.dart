@@ -17,6 +17,9 @@ import '../../domain/models/weekly_reflection.dart';
 import '../../domain/models/recovery_event.dart';
 import '../../domain/models/pattern_insight.dart';
 import '../../domain/models/anonymous_post.dart';
+import '../../domain/models/burnout_forecast.dart';
+import '../../domain/models/early_warning.dart';
+import '../../domain/models/wellness_journey_summary.dart';
 
 class IsarDatabase {
   static late Isar instance;
@@ -54,6 +57,9 @@ class IsarDatabase {
         RecoveryEventSchema,
         PatternInsightSchema,
         AnonymousPostSchema,
+        BurnoutForecastSchema,
+        EarlyWarningAlertSchema,
+        WellnessJourneySummarySchema,
       ],
       directory: dir.path,
       name: uuid,

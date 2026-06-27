@@ -37,13 +37,18 @@ const PatternInsightSchema = CollectionSchema(
       name: r'generatedAt',
       type: IsarType.dateTime,
     ),
-    r'patternName': PropertySchema(
+    r'isDemoData': PropertySchema(
       id: 4,
+      name: r'isDemoData',
+      type: IsarType.bool,
+    ),
+    r'patternName': PropertySchema(
+      id: 5,
       name: r'patternName',
       type: IsarType.string,
     ),
     r'supportingEvidence': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'supportingEvidence',
       type: IsarType.long,
     )
@@ -85,8 +90,9 @@ void _patternInsightSerialize(
   writer.writeString(offsets[1], object.confidence);
   writer.writeString(offsets[2], object.description);
   writer.writeDateTime(offsets[3], object.generatedAt);
-  writer.writeString(offsets[4], object.patternName);
-  writer.writeLong(offsets[5], object.supportingEvidence);
+  writer.writeBool(offsets[4], object.isDemoData);
+  writer.writeString(offsets[5], object.patternName);
+  writer.writeLong(offsets[6], object.supportingEvidence);
 }
 
 PatternInsight _patternInsightDeserialize(
@@ -101,8 +107,9 @@ PatternInsight _patternInsightDeserialize(
   object.description = reader.readString(offsets[2]);
   object.generatedAt = reader.readDateTime(offsets[3]);
   object.id = id;
-  object.patternName = reader.readString(offsets[4]);
-  object.supportingEvidence = reader.readLong(offsets[5]);
+  object.isDemoData = reader.readBool(offsets[4]);
+  object.patternName = reader.readString(offsets[5]);
+  object.supportingEvidence = reader.readLong(offsets[6]);
   return object;
 }
 
@@ -122,8 +129,10 @@ P _patternInsightDeserializeProp<P>(
     case 3:
       return (reader.readDateTime(offset)) as P;
     case 4:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 5:
+      return (reader.readString(offset)) as P;
+    case 6:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -746,6 +755,16 @@ extension PatternInsightQueryFilter
   }
 
   QueryBuilder<PatternInsight, PatternInsight, QAfterFilterCondition>
+      isDemoDataEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isDemoData',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<PatternInsight, PatternInsight, QAfterFilterCondition>
       patternNameEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1003,6 +1022,20 @@ extension PatternInsightQuerySortBy
   }
 
   QueryBuilder<PatternInsight, PatternInsight, QAfterSortBy>
+      sortByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PatternInsight, PatternInsight, QAfterSortBy>
+      sortByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PatternInsight, PatternInsight, QAfterSortBy>
       sortByPatternName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'patternName', Sort.asc);
@@ -1102,6 +1135,20 @@ extension PatternInsightQuerySortThenBy
   }
 
   QueryBuilder<PatternInsight, PatternInsight, QAfterSortBy>
+      thenByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PatternInsight, PatternInsight, QAfterSortBy>
+      thenByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PatternInsight, PatternInsight, QAfterSortBy>
       thenByPatternName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'patternName', Sort.asc);
@@ -1161,6 +1208,13 @@ extension PatternInsightQueryWhereDistinct
     });
   }
 
+  QueryBuilder<PatternInsight, PatternInsight, QDistinct>
+      distinctByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isDemoData');
+    });
+  }
+
   QueryBuilder<PatternInsight, PatternInsight, QDistinct> distinctByPatternName(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1207,6 +1261,12 @@ extension PatternInsightQueryProperty
       generatedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'generatedAt');
+    });
+  }
+
+  QueryBuilder<PatternInsight, bool, QQueryOperations> isDemoDataProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isDemoData');
     });
   }
 

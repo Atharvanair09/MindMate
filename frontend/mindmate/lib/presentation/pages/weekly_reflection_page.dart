@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../domain/models/weekly_reflection.dart';
 import '../../services/weekly_reflection/weekly_reflection_service.dart';
+import '../widgets/global_background.dart';
 
 class WeeklyReflectionPage extends StatefulWidget {
   const WeeklyReflectionPage({super.key});
@@ -56,9 +57,9 @@ class _WeeklyReflectionPageState extends State<WeeklyReflectionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFFAFAFA),
         elevation: 0,
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black),
@@ -75,10 +76,11 @@ class _WeeklyReflectionPageState extends State<WeeklyReflectionPage> {
           child: Container(color: Colors.black, height: 2.0),
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.black))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+      body: GlobalBackgroundLayer(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: Colors.black))
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -105,6 +107,7 @@ class _WeeklyReflectionPageState extends State<WeeklyReflectionPage> {
                 ],
               ),
             ),
+      ),
     );
   }
 

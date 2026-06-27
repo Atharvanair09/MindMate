@@ -27,23 +27,28 @@ const MoodLogSchema = CollectionSchema(
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
-    r'isManual': PropertySchema(
+    r'isDemoData': PropertySchema(
       id: 2,
+      name: r'isDemoData',
+      type: IsarType.bool,
+    ),
+    r'isManual': PropertySchema(
+      id: 3,
       name: r'isManual',
       type: IsarType.bool,
     ),
     r'reason': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'reason',
       type: IsarType.string,
     ),
     r'score': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'score',
       type: IsarType.long,
     ),
     r'source': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'source',
       type: IsarType.string,
     )
@@ -108,10 +113,11 @@ void _moodLogSerialize(
 ) {
   writer.writeDouble(offsets[0], object.confidence);
   writer.writeDateTime(offsets[1], object.createdAt);
-  writer.writeBool(offsets[2], object.isManual);
-  writer.writeString(offsets[3], object.reason);
-  writer.writeLong(offsets[4], object.score);
-  writer.writeString(offsets[5], object.source);
+  writer.writeBool(offsets[2], object.isDemoData);
+  writer.writeBool(offsets[3], object.isManual);
+  writer.writeString(offsets[4], object.reason);
+  writer.writeLong(offsets[5], object.score);
+  writer.writeString(offsets[6], object.source);
 }
 
 MoodLog _moodLogDeserialize(
@@ -124,10 +130,11 @@ MoodLog _moodLogDeserialize(
   object.confidence = reader.readDouble(offsets[0]);
   object.createdAt = reader.readDateTime(offsets[1]);
   object.id = id;
-  object.isManual = reader.readBool(offsets[2]);
-  object.reason = reader.readString(offsets[3]);
-  object.score = reader.readLong(offsets[4]);
-  object.source = reader.readString(offsets[5]);
+  object.isDemoData = reader.readBool(offsets[2]);
+  object.isManual = reader.readBool(offsets[3]);
+  object.reason = reader.readString(offsets[4]);
+  object.score = reader.readLong(offsets[5]);
+  object.source = reader.readString(offsets[6]);
   return object;
 }
 
@@ -145,10 +152,12 @@ P _moodLogDeserializeProp<P>(
     case 2:
       return (reader.readBool(offset)) as P;
     case 3:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 4:
-      return (reader.readLong(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 5:
+      return (reader.readLong(offset)) as P;
+    case 6:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -605,6 +614,16 @@ extension MoodLogQueryFilter
     });
   }
 
+  QueryBuilder<MoodLog, MoodLog, QAfterFilterCondition> isDemoDataEqualTo(
+      bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isDemoData',
+        value: value,
+      ));
+    });
+  }
+
   QueryBuilder<MoodLog, MoodLog, QAfterFilterCondition> isManualEqualTo(
       bool value) {
     return QueryBuilder.apply(this, (query) {
@@ -960,6 +979,18 @@ extension MoodLogQuerySortBy on QueryBuilder<MoodLog, MoodLog, QSortBy> {
     });
   }
 
+  QueryBuilder<MoodLog, MoodLog, QAfterSortBy> sortByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<MoodLog, MoodLog, QAfterSortBy> sortByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
   QueryBuilder<MoodLog, MoodLog, QAfterSortBy> sortByIsManual() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isManual', Sort.asc);
@@ -1047,6 +1078,18 @@ extension MoodLogQuerySortThenBy
     });
   }
 
+  QueryBuilder<MoodLog, MoodLog, QAfterSortBy> thenByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<MoodLog, MoodLog, QAfterSortBy> thenByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
   QueryBuilder<MoodLog, MoodLog, QAfterSortBy> thenByIsManual() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isManual', Sort.asc);
@@ -1110,6 +1153,12 @@ extension MoodLogQueryWhereDistinct
     });
   }
 
+  QueryBuilder<MoodLog, MoodLog, QDistinct> distinctByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isDemoData');
+    });
+  }
+
   QueryBuilder<MoodLog, MoodLog, QDistinct> distinctByIsManual() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isManual');
@@ -1154,6 +1203,12 @@ extension MoodLogQueryProperty
   QueryBuilder<MoodLog, DateTime, QQueryOperations> createdAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'createdAt');
+    });
+  }
+
+  QueryBuilder<MoodLog, bool, QQueryOperations> isDemoDataProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isDemoData');
     });
   }
 

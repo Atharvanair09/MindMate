@@ -93,4 +93,6 @@ class WeeklyReflection {
   late List<String> influenceScores;
 
   late DateTime generatedAt;
+
+  bool isDemoData = false;
 }

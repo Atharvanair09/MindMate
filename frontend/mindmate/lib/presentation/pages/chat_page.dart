@@ -8,6 +8,7 @@ import '../../data/services/chat_api_service.dart';
 import '../widgets/bottom_nav.dart';
 import 'voice_call_screen.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import '../widgets/global_background.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -126,7 +127,7 @@ class _ChatPageState extends State<ChatPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFFF4EFEB),
+        backgroundColor: const Color(0xFFFAFAFA),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.zero,
           side: BorderSide(color: Colors.black, width: 3),
@@ -215,9 +216,10 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4EFEB),
-      body: SafeArea(
-        top: false,
+      backgroundColor: const Color(0xFFFAFAFA),
+      body: GlobalBackgroundLayer(
+        child: SafeArea(
+          top: false,
         child: Column(
           children: [
             _buildTopBar(),
@@ -231,6 +233,7 @@ class _ChatPageState extends State<ChatPage> {
             _buildBottomSection(),
           ],
         ),
+      ),
       ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -277,7 +280,7 @@ class _ChatPageState extends State<ChatPage> {
   void _showConversationsModal() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFFF4EFEB),
+      backgroundColor: const Color(0xFFFAFAFA),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(0)),

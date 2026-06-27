@@ -2,6 +2,7 @@ import 'package:isar/isar.dart';
 import '../../domain/models/mood_log.dart';
 import '../../domain/repositories/mood_repository.dart';
 import '../database/isar_database.dart';
+import '../../core/state/demo_mode_provider.dart';
 
 class MoodRepositoryImpl implements MoodRepository {
   Isar get _isar => IsarDatabase.instance;
@@ -35,12 +36,12 @@ class MoodRepositoryImpl implements MoodRepository {
 
   @override
   Future<List<MoodLog>> getAll() async {
-    return await _collection.where().findAll();
+    return await _collection.filter().isDemoDataEqualTo(DemoModeProvider.isDemoModeActive).findAll();
   }
 
   @override
   Stream<List<MoodLog>> watch() {
-    return _collection.where().watch(fireImmediately: true);
+    return _collection.filter().isDemoDataEqualTo(DemoModeProvider.isDemoModeActive).watch(fireImmediately: true);
   }
 
   @override

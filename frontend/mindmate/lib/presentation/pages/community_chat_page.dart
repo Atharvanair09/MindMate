@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../services/privacy/pseudonymization_service.dart';
 import '../../domain/models/anonymous_post.dart';
 import '../../data/repositories/anonymous_post_repository_impl.dart';
+import '../widgets/global_background.dart';
 
 class CommunityChatPage extends StatefulWidget {
   final String communityName;
@@ -99,7 +100,7 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
     final headerTextColor = isDarkBackground ? Colors.white : Colors.black;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF6EE),
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
         backgroundColor: widget.communityColor,
         elevation: 0,
@@ -133,9 +134,10 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
           child: Container(color: Colors.black, height: 2.0),
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(
+      body: GlobalBackgroundLayer(
+        child: Column(
+          children: [
+            Expanded(
             child: _isLoading 
                 ? const Center(child: CircularProgressIndicator(color: Colors.black))
                 : _posts.isEmpty
@@ -157,6 +159,7 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
           ),
           _buildMessageInput(),
         ],
+      ),
       ),
     );
   }
@@ -252,7 +255,7 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
                   hintText: "Share your thoughts anonymously...",
                   hintStyle: GoogleFonts.spaceGrotesk(color: Colors.grey[500]),
                   filled: true,
-                  fillColor: const Color(0xFFFAF6EE),
+                  fillColor: const Color(0xFFFAFAFA),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),

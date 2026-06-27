@@ -6,6 +6,7 @@ import '../../services/community/community_recommendation_service.dart';
 import 'community_chat_page.dart';
 import '../../domain/models/community_wellness.dart';
 import '../../services/community/community_wellness_service.dart';
+import '../widgets/global_background.dart';
 
 class CommunityInfo {
   final String name;
@@ -64,17 +65,12 @@ class _InsightsPageState extends State<InsightsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF6EE), // Light beige background
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFAF6EE),
+        backgroundColor: const Color(0xFFFAFAFA),
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
+        automaticallyImplyLeading: false,
         title: Text(
           "COMMUNITIES",
           style: GoogleFonts.anton(
@@ -93,8 +89,9 @@ class _InsightsPageState extends State<InsightsPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.black))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+          : GlobalBackgroundLayer(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -149,6 +146,7 @@ class _InsightsPageState extends State<InsightsPage> {
                   }).toList(),
                   const SizedBox(height: 20),
                 ],
+              ),
               ),
             ),
       bottomNavigationBar: const MindMateBottomNav(currentIndex: 3),

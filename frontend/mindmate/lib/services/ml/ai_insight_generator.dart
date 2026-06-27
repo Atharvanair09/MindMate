@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import '../../data/database/isar_database.dart';
 import '../../domain/models/reflection_result.dart';
@@ -10,15 +11,39 @@ import 'reflection_engine.dart';
 class AiInsightGenerator {
   static final AiInsightGenerator instance = AiInsightGenerator._internal();
 
+  AiInsightResult? _cachedInsight;
+  DateTime? _cacheDate;
+
   AiInsightGenerator._internal();
 
   Isar get isar => IsarDatabase.instance;
+
+  void invalidateCache() {
+    _cachedInsight = null;
+    _cacheDate = null;
+  }
 
   Future<AiInsightResult> generateInsight({
     required ReflectionResult currentReflection,
     required MoodFeatureVector latestVector,
     required ReflectionFollowUp? activeFollowUp,
+    bool forceRegenerate = false,
   }) async {
+    final today = DateTime.now();
+    final isSameDay = _cacheDate != null && 
+        _cacheDate!.year == today.year && 
+        _cacheDate!.month == today.month && 
+        _cacheDate!.day == today.day;
+
+    if (!forceRegenerate && _cachedInsight != null && isSameDay) {
+      debugPrint("=== AI INSIGHT DEBUG ===");
+      debugPrint("Insight generation time: ${_cachedInsight!.generatedAt}");
+      debugPrint("Insight source: Memory Cache");
+      debugPrint("Insight date: $_cacheDate");
+      debugPrint("Loaded from cache: true");
+      debugPrint("========================");
+      return _cachedInsight!;
+    }
     // Determine History and Gates
     int historyDaysAvailable = await isar.dailyMoodCheckIns.count();
     bool trendAvailable = historyDaysAvailable >= 3;
@@ -56,7 +81,6 @@ class AiInsightGenerator {
     }
 
     // Previous Reflection for Burnout Trend
-    final today = DateTime.now();
     final startOfDay = DateTime(today.year, today.month, today.day);
     
     final previousVector = await isar.moodFeatureVectors
@@ -215,55 +239,76 @@ class AiInsightGenerator {
       handled = true;
     }
 
-    // 4. Positive Indicators
-    if (!handled && journalPositive) {
-      insight = "Your reflections indicate a generally positive mindset.";
-      observation = "Journal entries contain uplifting linguistic patterns.";
-      suggestion = "Reflect on what went well today to maintain this momentum.";
-      factorsUsed.add("Positive Sentiment");
-      addUsedSignal("Journal Signal", "Journal sentiment is highly positive.");
+    // 4. Comprehensive Positive Insights
+    bool isOverallPositive = moodHigh || journalPositive || chatPositive || isBurnoutRecovering || positiveMoodTrend;
+    if (!handled && isOverallPositive) {
+      List<String> strongEvidence = [];
+      if (isBurnoutRecovering) strongEvidence.add("improving burnout");
+      if (positiveMoodTrend) strongEvidence.add("stable mood");
+      if (journalPositive) strongEvidence.add("positive reflections");
+      if (chatPositive) strongEvidence.add("positive conversations");
+      if (latestVector.journalCount >= 2 || currentReflection.contributingFactors.contains("Consistent Journaling")) strongEvidence.add("consistent journaling");
+      
+      bool mentionsSleep = false;
+      bool mentionsSocial = false;
+      if (hasFollowUpContext && activeFollowUp != null) {
+        final ctx = activeFollowUp.userResponse!.toLowerCase();
+        mentionsSocial = ctx.contains("friend") || ctx.contains("family") || ctx.contains("social") || ctx.contains("talk") || ctx.contains("chat") || ctx.contains("call") || ctx.contains("met") || ctx.contains("out");
+        mentionsSleep = ctx.contains("sleep") || ctx.contains("rest") || ctx.contains("nap") || ctx.contains("bed");
+      }
+      if (mentionsSleep) strongEvidence.add("better sleep habits");
+      if (mentionsSocial) strongEvidence.add("social interactions");
+
+      if (isBurnoutRecovering && journalPositive) {
+         insight = "Your burnout score has gradually decreased while positive reflections have become more frequent. Maintaining these habits appears to be supporting your wellbeing.";
+         observation = "Burnout has decreased over the past week while positive journal entries have increased.";
+      } else if (positiveMoodTrend && mentionsSocial) {
+         insight = "Your mood has remained stable over the last few days, and recent journal entries suggest that social interactions have been helping your recovery.";
+         observation = "Social interactions and stable mood are contributing to your current progress.";
+      } else if (mentionsSleep && strongEvidence.contains("consistent journaling")) {
+         insight = "Your recovery milestones suggest that consistent journaling and better sleep habits are contributing to your current progress.";
+         observation = "Consistent journaling and better sleep habits are supporting your wellbeing.";
+      } else if (chatPositive && journalPositive) {
+         insight = "Recent conversations and journal entries indicate improved emotional balance compared with earlier this week.";
+         observation = "Positive patterns detected across multiple sources.";
+      } else if (isBurnoutRecovering || positiveMoodTrend) {
+         insight = "Your emotional wellbeing appears more stable than last week. Positive routines and lower stress signals are becoming more consistent.";
+         observation = "Lower stress signals and stable patterns are becoming more consistent.";
+      } else {
+         String evidenceText = strongEvidence.isNotEmpty ? strongEvidence.join(" and ") : "positive routines";
+         insight = "Your wellbeing appears to be improving. Evidence suggests that $evidenceText ${strongEvidence.length > 1 ? 'are' : 'is'} contributing to your current progress.";
+         observation = "Analysis of your recent activities indicates sustained positive patterns.";
+      }
+      
+      if (isBurnoutRecovering) {
+        factorsUsed.add("Burnout Trend");
+        addUsedSignal("Burnout Trend Signal", "Burnout score shows a recovering trend.");
+      }
+      if (positiveMoodTrend || moodHigh) {
+        factorsUsed.add(positiveMoodTrend ? "Long-Term Trend" : "Positive Mood");
+        if (positiveMoodTrend) addUsedSignal("Historical Trend Signal", "Mood is trending positively above average.");
+        addUsedSignal("Mood Signal", "Current mood validates the positive state.");
+      }
+      if (journalPositive) {
+        factorsUsed.add("Positive Sentiment");
+        addUsedSignal("Journal Signal", "Journal sentiment is highly positive.");
+      }
+      if (chatPositive) {
+        factorsUsed.add("Positive Chat Sentiment");
+        addUsedSignal("Chat Signal", "Chat sentiment is highly positive.");
+      }
+      if (mentionsSleep || mentionsSocial) {
+        factorsUsed.add("Follow-Up Context");
+        addUsedSignal("User Context Signal", "User mentioned beneficial activities in follow-up.");
+      }
+      
+      suggestion = "Continue maintaining your current routines to reinforce this positive trend.";
       handled = true;
     }
 
-    if (!handled && chatPositive) {
-      insight = "Chat interactions reflect a positive outlook.";
-      observation = "Positive emotional indicators were detected in recent chats.";
-      suggestion = "Keep engaging in uplifting conversations.";
-      factorsUsed.add("Positive Chat Sentiment");
-      addUsedSignal("Chat Signal", "Chat sentiment is highly positive.");
-      handled = true;
-    }
-
-    if (!handled && moodHigh) {
-      insight = "You've been having a good day today.";
-      observation = "Your mood check-in shows a positive state.";
-      suggestion = "Keep up the momentum and note what went well today.";
-      factorsUsed.add("Positive Mood");
-      addUsedSignal("Mood Signal", "Mood score is high.");
-      handled = true;
-    }
-
-    // 5. Burnout Recovery
-    if (!handled && isBurnoutRecovering) {
-      insight = "Recent patterns suggest gradual recovery from stress.";
-      observation = "Your burnout risk has decreased compared to previous reflections.";
-      suggestion = "Maintain the routines that are helping you recover.";
-      factorsUsed.add("Burnout Trend");
-      addUsedSignal("Burnout Trend Signal", "Burnout score shows a recovering trend.");
-      handled = true;
-    }
-
-    // 6. Long-Term Trend Fallback
+    // 5. Long-Term Trend Fallback (Negative only)
     if (!handled && averageComparisonAvailable && hasMood) {
-      if (positiveMoodTrend) {
-        insight = "Your mood appears more stable compared to recent check-ins.";
-        observation = "Your mood is tracking above your 7-day average.";
-        suggestion = "Consider continuing activities that have recently improved your mood.";
-        factorsUsed.add("Long-Term Trend");
-        addUsedSignal("Historical Trend Signal", "Mood is trending positively above average.");
-        addUsedSignal("Mood Signal", "Current mood validates the trend.");
-        handled = true;
-      } else if (negativeMoodTrend) {
+      if (negativeMoodTrend) {
         insight = "Recent check-ins suggest a decline in mood consistency.";
         observation = "Your current mood is tracking below your 7-day average.";
         suggestion = "Consider a brief mindfulness exercise to reset.";
@@ -304,7 +349,7 @@ class AiInsightGenerator {
       detailedReflectionText += "\n\nTrend Note: Building your personal baseline. More data is needed for trend analysis.";
     }
 
-    return AiInsightResult(
+    final result = AiInsightResult(
       homeCardInsight: insight,
       detailedReflection: detailedReflectionText,
       observation: observation,
@@ -321,5 +366,17 @@ class AiInsightGenerator {
       signalAcceptanceReasons: acceptanceReasons,
       signalRejectionReasons: rejectionReasons,
     );
+
+    _cachedInsight = result;
+    _cacheDate = today;
+
+    debugPrint("=== AI INSIGHT DEBUG ===");
+    debugPrint("Insight generation time: ${result.generatedAt}");
+    debugPrint("Insight source: Generator Engine");
+    debugPrint("Insight date: $_cacheDate");
+    debugPrint("Loaded from cache: false (Regenerated)");
+    debugPrint("========================");
+
+    return result;
   }
 }

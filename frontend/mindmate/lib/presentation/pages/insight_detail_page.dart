@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../domain/models/ai_insight_result.dart';
+import '../widgets/global_background.dart';
 
 class InsightDetailPage extends StatelessWidget {
   final AiInsightResult insight;
@@ -10,7 +11,7 @@ class InsightDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -24,8 +25,9 @@ class InsightDetailPage extends StatelessWidget {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+      body: GlobalBackgroundLayer(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -83,6 +85,7 @@ class InsightDetailPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

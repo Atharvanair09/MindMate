@@ -3,6 +3,7 @@ import '../../domain/models/journal_entry.dart';
 import '../../domain/repositories/journal_repository.dart';
 import '../database/isar_database.dart';
 import '../../services/embedding/embedding_queue.dart';
+import '../../core/state/demo_mode_provider.dart';
 
 class JournalRepositoryImpl implements JournalRepository {
   Isar get _isar => IsarDatabase.instance;
@@ -39,12 +40,12 @@ class JournalRepositoryImpl implements JournalRepository {
 
   @override
   Future<List<JournalEntry>> getAll() async {
-    return await _collection.where().findAll();
+    return await _collection.filter().isDemoDataEqualTo(DemoModeProvider.isDemoModeActive).findAll();
   }
 
   @override
   Stream<List<JournalEntry>> watch() {
-    return _collection.where().watch(fireImmediately: true);
+    return _collection.filter().isDemoDataEqualTo(DemoModeProvider.isDemoModeActive).watch(fireImmediately: true);
   }
 
   @override

@@ -26,11 +26,18 @@ import 'wellness_timeline_page.dart';
 import '../../domain/models/community_wellness.dart';
 import '../../services/community/community_wellness_service.dart';
 import '../../domain/models/wellness_plan.dart';
+import '../widgets/global_background.dart';
 import '../../services/ml/wellness_plan_generator.dart';
 import '../../domain/models/coping_tool.dart';
 import '../../services/wellness/coping_toolkit_service.dart';
 import '../../domain/models/detected_situation.dart';
 import '../../services/ml/situation_detection_engine.dart';
+import '../../domain/models/early_warning.dart';
+import '../../services/wellness/early_warning_engine.dart';
+import '../../domain/models/burnout_forecast.dart';
+import '../../services/wellness/burnout_forecast_engine.dart';
+import '../widgets/explainable_ai_dashboard.dart';
+import '../widgets/expandable_smart_card.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -52,6 +59,11 @@ class _HomePageState extends State<HomePage> {
   List<CommunityWellness> _monitoredCommunities = [];
   WellnessPlan? _wellnessPlan;
   List<CopingTool> _recommendedTools = [];
+  EarlyWarningAlert? _earlyWarning;
+
+  // Explainable AI State
+  BurnoutForecast? _burnoutForecast;
+  List<DetectedSituation> _detectedSituations = [];
 
   @override
   void initState() {
@@ -77,19 +89,22 @@ class _HomePageState extends State<HomePage> {
       final isar = IsarDatabase.instance;
       final now = DateTime.now();
       final todayMidnight = DateTime.utc(now.year, now.month, now.day);
-      
-      final todayMood = await isar.dailyMoodCheckIns
-        .where()
-        .dateEqualTo(todayMidnight)
-        .findFirst();
 
-      ReflectionFollowUp? activePrompt = await ReflectionFollowUpService.instance.getActiveFollowUp();
-      
+      final todayMood = await isar.dailyMoodCheckIns
+          .where()
+          .dateEqualTo(todayMidnight)
+          .findFirst();
+
+      ReflectionFollowUp? activePrompt =
+          await ReflectionFollowUpService.instance.getActiveFollowUp();
+
       if (todayMood != null && activePrompt == null) {
         try {
-          final created = await ReflectionFollowUpService.instance.detectAndSaveFollowUp();
+          final created =
+              await ReflectionFollowUpService.instance.detectAndSaveFollowUp();
           if (created) {
-            activePrompt = await ReflectionFollowUpService.instance.getActiveFollowUp();
+            activePrompt =
+                await ReflectionFollowUpService.instance.getActiveFollowUp();
             await NotificationService.instance.sendSmartMoodReminder();
             await ReflectionFollowUpService.instance.recordFollowUpShown();
           }
@@ -124,30 +139,48 @@ class _HomePageState extends State<HomePage> {
         debugPrint('Error loading weekly reflection: $e');
       }
 
-      final monitoredCommunities = await CommunityWellnessService.instance.getMonitoredCommunities();
+      final monitoredCommunities =
+          await CommunityWellnessService.instance.getMonitoredCommunities();
 
       // Generate daily wellness plan dynamically
       WellnessPlan? wellnessPlan;
       List<CopingTool> recommendedTools = [];
+      List<DetectedSituation> situations = [];
       try {
         wellnessPlan = await WellnessPlanGenerator.instance.generatePlan();
-        final situations = await SituationDetectionEngine.instance.detectSituations();
+        situations = await SituationDetectionEngine.instance.detectSituations();
         if (situations.isNotEmpty) {
-          recommendedTools = CopingToolkitService.instance.getRecommendedTools(situations.first);
+          recommendedTools = CopingToolkitService.instance
+              .getRecommendedTools(situations.first);
         } else {
-          recommendedTools = CopingToolkitService.instance.getRecommendedTools(
-            DetectedSituation(
-              situationName: "General",
-              confidence: 100,
-              evidenceUsed: [],
-              reason: "",
-              keywordsTriggered: [],
-              generatedAt: DateTime.now(),
-            )
-          );
+          recommendedTools = CopingToolkitService.instance
+              .getRecommendedTools(DetectedSituation(
+            situationName: "General",
+            confidence: 100,
+            evidenceUsed: [],
+            reason: "",
+            keywordsTriggered: [],
+            generatedAt: DateTime.now(),
+          ));
         }
       } catch (e) {
         debugPrint('Error generating wellness plan: $e');
+      }
+
+      EarlyWarningAlert? earlyWarning;
+      try {
+        earlyWarning =
+            await EarlyWarningEngine.instance.evaluateWarningStatus();
+      } catch (e) {
+        debugPrint('Error evaluating early warning: $e');
+      }
+
+      BurnoutForecast? burnoutForecast;
+      try {
+        burnoutForecast =
+            await BurnoutForecastEngine.instance.getDailyForecast();
+      } catch (e) {
+        debugPrint('Error getting burnout forecast: $e');
       }
 
       if (mounted) {
@@ -160,8 +193,11 @@ class _HomePageState extends State<HomePage> {
           _monitoredCommunities = monitoredCommunities;
           _wellnessPlan = wellnessPlan;
           _recommendedTools = recommendedTools;
+          _earlyWarning = earlyWarning;
+          _burnoutForecast = burnoutForecast;
+          _detectedSituations = situations;
           _isLoading = false;
-          
+
           if (todayMood != null) {
             final levels = ["GREAT", "GOOD", "OKAY", "LOW", "STRUGGLING"];
             _selectedMoodIndex = levels.indexOf(todayMood.moodLevel);
@@ -183,13 +219,13 @@ class _HomePageState extends State<HomePage> {
   Future<void> _saveMood(int index, String source) async {
     final levels = ["GREAT", "GOOD", "OKAY", "LOW", "STRUGGLING"];
     final moodLevel = levels[index];
-    
+
     final isar = IsarDatabase.instance;
     final now = DateTime.now();
     final todayMidnight = DateTime.utc(now.year, now.month, now.day);
-    
+
     DailyMoodCheckIn moodToSave;
-    
+
     if (_todayMood != null) {
       moodToSave = _todayMood!;
       moodToSave.moodLevel = moodLevel;
@@ -203,7 +239,7 @@ class _HomePageState extends State<HomePage> {
         ..updatedAt = now
         ..source = source;
     }
-    
+
     await isar.writeTxn(() async {
       await isar.dailyMoodCheckIns.put(moodToSave);
     });
@@ -212,7 +248,8 @@ class _HomePageState extends State<HomePage> {
     await FeaturePipeline.instance.triggerPipeline();
 
     if (_activeFollowUp != null) {
-      await ReflectionFollowUpService.instance.markResolved(_activeFollowUp!.id);
+      await ReflectionFollowUpService.instance
+          .markResolved(_activeFollowUp!.id);
     }
 
     // Evaluate reflection follow-up based on the new mood state
@@ -222,8 +259,10 @@ class _HomePageState extends State<HomePage> {
       debugPrint("Error detecting reflection follow-up in _saveMood: $e");
     }
 
-    final activeFollowUp = await ReflectionFollowUpService.instance.getActiveFollowUp();
-    final updatedReflection = await ReflectionEngine.instance.getLatestReflection();
+    final activeFollowUp =
+        await ReflectionFollowUpService.instance.getActiveFollowUp();
+    final updatedReflection =
+        await ReflectionEngine.instance.getLatestReflection();
     final vector = await FeaturePipeline.instance.getLatestVector();
     AiInsightResult? aiInsight;
     if (vector != null) {
@@ -233,7 +272,7 @@ class _HomePageState extends State<HomePage> {
         activeFollowUp: activeFollowUp,
       );
     }
-    
+
     // We've logged a mood today, so we can cancel the daily reminder
     await NotificationService.instance.cancelDailyMoodReminder();
 
@@ -243,7 +282,8 @@ class _HomePageState extends State<HomePage> {
         _selectedMoodIndex = index;
         _reflection = updatedReflection;
         _aiInsight = aiInsight;
-        _activeFollowUp = activeFollowUp; // Update with the new follow-up state (can be null or a newly triggered one)
+        _activeFollowUp =
+            activeFollowUp; // Update with the new follow-up state (can be null or a newly triggered one)
         _showReflectionInput = false;
       });
     }
@@ -252,37 +292,60 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8), // Light grey background
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      backgroundColor: const Color(0xFFFAFAFA), // Brighter variant of white
+      body: GlobalBackgroundLayer(
+        child: SafeArea(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildTopBar(context),
-              const SizedBox(height: 24),
-              _buildBurnoutCard(),
-              const SizedBox(height: 24),
-              _buildCommunityWellnessSection(),
-              const SizedBox(height: 24),
-              _buildSectionTitle("HOW ARE YOU FEELING?"),
-              const SizedBox(height: 12),
-              if (_activeFollowUp != null) ...[
-                _buildReflectionFollowUpCard(),
-                const SizedBox(height: 12),
-              ],
-              _buildMoodSelector(),
-              const SizedBox(height: 24),
-              _buildActionButtons(),
-              const SizedBox(height: 24),
-              _buildWeeklyChart(),
-              const SizedBox(height: 24),
-              _buildWellnessPlanSection(),
-              const SizedBox(height: 24),
-              _buildSectionTitle("COPING TOOLKIT"),
-              const SizedBox(height: 12),
-              _buildCopingToolkit(),
-              const SizedBox(height: 100), // Space for bottom nav
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.only(
+                      left: 20, right: 20, top: 24, bottom: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: _buildGreeting(context)),
+                          if (_earlyWarning != null &&
+                              _earlyWarning!.level != "Green")
+                            _buildEarlyWarningCard(),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      _buildBurnoutCard(),
+                      const SizedBox(height: 24),
+                      _buildSectionTitle("HOW ARE YOU FEELING?"),
+                      const SizedBox(height: 12),
+                      if (_activeFollowUp != null) ...[
+                        _buildReflectionFollowUpCard(),
+                        const SizedBox(height: 12),
+                      ],
+                      _buildMoodSelector(),
+                      const SizedBox(height: 24),
+                      _buildColorfulButtons(),
+                      const SizedBox(height: 24),
+                      _buildCommunityWellnessSection(),
+                      const SizedBox(height: 24),
+                      ExplainableAiDashboard(
+                        burnoutForecast: _burnoutForecast,
+                        detectedSituations: _detectedSituations,
+                        aiInsight: _aiInsight,
+                      ),
+                      _buildWeeklyChart(),
+                      const SizedBox(height: 24),
+                      _buildWellnessPlanSection(),
+                      const SizedBox(height: 24),
+                      _buildSectionTitle("COPING TOOLKIT"),
+                      const SizedBox(height: 12),
+                      _buildCopingToolkit(),
+                      const SizedBox(height: 100), // Space for bottom nav
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -292,87 +355,74 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildTopBar(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Consumer<UserProvider>(
-          builder: (context, userProvider, child) {
-            final userName = userProvider.userName.isNotEmpty 
-                ? userProvider.userName 
-                : "Friend";
-            return Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    border: Border.all(color: Colors.black, width: 2),
-                  ),
-                  child: ClipRect(
-                    child: _buildAvatarImage(userProvider),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  userName.toUpperCase(),
-                  style: GoogleFonts.vt323(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    letterSpacing: 1.8,
-                  ),
-                ),
-              ],
-            );
-          },
+    return Container(
+      padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 6),
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Colors.black, width: 3.0),
         ),
-        FutureBuilder<int>(
-          future: NotificationService.instance.getUnreadCount(),
-          builder: (context, snapshot) {
-            final count = snapshot.data ?? 0;
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.notifications_none, color: Colors.black, size: 28),
-                  onPressed: () => _showNotificationCenter(context),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                if (count > 0)
-                  Positioned(
-                    right: -2,
-                    top: -2,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.redAccent,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.black, width: 1.5),
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 16,
-                        minHeight: 16,
-                      ),
-                      child: Center(
-                        child: Text(
-                          count.toString(),
-                          style: GoogleFonts.vt323(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            height: 1.0,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const SizedBox(width: 46),
+          Text(
+            "HOME",
+            style: GoogleFonts.bebasNeue(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+              letterSpacing: 2.0,
+            ),
+          ),
+          FutureBuilder<int>(
+            future: NotificationService.instance.getUnreadCount(),
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_none,
+                        color: Colors.black, size: 28),
+                    onPressed: () => _showNotificationCenter(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.black, width: 1.5),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Center(
+                          child: Text(
+                            count.toString(),
+                            style: GoogleFonts.vt323(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              height: 1.0,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-              ],
-            );
-          },
-        ),
-      ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -385,7 +435,7 @@ class _HomePageState extends State<HomePage> {
         fit: BoxFit.cover,
       );
     }
-    
+
     final imageUrl = userState.avatarImageUrl;
     if (imageUrl != null && imageUrl.isNotEmpty) {
       if (imageUrl.startsWith('http')) {
@@ -394,7 +444,8 @@ class _HomePageState extends State<HomePage> {
           width: 32,
           height: 32,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _buildDefaultIcon(userState),
+          errorBuilder: (context, error, stackTrace) =>
+              _buildDefaultIcon(userState),
         );
       } else {
         final bytes = userState.avatarImageBytes;
@@ -404,7 +455,8 @@ class _HomePageState extends State<HomePage> {
             width: 32,
             height: 32,
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _buildDefaultIcon(userState),
+            errorBuilder: (context, error, stackTrace) =>
+                _buildDefaultIcon(userState),
           );
         }
       }
@@ -446,11 +498,11 @@ class _HomePageState extends State<HomePage> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: GoogleFonts.vt323(
-        fontSize: 24,
+      style: GoogleFonts.bebasNeue(
+        fontSize: 26,
         fontWeight: FontWeight.w600,
         color: Colors.black,
-        letterSpacing: 3,
+        letterSpacing: 2,
       ),
     );
   }
@@ -458,96 +510,98 @@ class _HomePageState extends State<HomePage> {
   Widget _buildBurnoutCard() {
     final score = _reflection?.burnoutScore.toString() ?? "--";
     final level = _reflection?.burnoutLevel ?? "CALC...";
-    final insight = _aiInsight?.homeCardInsight ?? _reflection?.insight ?? "Analyzing your latest activity...";
+    final insight = _aiInsight?.homeCardInsight ??
+        _reflection?.insight ??
+        "Analyzing your latest activity...";
     Color levelColor = Colors.greenAccent;
     if (level == 'MODERATE') levelColor = Colors.orangeAccent;
     if (level == 'HIGH') levelColor = Colors.redAccent;
 
     return GestureDetector(
-      onTap: () {
-        if (_aiInsight != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => InsightDetailPage(insight: _aiInsight!),
-            ),
-          );
-        }
-      },
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.black,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black,
-            offset: Offset(4, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "BURNOUT RISK",
-                    style: GoogleFonts.vt323(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    level,
-                    style: GoogleFonts.inter(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: levelColor,
-                    ),
-                  ),
-                ],
+        onTap: () {
+          if (_aiInsight != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => InsightDetailPage(insight: _aiInsight!),
               ),
-              Row(
-                children: [
-                  Text(
-                    score,
-                    style: GoogleFonts.spaceMono(
-                      fontSize: 56,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.yellow,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Container(
-                    width: 6,
-                    height: 60,
-                    color: Colors.yellow,
-                  ),
-                ],
+            );
+          }
+        },
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.black,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.cyanAccent, // Brighter cyan shadow
+                offset: Offset(4, 4),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Container(height: 2, color: Colors.grey[800]),
-          const SizedBox(height: 12),
-          Text(
-            insight,
-            style: GoogleFonts.vt323(
-              fontSize: 18,
-              color: Colors.yellow,
-              letterSpacing: 1,
-            ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "BURNOUT RISK",
+                        style: GoogleFonts.vt323(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        level,
+                        style: GoogleFonts.inter(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          color: levelColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        score,
+                        style: GoogleFonts.spaceMono(
+                          fontSize: 56,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.yellow,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Container(
+                        width: 6,
+                        height: 60,
+                        color: Colors.yellow,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(height: 2, color: Colors.grey[800]),
+              const SizedBox(height: 12),
+              Text(
+                insight,
+                style: GoogleFonts.vt323(
+                  fontSize: 20,
+                  color: Colors.cyanAccent,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    ));
+        ));
   }
 
   Widget _buildCommunityWellnessSection() {
@@ -560,8 +614,10 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(height: 12),
         ..._monitoredCommunities.map((wellness) {
           Color trendColor = Colors.greenAccent;
-          if (wellness.overallTrend == 'Needs Attention') trendColor = Colors.redAccent;
-          if (wellness.overallTrend == 'Improving') trendColor = Colors.orangeAccent;
+          if (wellness.overallTrend == 'Needs Attention')
+            trendColor = Colors.redAccent;
+          if (wellness.overallTrend == 'Improving')
+            trendColor = Colors.orangeAccent;
 
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
@@ -592,7 +648,8 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       color: Colors.black,
                       child: Text(
                         wellness.overallTrend.toUpperCase(),
@@ -612,7 +669,9 @@ class _HomePageState extends State<HomePage> {
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: wellness.overallTrend == 'Needs Attention' ? Colors.red[700] : Colors.black87,
+                      color: wellness.overallTrend == 'Needs Attention'
+                          ? Colors.red[700]
+                          : Colors.black87,
                     ),
                   ),
                 ],
@@ -635,7 +694,7 @@ class _HomePageState extends State<HomePage> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF00E5FF), // Brighter cyber cyan
         border: Border.all(color: Colors.black, width: 3),
         boxShadow: const [
           BoxShadow(
@@ -651,11 +710,11 @@ class _HomePageState extends State<HomePage> {
             children: [
               Text(
                 "✨ REFLECTION FOLLOW-UP",
-                style: GoogleFonts.vt323(
-                  fontSize: 22,
+                style: GoogleFonts.bebasNeue(
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
-                  letterSpacing: 1.5,
+                  letterSpacing: 2,
                 ),
               ),
             ],
@@ -672,55 +731,64 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 16),
           if (!_showReflectionInput) ...[
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildCardButton(
-                    label: "TELL ME MORE",
-                    onTap: () {
-                      setState(() {
-                        _showReflectionInput = true;
-                      });
-                    },
-                    backgroundColor: Colors.yellow,
-                    textColor: Colors.black,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildCardButton(
-                    label: "KEEP CURRENT MOOD",
-                    onTap: () async {
-                      await ReflectionFollowUpService.instance.markResolved(_activeFollowUp!.id);
-                      setState(() {
-                        _activeFollowUp = null;
-                      });
-                      await _loadData();
-                    },
-                    backgroundColor: Colors.black,
-                    textColor: Colors.white,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildCardButton(
-                    label: "DISMISS",
-                    onTap: () async {
-                      await ReflectionFollowUpService.instance.markDismissed(_activeFollowUp!.id);
-                      setState(() {
-                        _activeFollowUp = null;
-                      });
-                    },
-                    backgroundColor: Colors.white,
-                    textColor: Colors.black,
-                  ),
-                ],
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildCardButton(
+                        label: "TELL ME MORE",
+                        onTap: () {
+                          setState(() {
+                            _showReflectionInput = true;
+                          });
+                        },
+                        backgroundColor: Colors.yellow,
+                        textColor: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildCardButton(
+                        label: "KEEP MOOD",
+                        onTap: () async {
+                          await ReflectionFollowUpService.instance
+                              .markResolved(_activeFollowUp!.id);
+                          setState(() {
+                            _activeFollowUp = null;
+                          });
+                          await _loadData();
+                        },
+                        backgroundColor: Colors.black,
+                        textColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _buildCardButton(
+                  label: "DISMISS",
+                  onTap: () async {
+                    await ReflectionFollowUpService.instance
+                        .markDismissed(_activeFollowUp!.id);
+                    setState(() {
+                      _activeFollowUp = null;
+                    });
+                  },
+                  backgroundColor: Colors.white,
+                  textColor: Colors.black,
+                ),
+              ],
             ),
           ] else ...[
             Text(
               inputPrompt,
-              style: GoogleFonts.vt323(
-                fontSize: 16,
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
                 color: Colors.black87,
-                letterSpacing: 1.1,
+                height: 1.4,
               ),
             ),
             const SizedBox(height: 8),
@@ -728,8 +796,10 @@ class _HomePageState extends State<HomePage> {
               controller: _reflectionController,
               decoration: InputDecoration(
                 hintText: "Type optional context...",
-                hintStyle: GoogleFonts.vt323(color: Colors.grey[600], fontSize: 16),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                hintStyle:
+                    GoogleFonts.vt323(color: Colors.grey[600], fontSize: 16),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 filled: true,
                 fillColor: Colors.grey[100],
                 border: OutlineInputBorder(
@@ -747,33 +817,37 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 12),
             Row(
               children: [
-                _buildCardButton(
-                  label: "SAVE CONTEXT",
-                  onTap: () async {
-                    await ReflectionFollowUpService.instance.markResolved(
-                      _activeFollowUp!.id,
-                      userResponse: _reflectionController.text,
-                    );
-                    _reflectionController.clear();
-                    setState(() {
-                      _activeFollowUp = null;
-                      _showReflectionInput = false;
-                    });
-                    await _loadData();
-                  },
-                  backgroundColor: Colors.yellow,
-                  textColor: Colors.black,
+                Expanded(
+                  child: _buildCardButton(
+                    label: "SAVE CONTEXT",
+                    onTap: () async {
+                      await ReflectionFollowUpService.instance.markResolved(
+                        _activeFollowUp!.id,
+                        userResponse: _reflectionController.text,
+                      );
+                      _reflectionController.clear();
+                      setState(() {
+                        _activeFollowUp = null;
+                        _showReflectionInput = false;
+                      });
+                      await _loadData();
+                    },
+                    backgroundColor: Colors.yellow,
+                    textColor: Colors.black,
+                  ),
                 ),
                 const SizedBox(width: 8),
-                _buildCardButton(
-                  label: "CANCEL",
-                  onTap: () {
-                    setState(() {
-                      _showReflectionInput = false;
-                    });
-                  },
-                  backgroundColor: Colors.white,
-                  textColor: Colors.black,
+                Expanded(
+                  child: _buildCardButton(
+                    label: "CANCEL",
+                    onTap: () {
+                      setState(() {
+                        _showReflectionInput = false;
+                      });
+                    },
+                    backgroundColor: Colors.white,
+                    textColor: Colors.black,
+                  ),
                 ),
               ],
             ),
@@ -797,22 +871,58 @@ class _HomePageState extends State<HomePage> {
           color: backgroundColor,
           border: Border.all(color: Colors.black, width: 2),
         ),
-        child: Text(
-          label,
-          style: GoogleFonts.vt323(
-            fontSize: 16,
-            color: textColor,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.1,
+        child: Center(
+          child: Text(
+            label,
+            style: GoogleFonts.vt323(
+              fontSize: 20,
+              color: textColor,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.1,
+            ),
           ),
         ),
       ),
     );
   }
 
+  Color _getMoodColor(String label) {
+    switch (label.toUpperCase()) {
+      case 'GREAT':
+        return const Color(0xFF4CAF50); // Green
+      case 'GOOD':
+        return const Color(0xFF8BC34A); // Light Green/Lime
+      case 'OKAY':
+        return const Color(0xFFFFB300); // Yellow/Orange
+      case 'LOW':
+        return const Color(0xFFFF9800); // Orange
+      case 'BAD':
+      case 'STRUGGLING':
+        return const Color(0xFFE53935); // Red
+      default:
+        return Colors.white;
+    }
+  }
+
+  Color _getMoodTextColor(String label) {
+    switch (label.toUpperCase()) {
+      case 'GREAT':
+      case 'LOW':
+      case 'BAD':
+      case 'STRUGGLING':
+        return Colors.white;
+      case 'GOOD':
+      case 'OKAY':
+        return Colors.black;
+      default:
+        return Colors.black;
+    }
+  }
+
   Widget _buildMoodSelector() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Colors.black));
+      return const Center(
+          child: CircularProgressIndicator(color: Colors.black));
     }
 
     final moods = [
@@ -824,12 +934,23 @@ class _HomePageState extends State<HomePage> {
     ];
 
     if (_todayMood != null) {
-      final currentMood = moods.firstWhere((m) => m["label"] == _todayMood!.moodLevel, orElse: () => moods[2]);
-      
-      return Container(
+      final currentMood = moods.firstWhere(
+        (m) =>
+            m["label"] == _todayMood!.moodLevel ||
+            (_todayMood!.moodLevel == "STRUGGLING" && m["label"] == "BAD"),
+        orElse: () => moods[2],
+      );
+      final moodLabel = currentMood["label"]!;
+      final containerBg = _getMoodColor(moodLabel);
+      final textColor = _getMoodTextColor(moodLabel);
+      final subTextColor = textColor.withOpacity(0.85);
+
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: containerBg,
           border: Border.all(color: Colors.black, width: 2),
           boxShadow: const [
             BoxShadow(
@@ -843,26 +964,37 @@ class _HomePageState extends State<HomePage> {
           children: [
             Row(
               children: [
-                Text(currentMood["emoji"]!, style: const TextStyle(fontSize: 32)),
+                Text(currentMood["emoji"]!,
+                    style: const TextStyle(fontSize: 32)),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "Today's Mood: ${currentMood["label"]!}",
-                        style: GoogleFonts.inter(
-                          fontSize: 20,
+                      AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 350),
+                        curve: Curves.easeInOut,
+                        style: GoogleFonts.bebasNeue(
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: textColor,
+                          letterSpacing: 2,
                         ),
+                        child: Text("Today's Mood: $moodLabel"),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        _reflection?.insight ?? "Thanks for checking in! Your mood has been recorded.",
-                        style: GoogleFonts.vt323(
-                          fontSize: 16,
-                          color: Colors.black87,
+                      AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 350),
+                        curve: Curves.easeInOut,
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: subTextColor,
+                          height: 1.4,
+                        ),
+                        child: Text(
+                          _reflection?.insight ??
+                              "Thanks for checking in! Your mood has been recorded.",
                         ),
                       ),
                     ],
@@ -871,24 +1003,30 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  _todayMood = null; // Set to null to show selector again
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  border: Border.all(color: Colors.black, width: 2),
-                ),
-                child: Text(
-                  "CHANGE MOOD",
-                  style: GoogleFonts.vt323(
-                    fontSize: 16,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _todayMood = null; // Set to null to show selector again
+                  });
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    border: Border.all(color: Colors.black, width: 2),
+                  ),
+                  child: Center(
+                    child: Text(
+                      "CHANGE MOOD",
+                      style: GoogleFonts.vt323(
+                        fontSize: 20,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -902,182 +1040,53 @@ class _HomePageState extends State<HomePage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(moods.length, (index) {
         final isSelected = _selectedMoodIndex == index;
-        return GestureDetector(
-          onTap: () {
-            _saveMood(index, _activeFollowUp != null ? 'smart_prompt' : 'manual');
-          },
-          child: Container(
-            width: (MediaQuery.of(context).size.width - 40 - 48) / 5, // Auto-size based on screen width
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: isSelected ? Colors.yellow : Colors.white,
-              border: Border.all(color: Colors.black, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black,
-                  offset: isSelected ? const Offset(4, 4) : const Offset(3, 3),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Text(
-                  moods[index]["emoji"]!,
-                  style: const TextStyle(fontSize: 24),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  moods[index]["label"]!,
-                  style: GoogleFonts.vt323(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-              ],
-            ),
-          ));
-      }),
-    );
-  }
+        final label = moods[index]["label"]!;
+        final containerBg = isSelected ? _getMoodColor(label) : Colors.white;
+        final textColor = isSelected ? _getMoodTextColor(label) : Colors.black;
 
-  Widget _buildActionButtons() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.yellow,
-                  border: Border.all(color: Colors.black, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black,
-                      offset: Offset(4, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const DeveloperDebugPage(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        "CHAT",
-                        style: GoogleFonts.inter(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "talk to someone →",
-                      style: GoogleFonts.vt323(
-                        fontSize: 18,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  border: Border.all(color: Colors.black, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black,
-                      offset: Offset(4, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "JOURNAL",
-                      style: GoogleFonts.inter(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.yellow,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "private. on-device →",
-                      style: GoogleFonts.vt323(
-                        fontSize: 15,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const WellnessTimelinePage(),
-              ),
-            );
-          },
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.black, width: 2),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black,
-                  offset: Offset(4, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "WELLNESS TIMELINE",
-                  style: GoogleFonts.inter(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
+        return GestureDetector(
+            onTap: () {
+              _saveMood(
+                  index, _activeFollowUp != null ? 'smart_prompt' : 'manual');
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              width: (MediaQuery.of(context).size.width - 40 - 48) /
+                  5, // Auto-size based on screen width
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: containerBg,
+                border: Border.all(color: Colors.black, width: 2),
+                boxShadow: [
+                  BoxShadow(
                     color: Colors.black,
+                    offset:
+                        isSelected ? const Offset(4, 4) : const Offset(3, 3),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "view your emotional journey →",
-                  style: GoogleFonts.vt323(
-                    fontSize: 18,
-                    color: Colors.black,
+                ],
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    moods[index]["emoji"]!,
+                    style: const TextStyle(fontSize: 24),
                   ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+                  const SizedBox(height: 8),
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    style: GoogleFonts.vt323(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                    child: Text(label),
+                  ),
+                ],
+              ),
+            ));
+      }),
     );
   }
 
@@ -1151,7 +1160,8 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) {
+            children:
+                ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) {
               return Text(
                 day,
                 style: GoogleFonts.vt323(
@@ -1173,7 +1183,8 @@ class _HomePageState extends State<HomePage> {
       height: 120 * fillPct,
       decoration: BoxDecoration(
         color: isHighlighted ? Colors.yellow : Colors.black,
-        border: isHighlighted ? Border.all(color: Colors.black, width: 1) : null,
+        border:
+            isHighlighted ? Border.all(color: Colors.black, width: 1) : null,
       ),
     );
   }
@@ -1203,9 +1214,11 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 decoration: const BoxDecoration(
                   color: Color(0xFFE0E0E0),
-                  border: Border(right: BorderSide(color: Colors.black, width: 2)),
+                  border:
+                      Border(right: BorderSide(color: Colors.black, width: 2)),
                 ),
-                child: Icon(_getIconData(tool.iconName), color: Colors.black, size: 32),
+                child: Icon(_getIconData(tool.iconName),
+                    color: Colors.black, size: 32),
               ),
               Expanded(
                 child: Padding(
@@ -1244,19 +1257,166 @@ class _HomePageState extends State<HomePage> {
 
   IconData _getIconData(String name) {
     switch (name) {
-      case 'timer': return Icons.timer;
-      case 'list_alt': return Icons.list_alt;
-      case 'self_improvement': return Icons.self_improvement;
-      case 'air': return Icons.air;
-      case 'checklist': return Icons.checklist;
-      case 'book': return Icons.book;
-      case 'nightlight_round': return Icons.nightlight_round;
-      case 'tips_and_updates': return Icons.tips_and_updates;
-      case 'edit_note': return Icons.edit_note;
-      case 'chat_bubble_outline': return Icons.chat_bubble_outline;
-      case 'people_outline': return Icons.people_outline;
-      default: return Icons.build;
+      case 'timer':
+        return Icons.timer;
+      case 'list_alt':
+        return Icons.list_alt;
+      case 'self_improvement':
+        return Icons.self_improvement;
+      case 'air':
+        return Icons.air;
+      case 'checklist':
+        return Icons.checklist;
+      case 'book':
+        return Icons.book;
+      case 'nightlight_round':
+        return Icons.nightlight_round;
+      case 'tips_and_updates':
+        return Icons.tips_and_updates;
+      case 'edit_note':
+        return Icons.edit_note;
+      case 'chat_bubble_outline':
+        return Icons.chat_bubble_outline;
+      case 'people_outline':
+        return Icons.people_outline;
+      default:
+        return Icons.build;
     }
+  }
+
+  Widget _buildGreeting(BuildContext context) {
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        final userName = userProvider.userName.isNotEmpty
+            ? userProvider.userName.toUpperCase()
+            : "FRIEND";
+
+        final now = DateTime.now();
+        final formattedDate =
+            DateFormat('EEEE, MMM d').format(now).toUpperCase();
+
+        String greeting = "GOOD MORNING";
+        if (now.hour >= 12 && now.hour < 17) {
+          greeting = "GOOD AFTERNOON";
+        } else if (now.hour >= 17) {
+          greeting = "GOOD EVENING";
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "$greeting,\n$userName",
+              style: GoogleFonts.bebasNeue(
+                fontSize: 42,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+                height: 1.0,
+                letterSpacing: 1.0,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              formattedDate,
+              style: GoogleFonts.bebasNeue(
+                fontSize: 16,
+                color: Colors.grey[600],
+                letterSpacing: 1.0,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildEarlyWarningCard() {
+    return Align(
+        alignment: Alignment.centerRight,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.yellow,
+            border: Border.all(color: Colors.black, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black,
+                offset: Offset(2, 2),
+              ),
+            ],
+          ),
+          child: IconButton(
+            icon: Icon(
+              _earlyWarning!.level == "Red"
+                  ? Icons.warning
+                  : Icons.warning_amber,
+              color: Colors.black,
+              size: 28,
+            ),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: const Color(0xFFF8F8F8),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.zero,
+                    side: BorderSide(color: Colors.black, width: 2),
+                  ),
+                  title: Text(
+                    "EARLY WARNING",
+                    style: GoogleFonts.vt323(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: _earlyWarning!.reasons.map((reason) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("•",
+                                style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                reason,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        "CLOSE",
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ));
   }
 
   void _showNotificationCenter(BuildContext context) {
@@ -1295,9 +1455,12 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         // Header
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                           decoration: const BoxDecoration(
-                            border: Border(bottom: BorderSide(color: Colors.yellow, width: 2)),
+                            border: Border(
+                                bottom:
+                                    BorderSide(color: Colors.yellow, width: 2)),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1316,10 +1479,12 @@ class _HomePageState extends State<HomePage> {
                                   if (notifications.any((n) => !n.read))
                                     GestureDetector(
                                       onTap: () async {
-                                        await NotificationService.instance.markAllAsRead();
+                                        await NotificationService.instance
+                                            .markAllAsRead();
                                         if (context.mounted) {
                                           Navigator.of(context).pop();
-                                          _showNotificationCenter(context); // reload popup
+                                          _showNotificationCenter(
+                                              context); // reload popup
                                           setState(() {}); // refresh home badge
                                         }
                                       },
@@ -1335,7 +1500,8 @@ class _HomePageState extends State<HomePage> {
                                   const SizedBox(width: 12),
                                   GestureDetector(
                                     onTap: () => Navigator.of(context).pop(),
-                                    child: const Icon(Icons.close, color: Colors.yellow, size: 20),
+                                    child: const Icon(Icons.close,
+                                        color: Colors.yellow, size: 20),
                                   ),
                                 ],
                               ),
@@ -1346,7 +1512,8 @@ class _HomePageState extends State<HomePage> {
                         Flexible(
                           child: notifications.isEmpty
                               ? Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 40),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 40),
                                   child: Center(
                                     child: Text(
                                       "ALL CLEAR",
@@ -1362,15 +1529,17 @@ class _HomePageState extends State<HomePage> {
                                   shrinkWrap: true,
                                   padding: const EdgeInsets.all(8),
                                   itemCount: notifications.length,
-                                  separatorBuilder: (context, index) => Container(
+                                  separatorBuilder: (context, index) =>
+                                      Container(
                                     height: 1,
                                     color: Colors.grey[900],
                                   ),
                                   itemBuilder: (context, index) {
                                     final notification = notifications[index];
-                                    IconData iconData = Icons.notifications_none;
+                                    IconData iconData =
+                                        Icons.notifications_none;
                                     Color iconColor = Colors.white;
-                                    
+
                                     switch (notification.type) {
                                       case 'ai_insight':
                                         iconData = Icons.auto_awesome;
@@ -1414,44 +1583,61 @@ class _HomePageState extends State<HomePage> {
                                         break;
                                     }
 
-                                    final timeStr = DateFormat('h:mm a').format(notification.createdAt);
+                                    final timeStr = DateFormat('h:mm a')
+                                        .format(notification.createdAt);
 
                                     return InkWell(
                                       onTap: () async {
                                         if (!notification.read) {
-                                          await NotificationService.instance.markAsRead(notification.id);
+                                          await NotificationService.instance
+                                              .markAsRead(notification.id);
                                           if (context.mounted) {
                                             Navigator.of(context).pop();
-                                            _showNotificationCenter(context); // reload popup
-                                            setState(() {}); // refresh home badge
+                                            _showNotificationCenter(
+                                                context); // reload popup
+                                            setState(
+                                                () {}); // refresh home badge
                                           }
                                         }
                                       },
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 8, horizontal: 4),
                                         child: Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            Icon(iconData, color: iconColor, size: 20),
+                                            Icon(iconData,
+                                                color: iconColor, size: 20),
                                             const SizedBox(width: 8),
                                             Expanded(
                                               child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
                                                 children: [
                                                   Row(
-                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
                                                     children: [
                                                       Text(
-                                                        notification.title.toUpperCase(),
-                                                        style: GoogleFonts.vt323(
-                                                          color: notification.read ? Colors.grey : Colors.white,
+                                                        notification.title
+                                                            .toUpperCase(),
+                                                        style:
+                                                            GoogleFonts.vt323(
+                                                          color: notification
+                                                                  .read
+                                                              ? Colors.grey
+                                                              : Colors.white,
                                                           fontSize: 16,
-                                                          fontWeight: FontWeight.bold,
+                                                          fontWeight:
+                                                              FontWeight.bold,
                                                         ),
                                                       ),
                                                       Text(
                                                         timeStr,
-                                                        style: GoogleFonts.vt323(
+                                                        style:
+                                                            GoogleFonts.vt323(
                                                           color: Colors.grey,
                                                           fontSize: 12,
                                                         ),
@@ -1462,7 +1648,9 @@ class _HomePageState extends State<HomePage> {
                                                   Text(
                                                     notification.description,
                                                     style: GoogleFonts.inter(
-                                                      color: notification.read ? Colors.grey[600] : Colors.grey[300],
+                                                      color: notification.read
+                                                          ? Colors.grey[600]
+                                                          : Colors.grey[300],
                                                       fontSize: 12,
                                                     ),
                                                   ),
@@ -1505,8 +1693,10 @@ class _HomePageState extends State<HomePage> {
     }
 
     Color statusColor = Colors.grey[700]!; // Stable
-    if (_wellnessPlan!.planStatus == "Improving") statusColor = Colors.green[700]!;
-    if (_wellnessPlan!.planStatus == "Needs Attention") statusColor = Colors.red[700]!;
+    if (_wellnessPlan!.planStatus == "Improving")
+      statusColor = Colors.green[700]!;
+    if (_wellnessPlan!.planStatus == "Needs Attention")
+      statusColor = Colors.red[700]!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1565,7 +1755,8 @@ class _HomePageState extends State<HomePage> {
                       letterSpacing: 1.2,
                     ),
                   ),
-                  Icon(Icons.assignment, color: Colors.blueAccent[700], size: 20),
+                  Icon(Icons.assignment,
+                      color: Colors.blueAccent[700], size: 20),
                 ],
               ),
               if (_wellnessPlan!.effectivenessExplanation != null) ...[
@@ -1579,7 +1770,8 @@ class _HomePageState extends State<HomePage> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.auto_awesome, color: Colors.black, size: 16),
+                      const Icon(Icons.auto_awesome,
+                          color: Colors.black, size: 16),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -1610,7 +1802,8 @@ class _HomePageState extends State<HomePage> {
                         onTap: () {
                           setState(() {
                             // Toggle completion status locally
-                            _wellnessPlan!.actions[index] = action.copyWith(isCompleted: !action.isCompleted);
+                            _wellnessPlan!.actions[index] = action.copyWith(
+                                isCompleted: !action.isCompleted);
                           });
                         },
                         child: Container(
@@ -1618,11 +1811,14 @@ class _HomePageState extends State<HomePage> {
                           height: 24,
                           margin: const EdgeInsets.only(right: 12, top: 2),
                           decoration: BoxDecoration(
-                            color: action.isCompleted ? Colors.blueAccent[700] : Colors.white,
+                            color: action.isCompleted
+                                ? Colors.blueAccent[700]
+                                : Colors.white,
                             border: Border.all(color: Colors.black, width: 2),
                           ),
-                          child: action.isCompleted 
-                              ? const Icon(Icons.check, size: 16, color: Colors.white)
+                          child: action.isCompleted
+                              ? const Icon(Icons.check,
+                                  size: 16, color: Colors.white)
                               : null,
                         ),
                       ),
@@ -1632,8 +1828,12 @@ class _HomePageState extends State<HomePage> {
                           style: GoogleFonts.inter(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color: action.isCompleted ? Colors.grey[500] : Colors.black87,
-                            decoration: action.isCompleted ? TextDecoration.lineThrough : null,
+                            color: action.isCompleted
+                                ? Colors.grey[500]
+                                : Colors.black87,
+                            decoration: action.isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
                           ),
                         ),
                       ),
@@ -1645,6 +1845,285 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildColorfulButtons() {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: ExpandableSmartCard(
+              id: 'journal_btn',
+              backgroundColor: const Color(0xFFFF9FF3), // Pink
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              collapsedChild: Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.book, size: 28, color: Colors.black),
+                    const SizedBox(height: 8),
+                    Text(
+                      "JOURNAL",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              expandedChild: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Private Journal",
+                      style: GoogleFonts.bebasNeue(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Write down your feelings safely. Data never leaves your device.",
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: GestureDetector(
+                        onTap: () {
+                          // No-op or define entry action
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            border: Border.all(color: Colors.black, width: 2),
+                          ),
+                          child: Center(
+                            child: Text(
+                              "NEW ENTRY",
+                              style: GoogleFonts.vt323(
+                                fontSize: 18,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ExpandableSmartCard(
+              id: 'community_wellness_btn',
+              backgroundColor: const Color(0xFF48DBFB), // Blue
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              collapsedChild: Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.people, size: 28, color: Colors.black),
+                    const SizedBox(height: 8),
+                    Text(
+                      "COMMUNITY\nWELLNESS",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              expandedChild: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Community Wellness",
+                      style: GoogleFonts.bebasNeue(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "View collective insights and wellness status of your teams.",
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "🟢 Engineering: Stable Wellness\n🟡 Operations: High Burnout Risk",
+                      style: GoogleFonts.vt323(
+                        fontSize: 16,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ExpandableSmartCard(
+              id: 'wellness_timeline_btn',
+              backgroundColor: const Color(0xFF1DD1A1), // Green
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              collapsedChild: Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.timeline, size: 28, color: Colors.black),
+                    const SizedBox(height: 8),
+                    Text(
+                      "WELLNESS\nTIMELINE",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              expandedChild: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Emotional Journey",
+                      style: GoogleFonts.bebasNeue(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Track how your burnout risk and sentiment change daily.",
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const WellnessTimelinePage(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            border: Border.all(color: Colors.black, width: 2),
+                          ),
+                          child: Center(
+                            child: Text(
+                              "OPEN FULL TIMELINE",
+                              style: GoogleFonts.vt323(
+                                fontSize: 18,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildColorfulButton({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required Color shadowColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+        decoration: BoxDecoration(
+          color: color,
+          border: Border.all(color: Colors.black, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: shadowColor,
+              offset: const Offset(4, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 28, color: Colors.black),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                color: Colors.black,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -3,7 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../domain/models/timeline_event.dart';
 import '../../services/timeline/timeline_service.dart';
+import '../../domain/models/wellness_journey_summary.dart';
+import '../../services/wellness_journey/wellness_journey_service.dart';
 import 'weekly_reflection_page.dart';
+import '../widgets/global_background.dart';
 
 class WellnessTimelinePage extends StatefulWidget {
   const WellnessTimelinePage({super.key});
@@ -14,13 +17,39 @@ class WellnessTimelinePage extends StatefulWidget {
 
 class _WellnessTimelinePageState extends State<WellnessTimelinePage> {
   bool _newestFirst = true;
+  WellnessJourneySummary? _summary;
+  bool _isLoadingSummary = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSummary();
+  }
+
+  Future<void> _loadSummary() async {
+    try {
+      final summary = await WellnessJourneyService.instance.getOrGenerateSummary();
+      if (mounted) {
+        setState(() {
+          _summary = summary;
+          _isLoadingSummary = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingSummary = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF8F8F8),
+        backgroundColor: const Color(0xFFFAFAFA),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black, size: 28),
@@ -47,11 +76,12 @@ class _WellnessTimelinePageState extends State<WellnessTimelinePage> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: StreamBuilder<List<TimelineEvent>>(
+      body: GlobalBackgroundLayer(
+        child: SafeArea(
+          child: StreamBuilder<List<TimelineEvent>>(
           stream: TimelineService.instance.watchTimelineEvents(newestFirst: _newestFirst),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+            if (snapshot.connectionState == ConnectionState.waiting && _isLoadingSummary) {
               return const Center(child: CircularProgressIndicator(color: Colors.black));
             }
             if (snapshot.hasError) {
@@ -63,24 +93,97 @@ class _WellnessTimelinePageState extends State<WellnessTimelinePage> {
               );
             }
             final events = snapshot.data ?? [];
-            if (events.isEmpty) {
-              return Center(
-                child: Text(
-                  "NO EVENTS YET.",
-                  style: GoogleFonts.vt323(fontSize: 24, color: Colors.grey),
-                ),
-              );
-            }
 
             return ListView.builder(
               padding: const EdgeInsets.all(20),
-              itemCount: events.length,
+              itemCount: events.length + 1,
               itemBuilder: (context, index) {
-                return _buildTimelineEvent(events[index]);
+                if (index == 0) {
+                  return _buildJourneySummaryCard();
+                }
+                
+                // Adjust index for events
+                final eventIndex = index - 1;
+                return _buildTimelineEvent(events[eventIndex]);
               },
             );
           },
         ),
+      ),
+      ),
+    );
+  }
+
+  Widget _buildJourneySummaryCard() {
+    if (_isLoadingSummary) {
+      return const Padding(
+        padding: EdgeInsets.only(bottom: 24),
+        child: Center(child: CircularProgressIndicator(color: Colors.black)),
+      );
+    }
+
+    if (_summary == null || _summary!.narrative.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 32),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.yellow,
+        border: Border.all(color: Colors.black, width: 3),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black,
+            offset: Offset(6, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: Colors.black, size: 28),
+              const SizedBox(width: 12),
+              Text(
+                "YOUR WELLNESS JOURNEY",
+                style: GoogleFonts.vt323(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            height: 2,
+            color: Colors.black.withOpacity(0.3),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _summary!.narrative,
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              color: Colors.black87,
+              height: 1.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              "Generated ${DateFormat('MMM dd, HH:mm').format(_summary!.generatedAt)}",
+              style: GoogleFonts.vt323(
+                fontSize: 14,
+                color: Colors.black54,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

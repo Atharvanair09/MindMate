@@ -19,4 +19,6 @@ class MoodLog {
   late double confidence;
 
   late bool isManual;
+
+  bool isDemoData = false;
 }

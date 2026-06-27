@@ -42,23 +42,28 @@ const ChatMessageSchema = CollectionSchema(
       name: r'emotionalIntensity',
       type: IsarType.double,
     ),
-    r'message': PropertySchema(
+    r'isDemoData': PropertySchema(
       id: 5,
+      name: r'isDemoData',
+      type: IsarType.bool,
+    ),
+    r'message': PropertySchema(
+      id: 6,
       name: r'message',
       type: IsarType.string,
     ),
     r'role': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'role',
       type: IsarType.string,
     ),
     r'sentimentScore': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'sentimentScore',
       type: IsarType.double,
     ),
     r'stressScore': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'stressScore',
       type: IsarType.double,
     )
@@ -127,10 +132,11 @@ void _chatMessageSerialize(
   writer.writeBool(offsets[2], object.embeddingGenerated);
   writer.writeLong(offsets[3], object.embeddingId);
   writer.writeDouble(offsets[4], object.emotionalIntensity);
-  writer.writeString(offsets[5], object.message);
-  writer.writeString(offsets[6], object.role);
-  writer.writeDouble(offsets[7], object.sentimentScore);
-  writer.writeDouble(offsets[8], object.stressScore);
+  writer.writeBool(offsets[5], object.isDemoData);
+  writer.writeString(offsets[6], object.message);
+  writer.writeString(offsets[7], object.role);
+  writer.writeDouble(offsets[8], object.sentimentScore);
+  writer.writeDouble(offsets[9], object.stressScore);
 }
 
 ChatMessage _chatMessageDeserialize(
@@ -146,10 +152,11 @@ ChatMessage _chatMessageDeserialize(
   object.embeddingId = reader.readLongOrNull(offsets[3]);
   object.emotionalIntensity = reader.readDoubleOrNull(offsets[4]);
   object.id = id;
-  object.message = reader.readString(offsets[5]);
-  object.role = reader.readString(offsets[6]);
-  object.sentimentScore = reader.readDoubleOrNull(offsets[7]);
-  object.stressScore = reader.readDoubleOrNull(offsets[8]);
+  object.isDemoData = reader.readBool(offsets[5]);
+  object.message = reader.readString(offsets[6]);
+  object.role = reader.readString(offsets[7]);
+  object.sentimentScore = reader.readDoubleOrNull(offsets[8]);
+  object.stressScore = reader.readDoubleOrNull(offsets[9]);
   return object;
 }
 
@@ -171,12 +178,14 @@ P _chatMessageDeserializeProp<P>(
     case 4:
       return (reader.readDoubleOrNull(offset)) as P;
     case 5:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
-      return (reader.readDoubleOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 8:
+      return (reader.readDoubleOrNull(offset)) as P;
+    case 9:
       return (reader.readDoubleOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -833,6 +842,16 @@ extension ChatMessageQueryFilter
     });
   }
 
+  QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition>
+      isDemoDataEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isDemoData',
+        value: value,
+      ));
+    });
+  }
+
   QueryBuilder<ChatMessage, ChatMessage, QAfterFilterCondition> messageEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1340,6 +1359,18 @@ extension ChatMessageQuerySortBy
     });
   }
 
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> sortByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> sortByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
   QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> sortByMessage() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'message', Sort.asc);
@@ -1469,6 +1500,18 @@ extension ChatMessageQuerySortThenBy
     });
   }
 
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> thenByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> thenByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
   QueryBuilder<ChatMessage, ChatMessage, QAfterSortBy> thenByMessage() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'message', Sort.asc);
@@ -1555,6 +1598,12 @@ extension ChatMessageQueryWhereDistinct
     });
   }
 
+  QueryBuilder<ChatMessage, ChatMessage, QDistinct> distinctByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isDemoData');
+    });
+  }
+
   QueryBuilder<ChatMessage, ChatMessage, QDistinct> distinctByMessage(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1619,6 +1668,12 @@ extension ChatMessageQueryProperty
       emotionalIntensityProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'emotionalIntensity');
+    });
+  }
+
+  QueryBuilder<ChatMessage, bool, QQueryOperations> isDemoDataProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isDemoData');
     });
   }
 

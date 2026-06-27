@@ -9,6 +9,7 @@ import '../widgets/diary_grid/models/diary_page_data.dart';
 import '../widgets/diary_grid/scrapbook_diary_editor.dart';
 import '../../domain/models/reflection_result.dart';
 import '../../services/ml/reflection_engine.dart';
+import '../widgets/global_background.dart';
 
 class LocalJournalViewPage extends StatefulWidget {
   final String journalId;
@@ -62,9 +63,9 @@ class _LocalJournalViewPageState extends State<LocalJournalViewPage> {
     final totalWordCount = _getTotalWordCount(pages);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F1E3),
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF6F1E3),
+        backgroundColor: const Color(0xFFFAFAFA),
         elevation: 0,
         toolbarHeight: 60,
         bottom: PreferredSize(
@@ -106,8 +107,9 @@ class _LocalJournalViewPageState extends State<LocalJournalViewPage> {
         ),
         centerTitle: false,
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 20.0),
+      body: GlobalBackgroundLayer(
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 20.0),
         itemCount: pages.length + 1,
         itemBuilder: (context, index) {
           if (index == pages.length) {
@@ -275,6 +277,7 @@ class _LocalJournalViewPageState extends State<LocalJournalViewPage> {
             ),
           );
         },
+      ),
       ),
     );
   }

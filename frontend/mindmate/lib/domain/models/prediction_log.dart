@@ -15,4 +15,6 @@ class PredictionLog {
   String? actualMood;
 
   bool correctedByUser = false;
+
+  bool isDemoData = false;
 }

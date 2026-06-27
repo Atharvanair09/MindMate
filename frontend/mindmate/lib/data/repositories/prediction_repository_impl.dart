@@ -2,6 +2,7 @@ import 'package:isar/isar.dart';
 import '../../domain/models/prediction_log.dart';
 import '../../domain/repositories/prediction_repository.dart';
 import '../database/isar_database.dart';
+import '../../core/state/demo_mode_provider.dart';
 
 class PredictionRepositoryImpl implements PredictionRepository {
   Isar get _isar => IsarDatabase.instance;
@@ -35,12 +36,12 @@ class PredictionRepositoryImpl implements PredictionRepository {
 
   @override
   Future<List<PredictionLog>> getAll() async {
-    return await _collection.where().findAll();
+    return await _collection.filter().isDemoDataEqualTo(DemoModeProvider.isDemoModeActive).findAll();
   }
 
   @override
   Stream<List<PredictionLog>> watch() {
-    return _collection.where().watch(fireImmediately: true);
+    return _collection.filter().isDemoDataEqualTo(DemoModeProvider.isDemoModeActive).watch(fireImmediately: true);
   }
 
   @override

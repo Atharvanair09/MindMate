@@ -4,7 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/state/user_provider.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../core/state/demo_mode_provider.dart';
+import '../../services/demo_mode/demo_mode_service.dart';
 import '../widgets/bottom_nav.dart';
+import '../widgets/global_background.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -12,9 +15,10 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F0E9), // Beige
+      backgroundColor: const Color(0xFFFAFAFA), // Brighter variant of white
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF2F0E9),
+        automaticallyImplyLeading: false,
+        backgroundColor: const Color(0xFFFAFAFA),
         elevation: 0,
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black),
@@ -40,8 +44,9 @@ class ProfilePage extends StatelessWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+      body: GlobalBackgroundLayer(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -60,10 +65,22 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 8),
             _buildSettingsList(context),
             const SizedBox(height: 32),
+            Text(
+              'DEVELOPER OPTIONS',
+              style: GoogleFonts.anton(
+                fontSize: 20,
+                color: Colors.black,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildDeveloperOptionsList(context),
+            const SizedBox(height: 32),
             _buildLogoutButton(context),
             const SizedBox(height: 40),
           ],
         ),
+      ),
       ),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
@@ -291,6 +308,74 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  Widget _buildDeveloperOptionsList(BuildContext context) {
+    return Consumer<DemoModeProvider>(
+      builder: (context, demoMode, _) {
+        if (demoMode.isSeeding) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return Column(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.black, width: 2),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'DEMO MODE',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Show simulated realistic timeline',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Switch(
+                    value: demoMode.isDemoMode,
+                    activeColor: const Color(0xFF00E5FF),
+                    onChanged: (val) async {
+                      await DemoModeService.instance.toggleDemoMode(context, val);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildSettingsTile(
+              title: 'RESET DEMO DATA',
+              subtitle: 'Delete generated demo data',
+              icon: Icons.refresh,
+              onTap: () async {
+                await DemoModeService.instance.resetDemoData(context);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Demo data cleared.')),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildSettingsTile({
     required String title,
     required String subtitle,
@@ -470,7 +555,7 @@ class ProfilePage extends StatelessWidget {
       barrierDismissible: true,
       builder: (ctx) => AlertDialog(
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        backgroundColor: const Color(0xFFF2F0E9),
+        backgroundColor: const Color(0xFFFAFAFA),
         title: Text(
           'LOG OUT?',
           style: GoogleFonts.anton(

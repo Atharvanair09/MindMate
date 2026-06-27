@@ -3,6 +3,7 @@ import '../../domain/models/chat_message.dart';
 import '../../domain/repositories/chat_repository.dart';
 import '../database/isar_database.dart';
 import '../../services/embedding/embedding_queue.dart';
+import '../../core/state/demo_mode_provider.dart';
 
 class ChatRepositoryImpl implements ChatRepository {
   Isar get _isar => IsarDatabase.instance;
@@ -39,12 +40,12 @@ class ChatRepositoryImpl implements ChatRepository {
 
   @override
   Future<List<ChatMessage>> getAll() async {
-    return await _collection.where().findAll();
+    return await _collection.filter().isDemoDataEqualTo(DemoModeProvider.isDemoModeActive).findAll();
   }
 
   @override
   Stream<List<ChatMessage>> watch() {
-    return _collection.where().watch(fireImmediately: true);
+    return _collection.filter().isDemoDataEqualTo(DemoModeProvider.isDemoModeActive).watch(fireImmediately: true);
   }
 
   @override
@@ -56,7 +57,7 @@ class ChatRepositoryImpl implements ChatRepository {
 
   @override
   Future<List<ChatMessage>> getHistory({required String conversationId}) async {
-    // In-memory filter. With generated code, use .filter().conversationIdEqualTo(conversationId).findAll()
+    // With generated code, use .filter().conversationIdEqualTo(conversationId).findAll()
     final all = await getAll();
     final history = all.where((msg) => msg.conversationId == conversationId).toList();
     history.sort((a, b) => a.createdAt.compareTo(b.createdAt));

@@ -16,6 +16,7 @@ import 'presentation/pages/pseudonymization_tester_page.dart';
 import 'presentation/pages/sanitized_storage_tester_page.dart';
 import 'presentation/pages/community_recommendation_tester_page.dart';
 import 'presentation/pages/situation_detection_tester_page.dart';
+import 'presentation/pages/burnout_forecast_tester_page.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/journal_repository_impl.dart';
 import 'data/repositories/chat_repository_impl.dart';
@@ -30,6 +31,7 @@ import 'services/ml/feature_pipeline.dart';
 import 'services/notifications/notification_service.dart';
 import 'core/state/session_initializer.dart';
 import 'core/state/app_state_observer.dart';
+import 'core/state/demo_mode_provider.dart';
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
@@ -38,6 +40,9 @@ void main() async {
   
   // Initialize app state awareness
   AppStateObserver.instance.initialize();
+
+  // Initialize demo mode state
+  await DemoModeProvider.initialize();
 
   // This removes the debug guidelines border if it was accidentally enabled
   debugPaintSizeEnabled = false;
@@ -65,6 +70,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthViewModel(repository: authRepository)),
+        ChangeNotifierProvider(create: (_) => DemoModeProvider()),
         ChangeNotifierProvider(
           create: (_) => preloadedProvider ?? UserProvider(),
         ),
@@ -111,6 +117,7 @@ class MindMateApp extends StatelessWidget {
         '/sanitized-storage-tester': (context) => const SanitizedStorageTesterPage(),
         '/community-recommendation-tester': (context) => const CommunityRecommendationTesterPage(),
         '/situation-detection-tester': (context) => const SituationDetectionTesterPage(),
+        '/burnout-forecast-tester': (context) => const BurnoutForecastTesterPage(),
       },
     );
   }

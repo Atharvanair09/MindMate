@@ -37,8 +37,13 @@ const PredictionLogSchema = CollectionSchema(
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
-    r'predictedMood': PropertySchema(
+    r'isDemoData': PropertySchema(
       id: 4,
+      name: r'isDemoData',
+      type: IsarType.bool,
+    ),
+    r'predictedMood': PropertySchema(
+      id: 5,
       name: r'predictedMood',
       type: IsarType.string,
     )
@@ -83,7 +88,8 @@ void _predictionLogSerialize(
   writer.writeDouble(offsets[1], object.confidence);
   writer.writeBool(offsets[2], object.correctedByUser);
   writer.writeDateTime(offsets[3], object.createdAt);
-  writer.writeString(offsets[4], object.predictedMood);
+  writer.writeBool(offsets[4], object.isDemoData);
+  writer.writeString(offsets[5], object.predictedMood);
 }
 
 PredictionLog _predictionLogDeserialize(
@@ -98,7 +104,8 @@ PredictionLog _predictionLogDeserialize(
   object.correctedByUser = reader.readBool(offsets[2]);
   object.createdAt = reader.readDateTime(offsets[3]);
   object.id = id;
-  object.predictedMood = reader.readString(offsets[4]);
+  object.isDemoData = reader.readBool(offsets[4]);
+  object.predictedMood = reader.readString(offsets[5]);
   return object;
 }
 
@@ -118,6 +125,8 @@ P _predictionLogDeserializeProp<P>(
     case 3:
       return (reader.readDateTime(offset)) as P;
     case 4:
+      return (reader.readBool(offset)) as P;
+    case 5:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -561,6 +570,16 @@ extension PredictionLogQueryFilter
   }
 
   QueryBuilder<PredictionLog, PredictionLog, QAfterFilterCondition>
+      isDemoDataEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isDemoData',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<PredictionLog, PredictionLog, QAfterFilterCondition>
       predictedMoodEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -758,6 +777,19 @@ extension PredictionLogQuerySortBy
     });
   }
 
+  QueryBuilder<PredictionLog, PredictionLog, QAfterSortBy> sortByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PredictionLog, PredictionLog, QAfterSortBy>
+      sortByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
   QueryBuilder<PredictionLog, PredictionLog, QAfterSortBy>
       sortByPredictedMood() {
     return QueryBuilder.apply(this, (query) {
@@ -840,6 +872,19 @@ extension PredictionLogQuerySortThenBy
     });
   }
 
+  QueryBuilder<PredictionLog, PredictionLog, QAfterSortBy> thenByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PredictionLog, PredictionLog, QAfterSortBy>
+      thenByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
   QueryBuilder<PredictionLog, PredictionLog, QAfterSortBy>
       thenByPredictedMood() {
     return QueryBuilder.apply(this, (query) {
@@ -883,6 +928,12 @@ extension PredictionLogQueryWhereDistinct
     });
   }
 
+  QueryBuilder<PredictionLog, PredictionLog, QDistinct> distinctByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isDemoData');
+    });
+  }
+
   QueryBuilder<PredictionLog, PredictionLog, QDistinct> distinctByPredictedMood(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -922,6 +973,12 @@ extension PredictionLogQueryProperty
   QueryBuilder<PredictionLog, DateTime, QQueryOperations> createdAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'createdAt');
+    });
+  }
+
+  QueryBuilder<PredictionLog, bool, QQueryOperations> isDemoDataProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isDemoData');
     });
   }
 

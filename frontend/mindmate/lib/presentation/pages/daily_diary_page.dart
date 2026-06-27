@@ -7,6 +7,7 @@ import '../widgets/diary_grid/models/diary_image_block.dart';
 import '../widgets/diary_grid/scrapbook_diary_editor.dart';
 import 'package:provider/provider.dart';
 import '../../core/state/diary_provider.dart';
+import '../widgets/global_background.dart';
 
 class DailyDiaryPage extends StatefulWidget {
   const DailyDiaryPage({super.key});
@@ -183,9 +184,9 @@ class _DailyDiaryPageState extends State<DailyDiaryPage> {
     final totalWordCount = _getTotalWordCount(_pages);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F1E3),
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF6F1E3),
+        backgroundColor: const Color(0xFFFAFAFA),
         elevation: 0,
         toolbarHeight: 60,
         bottom: PreferredSize(
@@ -259,9 +260,10 @@ class _DailyDiaryPageState extends State<DailyDiaryPage> {
         ],
         centerTitle: false,
       ),
-      body: Column(
-        children: [
-          // Pages Area
+      body: GlobalBackgroundLayer(
+        child: Column(
+          children: [
+            // Pages Area
           Expanded(
             child: PageView.builder(
               controller: _pageController,
@@ -367,6 +369,7 @@ class _DailyDiaryPageState extends State<DailyDiaryPage> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

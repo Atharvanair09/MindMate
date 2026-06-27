@@ -16,4 +16,6 @@ class DailyMoodCheckIn {
   late DateTime updatedAt;
 
   late String source; // manual, smart_prompt
+
+  bool isDemoData = false;
 }

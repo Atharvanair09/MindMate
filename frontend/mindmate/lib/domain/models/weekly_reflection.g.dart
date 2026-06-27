@@ -82,88 +82,93 @@ const WeeklyReflectionSchema = CollectionSchema(
       name: r'influenceScores',
       type: IsarType.stringList,
     ),
-    r'journalContribution': PropertySchema(
+    r'isDemoData': PropertySchema(
       id: 13,
+      name: r'isDemoData',
+      type: IsarType.bool,
+    ),
+    r'journalContribution': PropertySchema(
+      id: 14,
       name: r'journalContribution',
       type: IsarType.double,
     ),
     r'keyPatterns': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'keyPatterns',
       type: IsarType.stringList,
     ),
     r'moodContribution': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'moodContribution',
       type: IsarType.double,
     ),
     r'moodTrend': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'moodTrend',
       type: IsarType.string,
     ),
     r'mostNegativeInfluence': PropertySchema(
-      id: 17,
+      id: 18,
       name: r'mostNegativeInfluence',
       type: IsarType.string,
     ),
     r'mostPositiveInfluence': PropertySchema(
-      id: 18,
+      id: 19,
       name: r'mostPositiveInfluence',
       type: IsarType.string,
     ),
     r'negativeIndicators': PropertySchema(
-      id: 19,
+      id: 20,
       name: r'negativeIndicators',
       type: IsarType.stringList,
     ),
     r'negativeInfluenceReason': PropertySchema(
-      id: 20,
+      id: 21,
       name: r'negativeInfluenceReason',
       type: IsarType.string,
     ),
     r'positiveIndicators': PropertySchema(
-      id: 21,
+      id: 22,
       name: r'positiveIndicators',
       type: IsarType.stringList,
     ),
     r'positiveInfluenceReason': PropertySchema(
-      id: 22,
+      id: 23,
       name: r'positiveInfluenceReason',
       type: IsarType.string,
     ),
     r'rawConfidence': PropertySchema(
-      id: 23,
+      id: 24,
       name: r'rawConfidence',
       type: IsarType.double,
     ),
     r'suggestion': PropertySchema(
-      id: 24,
+      id: 25,
       name: r'suggestion',
       type: IsarType.string,
     ),
     r'summary': PropertySchema(
-      id: 25,
+      id: 26,
       name: r'summary',
       type: IsarType.string,
     ),
     r'topNegativeScore': PropertySchema(
-      id: 26,
+      id: 27,
       name: r'topNegativeScore',
       type: IsarType.double,
     ),
     r'topPositiveScore': PropertySchema(
-      id: 27,
+      id: 28,
       name: r'topPositiveScore',
       type: IsarType.double,
     ),
     r'weekEndDate': PropertySchema(
-      id: 28,
+      id: 29,
       name: r'weekEndDate',
       type: IsarType.dateTime,
     ),
     r'weekStartDate': PropertySchema(
-      id: 29,
+      id: 30,
       name: r'weekStartDate',
       type: IsarType.dateTime,
     )
@@ -261,23 +266,24 @@ void _weeklyReflectionSerialize(
   writer.writeDateTime(offsets[10], object.generatedAt);
   writer.writeString(offsets[11], object.historySufficiency);
   writer.writeStringList(offsets[12], object.influenceScores);
-  writer.writeDouble(offsets[13], object.journalContribution);
-  writer.writeStringList(offsets[14], object.keyPatterns);
-  writer.writeDouble(offsets[15], object.moodContribution);
-  writer.writeString(offsets[16], object.moodTrend);
-  writer.writeString(offsets[17], object.mostNegativeInfluence);
-  writer.writeString(offsets[18], object.mostPositiveInfluence);
-  writer.writeStringList(offsets[19], object.negativeIndicators);
-  writer.writeString(offsets[20], object.negativeInfluenceReason);
-  writer.writeStringList(offsets[21], object.positiveIndicators);
-  writer.writeString(offsets[22], object.positiveInfluenceReason);
-  writer.writeDouble(offsets[23], object.rawConfidence);
-  writer.writeString(offsets[24], object.suggestion);
-  writer.writeString(offsets[25], object.summary);
-  writer.writeDouble(offsets[26], object.topNegativeScore);
-  writer.writeDouble(offsets[27], object.topPositiveScore);
-  writer.writeDateTime(offsets[28], object.weekEndDate);
-  writer.writeDateTime(offsets[29], object.weekStartDate);
+  writer.writeBool(offsets[13], object.isDemoData);
+  writer.writeDouble(offsets[14], object.journalContribution);
+  writer.writeStringList(offsets[15], object.keyPatterns);
+  writer.writeDouble(offsets[16], object.moodContribution);
+  writer.writeString(offsets[17], object.moodTrend);
+  writer.writeString(offsets[18], object.mostNegativeInfluence);
+  writer.writeString(offsets[19], object.mostPositiveInfluence);
+  writer.writeStringList(offsets[20], object.negativeIndicators);
+  writer.writeString(offsets[21], object.negativeInfluenceReason);
+  writer.writeStringList(offsets[22], object.positiveIndicators);
+  writer.writeString(offsets[23], object.positiveInfluenceReason);
+  writer.writeDouble(offsets[24], object.rawConfidence);
+  writer.writeString(offsets[25], object.suggestion);
+  writer.writeString(offsets[26], object.summary);
+  writer.writeDouble(offsets[27], object.topNegativeScore);
+  writer.writeDouble(offsets[28], object.topPositiveScore);
+  writer.writeDateTime(offsets[29], object.weekEndDate);
+  writer.writeDateTime(offsets[30], object.weekStartDate);
 }
 
 WeeklyReflection _weeklyReflectionDeserialize(
@@ -301,23 +307,24 @@ WeeklyReflection _weeklyReflectionDeserialize(
   object.historySufficiency = reader.readString(offsets[11]);
   object.id = id;
   object.influenceScores = reader.readStringList(offsets[12]) ?? [];
-  object.journalContribution = reader.readDouble(offsets[13]);
-  object.keyPatterns = reader.readStringList(offsets[14]) ?? [];
-  object.moodContribution = reader.readDouble(offsets[15]);
-  object.moodTrend = reader.readString(offsets[16]);
-  object.mostNegativeInfluence = reader.readString(offsets[17]);
-  object.mostPositiveInfluence = reader.readString(offsets[18]);
-  object.negativeIndicators = reader.readStringList(offsets[19]) ?? [];
-  object.negativeInfluenceReason = reader.readString(offsets[20]);
-  object.positiveIndicators = reader.readStringList(offsets[21]) ?? [];
-  object.positiveInfluenceReason = reader.readString(offsets[22]);
-  object.rawConfidence = reader.readDouble(offsets[23]);
-  object.suggestion = reader.readString(offsets[24]);
-  object.summary = reader.readString(offsets[25]);
-  object.topNegativeScore = reader.readDouble(offsets[26]);
-  object.topPositiveScore = reader.readDouble(offsets[27]);
-  object.weekEndDate = reader.readDateTime(offsets[28]);
-  object.weekStartDate = reader.readDateTime(offsets[29]);
+  object.isDemoData = reader.readBool(offsets[13]);
+  object.journalContribution = reader.readDouble(offsets[14]);
+  object.keyPatterns = reader.readStringList(offsets[15]) ?? [];
+  object.moodContribution = reader.readDouble(offsets[16]);
+  object.moodTrend = reader.readString(offsets[17]);
+  object.mostNegativeInfluence = reader.readString(offsets[18]);
+  object.mostPositiveInfluence = reader.readString(offsets[19]);
+  object.negativeIndicators = reader.readStringList(offsets[20]) ?? [];
+  object.negativeInfluenceReason = reader.readString(offsets[21]);
+  object.positiveIndicators = reader.readStringList(offsets[22]) ?? [];
+  object.positiveInfluenceReason = reader.readString(offsets[23]);
+  object.rawConfidence = reader.readDouble(offsets[24]);
+  object.suggestion = reader.readString(offsets[25]);
+  object.summary = reader.readString(offsets[26]);
+  object.topNegativeScore = reader.readDouble(offsets[27]);
+  object.topPositiveScore = reader.readDouble(offsets[28]);
+  object.weekEndDate = reader.readDateTime(offsets[29]);
+  object.weekStartDate = reader.readDateTime(offsets[30]);
   return object;
 }
 
@@ -355,38 +362,40 @@ P _weeklyReflectionDeserializeProp<P>(
     case 12:
       return (reader.readStringList(offset) ?? []) as P;
     case 13:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 14:
-      return (reader.readStringList(offset) ?? []) as P;
-    case 15:
       return (reader.readDouble(offset)) as P;
+    case 15:
+      return (reader.readStringList(offset) ?? []) as P;
     case 16:
-      return (reader.readString(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 17:
       return (reader.readString(offset)) as P;
     case 18:
       return (reader.readString(offset)) as P;
     case 19:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readString(offset)) as P;
     case 20:
-      return (reader.readString(offset)) as P;
-    case 21:
       return (reader.readStringList(offset) ?? []) as P;
+    case 21:
+      return (reader.readString(offset)) as P;
     case 22:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 23:
-      return (reader.readDouble(offset)) as P;
-    case 24:
       return (reader.readString(offset)) as P;
+    case 24:
+      return (reader.readDouble(offset)) as P;
     case 25:
       return (reader.readString(offset)) as P;
     case 26:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 27:
       return (reader.readDouble(offset)) as P;
     case 28:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 29:
+      return (reader.readDateTime(offset)) as P;
+    case 30:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1848,6 +1857,16 @@ extension WeeklyReflectionQueryFilter
         upper,
         includeUpper,
       );
+    });
+  }
+
+  QueryBuilder<WeeklyReflection, WeeklyReflection, QAfterFilterCondition>
+      isDemoDataEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isDemoData',
+        value: value,
+      ));
     });
   }
 
@@ -4108,6 +4127,20 @@ extension WeeklyReflectionQuerySortBy
   }
 
   QueryBuilder<WeeklyReflection, WeeklyReflection, QAfterSortBy>
+      sortByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WeeklyReflection, WeeklyReflection, QAfterSortBy>
+      sortByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
+  QueryBuilder<WeeklyReflection, WeeklyReflection, QAfterSortBy>
       sortByJournalContribution() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'journalContribution', Sort.asc);
@@ -4488,6 +4521,20 @@ extension WeeklyReflectionQuerySortThenBy
   }
 
   QueryBuilder<WeeklyReflection, WeeklyReflection, QAfterSortBy>
+      thenByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<WeeklyReflection, WeeklyReflection, QAfterSortBy>
+      thenByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
+  QueryBuilder<WeeklyReflection, WeeklyReflection, QAfterSortBy>
       thenByJournalContribution() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'journalContribution', Sort.asc);
@@ -4779,6 +4826,13 @@ extension WeeklyReflectionQueryWhereDistinct
   }
 
   QueryBuilder<WeeklyReflection, WeeklyReflection, QDistinct>
+      distinctByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isDemoData');
+    });
+  }
+
+  QueryBuilder<WeeklyReflection, WeeklyReflection, QDistinct>
       distinctByJournalContribution() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'journalContribution');
@@ -4998,6 +5052,12 @@ extension WeeklyReflectionQueryProperty
       influenceScoresProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'influenceScores');
+    });
+  }
+
+  QueryBuilder<WeeklyReflection, bool, QQueryOperations> isDemoDataProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isDemoData');
     });
   }
 

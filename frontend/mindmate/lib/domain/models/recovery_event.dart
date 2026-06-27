@@ -30,4 +30,6 @@ class RecoveryEvent {
   late String summary;
 
   late DateTime generatedAt;
+
+  bool isDemoData = false;
 }

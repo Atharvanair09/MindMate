@@ -42,23 +42,28 @@ const AppNotificationSchema = CollectionSchema(
       name: r'followUpSituation',
       type: IsarType.string,
     ),
-    r'read': PropertySchema(
+    r'isDemoData': PropertySchema(
       id: 5,
+      name: r'isDemoData',
+      type: IsarType.bool,
+    ),
+    r'read': PropertySchema(
+      id: 6,
       name: r'read',
       type: IsarType.bool,
     ),
     r'responded': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'responded',
       type: IsarType.bool,
     ),
     r'title': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'title',
       type: IsarType.string,
     ),
     r'type': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'type',
       type: IsarType.string,
     )
@@ -118,10 +123,11 @@ void _appNotificationSerialize(
   writer.writeString(offsets[2], object.followUpCategory);
   writer.writeString(offsets[3], object.followUpHash);
   writer.writeString(offsets[4], object.followUpSituation);
-  writer.writeBool(offsets[5], object.read);
-  writer.writeBool(offsets[6], object.responded);
-  writer.writeString(offsets[7], object.title);
-  writer.writeString(offsets[8], object.type);
+  writer.writeBool(offsets[5], object.isDemoData);
+  writer.writeBool(offsets[6], object.read);
+  writer.writeBool(offsets[7], object.responded);
+  writer.writeString(offsets[8], object.title);
+  writer.writeString(offsets[9], object.type);
 }
 
 AppNotification _appNotificationDeserialize(
@@ -137,10 +143,11 @@ AppNotification _appNotificationDeserialize(
   object.followUpHash = reader.readStringOrNull(offsets[3]);
   object.followUpSituation = reader.readStringOrNull(offsets[4]);
   object.id = id;
-  object.read = reader.readBool(offsets[5]);
-  object.responded = reader.readBoolOrNull(offsets[6]);
-  object.title = reader.readString(offsets[7]);
-  object.type = reader.readString(offsets[8]);
+  object.isDemoData = reader.readBool(offsets[5]);
+  object.read = reader.readBool(offsets[6]);
+  object.responded = reader.readBoolOrNull(offsets[7]);
+  object.title = reader.readString(offsets[8]);
+  object.type = reader.readString(offsets[9]);
   return object;
 }
 
@@ -164,10 +171,12 @@ P _appNotificationDeserializeProp<P>(
     case 5:
       return (reader.readBool(offset)) as P;
     case 6:
-      return (reader.readBoolOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 7:
-      return (reader.readString(offset)) as P;
+      return (reader.readBoolOrNull(offset)) as P;
     case 8:
+      return (reader.readString(offset)) as P;
+    case 9:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -980,6 +989,16 @@ extension AppNotificationQueryFilter
   }
 
   QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
+      isDemoDataEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isDemoData',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterFilterCondition>
       readEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -1368,6 +1387,20 @@ extension AppNotificationQuerySortBy
     });
   }
 
+  QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
+      sortByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
+      sortByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppNotification, AppNotification, QAfterSortBy> sortByRead() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'read', Sort.asc);
@@ -1506,6 +1539,20 @@ extension AppNotificationQuerySortThenBy
     });
   }
 
+  QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
+      thenByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppNotification, AppNotification, QAfterSortBy>
+      thenByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppNotification, AppNotification, QAfterSortBy> thenByRead() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'read', Sort.asc);
@@ -1599,6 +1646,13 @@ extension AppNotificationQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AppNotification, AppNotification, QDistinct>
+      distinctByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isDemoData');
+    });
+  }
+
   QueryBuilder<AppNotification, AppNotification, QDistinct> distinctByRead() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'read');
@@ -1667,6 +1721,12 @@ extension AppNotificationQueryProperty
       followUpSituationProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'followUpSituation');
+    });
+  }
+
+  QueryBuilder<AppNotification, bool, QQueryOperations> isDemoDataProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isDemoData');
     });
   }
 

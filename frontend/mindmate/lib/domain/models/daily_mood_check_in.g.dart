@@ -27,18 +27,23 @@ const DailyMoodCheckInSchema = CollectionSchema(
       name: r'date',
       type: IsarType.dateTime,
     ),
-    r'moodLevel': PropertySchema(
+    r'isDemoData': PropertySchema(
       id: 2,
+      name: r'isDemoData',
+      type: IsarType.bool,
+    ),
+    r'moodLevel': PropertySchema(
+      id: 3,
       name: r'moodLevel',
       type: IsarType.string,
     ),
     r'source': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'source',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -90,9 +95,10 @@ void _dailyMoodCheckInSerialize(
 ) {
   writer.writeDateTime(offsets[0], object.createdAt);
   writer.writeDateTime(offsets[1], object.date);
-  writer.writeString(offsets[2], object.moodLevel);
-  writer.writeString(offsets[3], object.source);
-  writer.writeDateTime(offsets[4], object.updatedAt);
+  writer.writeBool(offsets[2], object.isDemoData);
+  writer.writeString(offsets[3], object.moodLevel);
+  writer.writeString(offsets[4], object.source);
+  writer.writeDateTime(offsets[5], object.updatedAt);
 }
 
 DailyMoodCheckIn _dailyMoodCheckInDeserialize(
@@ -105,9 +111,10 @@ DailyMoodCheckIn _dailyMoodCheckInDeserialize(
   object.createdAt = reader.readDateTime(offsets[0]);
   object.date = reader.readDateTime(offsets[1]);
   object.id = id;
-  object.moodLevel = reader.readString(offsets[2]);
-  object.source = reader.readString(offsets[3]);
-  object.updatedAt = reader.readDateTime(offsets[4]);
+  object.isDemoData = reader.readBool(offsets[2]);
+  object.moodLevel = reader.readString(offsets[3]);
+  object.source = reader.readString(offsets[4]);
+  object.updatedAt = reader.readDateTime(offsets[5]);
   return object;
 }
 
@@ -123,10 +130,12 @@ P _dailyMoodCheckInDeserializeProp<P>(
     case 1:
       return (reader.readDateTime(offset)) as P;
     case 2:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 3:
       return (reader.readString(offset)) as P;
     case 4:
+      return (reader.readString(offset)) as P;
+    case 5:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -552,6 +561,16 @@ extension DailyMoodCheckInQueryFilter
   }
 
   QueryBuilder<DailyMoodCheckIn, DailyMoodCheckIn, QAfterFilterCondition>
+      isDemoDataEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isDemoData',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyMoodCheckIn, DailyMoodCheckIn, QAfterFilterCondition>
       moodLevelEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -916,6 +935,20 @@ extension DailyMoodCheckInQuerySortBy
   }
 
   QueryBuilder<DailyMoodCheckIn, DailyMoodCheckIn, QAfterSortBy>
+      sortByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DailyMoodCheckIn, DailyMoodCheckIn, QAfterSortBy>
+      sortByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DailyMoodCheckIn, DailyMoodCheckIn, QAfterSortBy>
       sortByMoodLevel() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'moodLevel', Sort.asc);
@@ -1001,6 +1034,20 @@ extension DailyMoodCheckInQuerySortThenBy
   }
 
   QueryBuilder<DailyMoodCheckIn, DailyMoodCheckIn, QAfterSortBy>
+      thenByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DailyMoodCheckIn, DailyMoodCheckIn, QAfterSortBy>
+      thenByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DailyMoodCheckIn, DailyMoodCheckIn, QAfterSortBy>
       thenByMoodLevel() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'moodLevel', Sort.asc);
@@ -1059,6 +1106,13 @@ extension DailyMoodCheckInQueryWhereDistinct
   }
 
   QueryBuilder<DailyMoodCheckIn, DailyMoodCheckIn, QDistinct>
+      distinctByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isDemoData');
+    });
+  }
+
+  QueryBuilder<DailyMoodCheckIn, DailyMoodCheckIn, QDistinct>
       distinctByMoodLevel({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'moodLevel', caseSensitive: caseSensitive);
@@ -1098,6 +1152,12 @@ extension DailyMoodCheckInQueryProperty
   QueryBuilder<DailyMoodCheckIn, DateTime, QQueryOperations> dateProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'date');
+    });
+  }
+
+  QueryBuilder<DailyMoodCheckIn, bool, QQueryOperations> isDemoDataProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isDemoData');
     });
   }
 

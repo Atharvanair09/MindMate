@@ -44,6 +44,8 @@ class ReflectionEngine {
           .resolvedEqualTo(true)
           .and()
           .userResponseIsNotNull()
+          .and()
+          .resolvedAtBetween(startOfDay, endOfDay)
           .sortByResolvedAtDesc()
           .findFirst();
       userContext = resolvedFollowUp?.userResponse;
@@ -382,12 +384,17 @@ class ReflectionEngine {
   Future<ReflectionResult> getReflectionForVector(MoodFeatureVector vector) async {
     String? userContext;
     try {
+      final startOfDay = DateTime(vector.date.year, vector.date.month, vector.date.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+      
       final resolvedFollowUp = await isar.reflectionFollowUps
           .where()
           .filter()
           .resolvedEqualTo(true)
           .and()
           .userResponseIsNotNull()
+          .and()
+          .resolvedAtBetween(startOfDay, endOfDay)
           .sortByResolvedAtDesc()
           .findFirst();
       userContext = resolvedFollowUp?.userResponse;

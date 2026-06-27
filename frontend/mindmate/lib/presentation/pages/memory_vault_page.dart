@@ -8,6 +8,7 @@ import '../../domain/models/journal_entry.dart';
 import 'local_chat_view_page.dart';
 import 'local_journal_view_page.dart';
 import '../widgets/activity_heatmap.dart';
+import '../widgets/global_background.dart';
 
 class MemoryVaultPage extends StatefulWidget {
   const MemoryVaultPage({super.key});
@@ -45,9 +46,9 @@ class _MemoryVaultPageState extends State<MemoryVaultPage> with SingleTickerProv
     final archiveProvider = context.watch<ArchiveProvider>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F0E9), // Beige
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF2F0E9),
+        backgroundColor: const Color(0xFFFAFAFA),
         elevation: 0,
         centerTitle: true,
         bottom: PreferredSize(
@@ -66,9 +67,10 @@ class _MemoryVaultPageState extends State<MemoryVaultPage> with SingleTickerProv
           ),
         ),
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 16),
+      body: GlobalBackgroundLayer(
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
           _buildTabs(),
           const SizedBox(height: 16),
           _buildSearchBar(archiveProvider),
@@ -86,6 +88,7 @@ class _MemoryVaultPageState extends State<MemoryVaultPage> with SingleTickerProv
                   ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -230,7 +233,7 @@ class _MemoryVaultPageState extends State<MemoryVaultPage> with SingleTickerProv
               context: context,
               builder: (BuildContext context) {
                 return AlertDialog(
-                  backgroundColor: const Color(0xFFF2F0E9),
+                  backgroundColor: const Color(0xFFFAFAFA),
                   shape: const RoundedRectangleBorder(
                     side: BorderSide(color: Colors.black, width: 2),
                     borderRadius: BorderRadius.zero,
@@ -500,7 +503,7 @@ class _MemoryVaultPageState extends State<MemoryVaultPage> with SingleTickerProv
               context: context,
               builder: (BuildContext context) {
                 return AlertDialog(
-                  backgroundColor: const Color(0xFFF2F0E9),
+                  backgroundColor: const Color(0xFFFAFAFA),
                   shape: const RoundedRectangleBorder(
                     side: BorderSide(color: Colors.black, width: 2),
                     borderRadius: BorderRadius.zero,

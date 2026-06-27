@@ -26,6 +26,8 @@ import '../../domain/models/pattern_insight.dart';
 import '../../services/pattern/pattern_discovery_service.dart';
 import '../../services/timeline/timeline_service.dart';
 import '../../services/notifications/notification_scheduler_service.dart';
+import '../../domain/models/preventive_intervention_plan.dart';
+import '../../services/wellness/preventive_intervention_planner.dart';
 
 class DeveloperDebugPage extends StatefulWidget {
   const DeveloperDebugPage({super.key});
@@ -76,6 +78,10 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
   WeeklyReflection? _weeklyReflection;
   int _weeklyDaysAnalysed = 0;
   bool _isGeneratingWeekly = false;
+
+  // Preventive Intervention Planner debug
+  PreventiveInterventionPlan? _preventivePlan;
+  bool _isGeneratingPreventivePlan = false;
 
   // Recovery Detection debug
   List<RecoveryEvent> _recoveryEvents = [];
@@ -827,8 +833,8 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
                   decoration: BoxDecoration(
-                    color: _isDiscoveringPatterns ? Colors.grey[800] : Colors.blueAccent,
-                    border: Border.all(color: Colors.blueAccent, width: 2),
+                    color: _isDiscoveringPatterns ? Colors.grey[800] : Colors.amberAccent,
+                    border: Border.all(color: Colors.amberAccent, width: 2),
                   ),
                   child: _isDiscoveringPatterns
                       ? const SizedBox(
@@ -836,7 +842,7 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
                           width: 18,
                           child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
                       : Text(
-                          "TRIGGER PATTERN DISCOVERY",
+                          "DISCOVER PATTERNS",
                           style: GoogleFonts.vt323(
                             color: Colors.black,
                             fontSize: 20,
@@ -848,6 +854,68 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
             ]),
             _buildDashedLine(),
             const SizedBox(height: 20),
+
+            // ── Phase 8.3 Preventive Intervention Planner ─────────────
+            _buildSection("Preventive Intervention Planner", [
+              if (_preventivePlan == null)
+                _buildValueRow("Generate a plan to see preventive actions", isCyan: true)
+              else ...[
+                _buildValueRow("Forecast Trend: ${_preventivePlan!.forecastTrend}", isCyan: true),
+                _buildValueRow("Generated At: ${DateFormat('MMM d, h:mm a').format(_preventivePlan!.generatedAt.toLocal())}"),
+                const SizedBox(height: 12),
+                _buildValueRow("Top Recommended Actions:", isCyan: true),
+                ..._preventivePlan!.actions.asMap().entries.map((entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12, left: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildValueRow("${entry.key + 1}. ${entry.value.text}"),
+                      _buildValueRow("   Why: ${entry.value.explanation}", isCyan: true),
+                    ],
+                  ),
+                )),
+              ],
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: _isGeneratingPreventivePlan
+                    ? null
+                    : () async {
+                        setState(() => _isGeneratingPreventivePlan = true);
+                        try {
+                          final p = await PreventiveInterventionPlanner.instance.generatePlan();
+                          setState(() {
+                            _preventivePlan = p;
+                            _isGeneratingPreventivePlan = false;
+                          });
+                        } catch (e) {
+                          setState(() => _isGeneratingPreventivePlan = false);
+                        }
+                      },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: _isGeneratingPreventivePlan ? Colors.grey[800] : Colors.greenAccent,
+                    border: Border.all(color: Colors.greenAccent, width: 2),
+                  ),
+                  child: _isGeneratingPreventivePlan
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                      : Text(
+                          "GENERATE PREVENTIVE PLAN",
+                          style: GoogleFonts.vt323(
+                            color: Colors.black,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ),
+            ]),
+            _buildDashedLine(),
+            const SizedBox(height: 20),
+
 
             // ── Timeline Events Debug ────────────────────────────
             _buildSection("Timeline Events Debug", [
@@ -1042,6 +1110,34 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
                   ),
                   child: Text(
                     "TRIGGER CONTEXTUAL FOLLOW-UP",
+                    style: GoogleFonts.vt323(
+                      color: Colors.black,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+            _buildDashedLine(),
+            const SizedBox(height: 20),
+
+            // ── AI Burnout Forecast Engine ────────────────────────────────
+            _buildSection("Burnout Forecast Engine", [
+              _buildValueRow("Test burnout forecasting and trends.", isCyan: true),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, '/burnout-forecast-tester');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.greenAccent,
+                    border: Border.all(color: Colors.greenAccent, width: 2),
+                  ),
+                  child: Text(
+                    "OPEN BURNOUT FORECAST TESTER",
                     style: GoogleFonts.vt323(
                       color: Colors.black,
                       fontSize: 20,

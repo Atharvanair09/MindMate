@@ -10,6 +10,7 @@ import '../../services/weekly_reflection/weekly_reflection_service.dart';
 import '../../data/database/isar_database.dart';
 import '../../domain/models/recovery_event.dart';
 import '../../services/ml/recovery_detection_service.dart';
+import '../widgets/global_background.dart';
 
 class MoodCheckInPage extends StatefulWidget {
   const MoodCheckInPage({super.key});
@@ -50,15 +51,12 @@ class _MoodCheckInPageState extends State<MoodCheckInPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF6EE), // Light beige background
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFAF6EE),
+        backgroundColor: const Color(0xFFFAFAFA),
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
         title: Text(
           "JOURNAL",
           style: GoogleFonts.anton(
@@ -75,9 +73,10 @@ class _MoodCheckInPageState extends State<MoodCheckInPage> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: GlobalBackgroundLayer(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Streak Banner
             Container(
@@ -204,6 +203,7 @@ class _MoodCheckInPageState extends State<MoodCheckInPage> {
             ),
           ],
         ),
+      ),
       ),
       bottomNavigationBar: const MindMateBottomNav(currentIndex: 2),
     );

@@ -37,33 +37,38 @@ const RecoveryEventSchema = CollectionSchema(
       name: r'generatedAt',
       type: IsarType.dateTime,
     ),
-    r'possibleTriggers': PropertySchema(
+    r'isDemoData': PropertySchema(
       id: 4,
+      name: r'isDemoData',
+      type: IsarType.bool,
+    ),
+    r'possibleTriggers': PropertySchema(
+      id: 5,
       name: r'possibleTriggers',
       type: IsarType.stringList,
     ),
     r'recoveryStrength': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'recoveryStrength',
       type: IsarType.string,
     ),
     r'startBurnout': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'startBurnout',
       type: IsarType.double,
     ),
     r'startDate': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'startDate',
       type: IsarType.dateTime,
     ),
     r'startMood': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'startMood',
       type: IsarType.double,
     ),
     r'summary': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'summary',
       type: IsarType.string,
     )
@@ -137,12 +142,13 @@ void _recoveryEventSerialize(
   writer.writeDateTime(offsets[1], object.endDate);
   writer.writeDouble(offsets[2], object.endMood);
   writer.writeDateTime(offsets[3], object.generatedAt);
-  writer.writeStringList(offsets[4], object.possibleTriggers);
-  writer.writeString(offsets[5], object.recoveryStrength);
-  writer.writeDouble(offsets[6], object.startBurnout);
-  writer.writeDateTime(offsets[7], object.startDate);
-  writer.writeDouble(offsets[8], object.startMood);
-  writer.writeString(offsets[9], object.summary);
+  writer.writeBool(offsets[4], object.isDemoData);
+  writer.writeStringList(offsets[5], object.possibleTriggers);
+  writer.writeString(offsets[6], object.recoveryStrength);
+  writer.writeDouble(offsets[7], object.startBurnout);
+  writer.writeDateTime(offsets[8], object.startDate);
+  writer.writeDouble(offsets[9], object.startMood);
+  writer.writeString(offsets[10], object.summary);
 }
 
 RecoveryEvent _recoveryEventDeserialize(
@@ -157,12 +163,13 @@ RecoveryEvent _recoveryEventDeserialize(
   object.endMood = reader.readDouble(offsets[2]);
   object.generatedAt = reader.readDateTime(offsets[3]);
   object.id = id;
-  object.possibleTriggers = reader.readStringList(offsets[4]) ?? [];
-  object.recoveryStrength = reader.readString(offsets[5]);
-  object.startBurnout = reader.readDouble(offsets[6]);
-  object.startDate = reader.readDateTime(offsets[7]);
-  object.startMood = reader.readDouble(offsets[8]);
-  object.summary = reader.readString(offsets[9]);
+  object.isDemoData = reader.readBool(offsets[4]);
+  object.possibleTriggers = reader.readStringList(offsets[5]) ?? [];
+  object.recoveryStrength = reader.readString(offsets[6]);
+  object.startBurnout = reader.readDouble(offsets[7]);
+  object.startDate = reader.readDateTime(offsets[8]);
+  object.startMood = reader.readDouble(offsets[9]);
+  object.summary = reader.readString(offsets[10]);
   return object;
 }
 
@@ -182,16 +189,18 @@ P _recoveryEventDeserializeProp<P>(
     case 3:
       return (reader.readDateTime(offset)) as P;
     case 4:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readBool(offset)) as P;
     case 5:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 6:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 7:
-      return (reader.readDateTime(offset)) as P;
-    case 8:
       return (reader.readDouble(offset)) as P;
+    case 8:
+      return (reader.readDateTime(offset)) as P;
     case 9:
+      return (reader.readDouble(offset)) as P;
+    case 10:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -788,6 +797,16 @@ extension RecoveryEventQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<RecoveryEvent, RecoveryEvent, QAfterFilterCondition>
+      isDemoDataEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isDemoData',
+        value: value,
       ));
     });
   }
@@ -1538,6 +1557,19 @@ extension RecoveryEventQuerySortBy
     });
   }
 
+  QueryBuilder<RecoveryEvent, RecoveryEvent, QAfterSortBy> sortByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<RecoveryEvent, RecoveryEvent, QAfterSortBy>
+      sortByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
   QueryBuilder<RecoveryEvent, RecoveryEvent, QAfterSortBy>
       sortByRecoveryStrength() {
     return QueryBuilder.apply(this, (query) {
@@ -1669,6 +1701,19 @@ extension RecoveryEventQuerySortThenBy
     });
   }
 
+  QueryBuilder<RecoveryEvent, RecoveryEvent, QAfterSortBy> thenByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<RecoveryEvent, RecoveryEvent, QAfterSortBy>
+      thenByIsDemoDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDemoData', Sort.desc);
+    });
+  }
+
   QueryBuilder<RecoveryEvent, RecoveryEvent, QAfterSortBy>
       thenByRecoveryStrength() {
     return QueryBuilder.apply(this, (query) {
@@ -1763,6 +1808,12 @@ extension RecoveryEventQueryWhereDistinct
     });
   }
 
+  QueryBuilder<RecoveryEvent, RecoveryEvent, QDistinct> distinctByIsDemoData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isDemoData');
+    });
+  }
+
   QueryBuilder<RecoveryEvent, RecoveryEvent, QDistinct>
       distinctByPossibleTriggers() {
     return QueryBuilder.apply(this, (query) {
@@ -1835,6 +1886,12 @@ extension RecoveryEventQueryProperty
       generatedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'generatedAt');
+    });
+  }
+
+  QueryBuilder<RecoveryEvent, bool, QQueryOperations> isDemoDataProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isDemoData');
     });
   }
 

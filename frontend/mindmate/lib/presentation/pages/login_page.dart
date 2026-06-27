@@ -5,6 +5,7 @@ import '../../core/constants/colors.dart';
 import '../../core/state/user_provider.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../widgets/global_background.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -51,9 +52,9 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F3E9),
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F3E9),
+        backgroundColor: const Color(0xFFFAFAFA),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
@@ -73,8 +74,9 @@ class _LoginPageState extends State<LoginPage> {
           child: Container(color: Colors.black, height: 2.0),
         ),
       ),
-      body: SafeArea(
-        child: Consumer<AuthViewModel>(
+      body: GlobalBackgroundLayer(
+        child: SafeArea(
+          child: Consumer<AuthViewModel>(
           builder: (context, viewModel, child) {
             if (viewModel.errorMessage != null) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -94,6 +96,7 @@ class _LoginPageState extends State<LoginPage> {
             );
           },
         ),
+      ),
       ),
     );
   }

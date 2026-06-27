@@ -36,6 +36,8 @@ class JournalEntry {
 
   bool isDeleted = false;
 
+  bool isDemoData = false;
+
   String get preview {
     if (content.isEmpty) return 'Empty journal';
     final lines = content.split('\n');
