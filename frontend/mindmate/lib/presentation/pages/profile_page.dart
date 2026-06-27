@@ -52,8 +52,6 @@ class ProfilePage extends StatelessWidget {
           children: [
             _buildCoreIdentityCard(context),
             const SizedBox(height: 24),
-            _buildStatsRow(),
-            const SizedBox(height: 24),
             Text(
               'SYSTEM SETTINGS',
               style: GoogleFonts.anton(
@@ -299,10 +297,13 @@ class ProfilePage extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _buildSettingsTile(
-          title: 'RESET IDENTITY',
-          subtitle: 'Warning: IRREVERSIBLE ACTION',
+          title: 'Developer Debug Page',
+          subtitle: 'Backend Information(Only for Developer)',
           icon: Icons.delete_outline,
           isDestructive: true,
+          onTap: () {
+            Navigator.pushNamed(context, '/developer-debug');
+          },
         ),
       ],
     );
@@ -423,92 +424,6 @@ class ProfilePage extends StatelessWidget {
         ],
       ),
     ));
-  }
-
-  Widget _buildStatsRow() {
-    return Consumer<UserProvider>(
-      builder: (context, user, _) {
-        return Row(
-          children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.black, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black,
-                      offset: Offset(4, 4),
-                      blurRadius: 0,
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'FOCUS TIME',
-                      style: GoogleFonts.spaceGrotesk(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '142h',
-                      style: GoogleFonts.anton(
-                        fontSize: 28,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFDEB00),
-                  border: Border.all(color: Colors.black, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black,
-                      offset: Offset(4, 4),
-                      blurRadius: 0,
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'MOOD SCORE',
-                      style: GoogleFonts.spaceGrotesk(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      (user.wellnessScore / 10).toStringAsFixed(1),
-                      style: GoogleFonts.anton(
-                        fontSize: 28,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Widget _buildLogoutButton(BuildContext context) {

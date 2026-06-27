@@ -27,9 +27,9 @@ import 'wellness_timeline_page.dart';
 import '../../domain/models/journal_entry.dart';
 import '../../domain/models/community_wellness.dart';
 import '../../services/community/community_wellness_service.dart';
-import '../../domain/models/wellness_plan.dart';
+import '../../domain/models/preventive_intervention_plan.dart';
 import '../widgets/global_background.dart';
-import '../../services/ml/wellness_plan_generator.dart';
+import '../../services/wellness/preventive_intervention_planner.dart';
 import '../../domain/models/coping_tool.dart';
 import '../../services/wellness/coping_toolkit_service.dart';
 import '../../domain/models/detected_situation.dart';
@@ -60,7 +60,7 @@ class _HomePageState extends State<HomePage> {
   bool _showReflectionInput = false;
   final TextEditingController _reflectionController = TextEditingController();
   List<CommunityWellness> _monitoredCommunities = [];
-  WellnessPlan? _wellnessPlan;
+  PreventiveInterventionPlan? _preventivePlan;
   List<CopingTool> _recommendedTools = [];
   EarlyWarningAlert? _earlyWarning;
 
@@ -149,11 +149,11 @@ class _HomePageState extends State<HomePage> {
           await CommunityWellnessService.instance.getMonitoredCommunities();
 
       // Generate daily wellness plan dynamically
-      WellnessPlan? wellnessPlan;
+      PreventiveInterventionPlan? preventivePlan;
       List<CopingTool> recommendedTools = [];
       List<DetectedSituation> situations = [];
       try {
-        wellnessPlan = await WellnessPlanGenerator.instance.generatePlan();
+        preventivePlan = await PreventiveInterventionPlanner.instance.generatePlan();
         situations = await SituationDetectionEngine.instance.detectSituations();
         if (situations.isNotEmpty) {
           recommendedTools = CopingToolkitService.instance
@@ -229,7 +229,7 @@ class _HomePageState extends State<HomePage> {
           _aiInsight = aiInsight;
           _weeklyReflection = weeklyReflection;
           _monitoredCommunities = monitoredCommunities;
-          _wellnessPlan = wellnessPlan;
+          _preventivePlan = preventivePlan;
           _recommendedTools = recommendedTools;
           _earlyWarning = earlyWarning;
           _burnoutForecast = burnoutForecast;
@@ -367,19 +367,10 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(height: 24),
                       _buildColorfulButtons(),
                       const SizedBox(height: 24),
-                      ExplainableAiDashboard(
-                        burnoutForecast: _burnoutForecast,
-                        detectedSituations: _detectedSituations,
-                        aiInsight: _aiInsight,
-                      ),
                       _buildWeeklyChart(),
                       const SizedBox(height: 24),
                       _buildWellnessPlanSection(),
-                      const SizedBox(height: 24),
-                      _buildSectionTitle("COPING TOOLKIT"),
-                      const SizedBox(height: 12),
-                      _buildCopingToolkit(),
-                      const SizedBox(height: 100), // Space for bottom nav
+                      const SizedBox(height: 50), // Space for bottom nav
                     ],
                   ),
                 ),
@@ -901,6 +892,45 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildWeeklyChart() {
+    List<double> weeklyBurnout = List.filled(7, 0.0);
+    int todayIndex = DateTime.now().weekday - 1;
+    String trendText = "ANALYZING TREND...";
+
+    if (_burnoutForecast != null) {
+      weeklyBurnout[todayIndex] = _burnoutForecast!.currentBurnout;
+      
+      int historyCount = _burnoutForecast!.historicalScores.length;
+      for (int i = 1; i <= todayIndex; i++) {
+        int historyIndex = historyCount - i;
+        if (historyIndex >= 0) {
+          weeklyBurnout[todayIndex - i] = _burnoutForecast!.historicalScores[historyIndex];
+        } else {
+          weeklyBurnout[todayIndex - i] = 0.0;
+        }
+      }
+
+      for (int i = todayIndex + 1; i < 7; i++) {
+        int daysAhead = i - todayIndex;
+        if (daysAhead == 1) {
+          weeklyBurnout[i] = _burnoutForecast!.forecastTomorrow;
+        } else if (daysAhead <= 3) {
+          weeklyBurnout[i] = _burnoutForecast!.forecast3Days;
+        } else {
+          weeklyBurnout[i] = _burnoutForecast!.forecast7Days;
+        }
+      }
+      
+      trendText = _burnoutForecast!.trend.toUpperCase();
+    } else {
+      // Dummy data if no forecast
+      weeklyBurnout = [40, 70, 20, 50, 80, 40, 50];
+    }
+
+    Color trendColor = Colors.black;
+    if (trendText.contains("INCREASING")) trendColor = Colors.redAccent;
+    else if (trendText.contains("DECREASING")) trendColor = Colors.greenAccent;
+    else if (trendText.contains("STABLE")) trendColor = Colors.orangeAccent;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -922,7 +952,7 @@ class _HomePageState extends State<HomePage> {
               border: Border(bottom: BorderSide(color: Colors.black, width: 3)),
             ),
             child: Text(
-              "THIS WEEK",
+              "THIS WEEK - BURNOUT RISK",
               style: GoogleFonts.vt323(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -931,19 +961,26 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 30),
           SizedBox(
-            height: 120,
+            height: 140,
             child: Stack(
+              alignment: Alignment.bottomCenter,
               children: [
                 // Grid lines
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: List.generate(
-                    4,
-                    (index) => Container(
-                      height: 1,
-                      color: Colors.grey[300],
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: 100,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: List.generate(
+                      4,
+                      (index) => Container(
+                        height: 1,
+                        color: Colors.grey[300],
+                      ),
                     ),
                   ),
                 ),
@@ -953,15 +990,10 @@ class _HomePageState extends State<HomePage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _buildBar(0.4, false),
-                      _buildBar(0.7, false),
-                      _buildBar(0.2, false),
-                      _buildBar(0.5, false),
-                      _buildBar(0.8, true), // Friday highlighted
-                      _buildBar(0.4, false),
-                      _buildBar(0.5, false),
-                    ],
+                    children: List.generate(7, (index) {
+                      double val = weeklyBurnout[index].clamp(0, 100);
+                      return _buildBar(val / 100.0, index == todayIndex, val.toInt());
+                    }),
                   ),
                 ),
               ],
@@ -982,20 +1014,59 @@ class _HomePageState extends State<HomePage> {
               );
             }).toList(),
           ),
+          const SizedBox(height: 20),
+          // AI Insight
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              border: Border.all(color: Colors.grey[400]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.auto_graph, color: trendColor, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "TREND: $trendText",
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildBar(double fillPct, bool isHighlighted) {
-    return Container(
-      width: 24,
-      height: 120 * fillPct,
-      decoration: BoxDecoration(
-        color: isHighlighted ? Colors.yellow : Colors.black,
-        border:
-            isHighlighted ? Border.all(color: Colors.black, width: 1) : null,
-      ),
+  Widget _buildBar(double fillPct, bool isHighlighted, int value) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Text(
+          value.toString(),
+          style: GoogleFonts.vt323(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: 24,
+          height: 100 * fillPct,
+          decoration: BoxDecoration(
+            color: isHighlighted ? Colors.yellow : Colors.black,
+            border:
+                isHighlighted ? Border.all(color: Colors.black, width: 1) : null,
+          ),
+        ),
+      ],
     );
   }
 
@@ -1498,15 +1569,17 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildWellnessPlanSection() {
-    if (_wellnessPlan == null || _wellnessPlan!.actions.isEmpty) {
+    if (_preventivePlan == null || _preventivePlan!.actions.isEmpty) {
       return const SizedBox.shrink();
     }
 
     Color statusColor = Colors.grey[700]!; // Stable
-    if (_wellnessPlan!.planStatus == "Improving")
+    if (_preventivePlan!.forecastTrend == "Improving") {
       statusColor = Colors.green[700]!;
-    if (_wellnessPlan!.planStatus == "Needs Attention")
+    }
+    if (_preventivePlan!.forecastTrend == "Needs Attention") {
       statusColor = Colors.red[700]!;
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1527,7 +1600,7 @@ class _HomePageState extends State<HomePage> {
                 border: Border.all(color: Colors.black, width: 2),
               ),
               child: Text(
-                _wellnessPlan!.planStatus.toUpperCase(),
+                _preventivePlan!.forecastTrend.toUpperCase(),
                 style: GoogleFonts.spaceGrotesk(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -1553,56 +1626,9 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "TARGET: ${_wellnessPlan!.primarySituation.toUpperCase()}",
-                    style: GoogleFonts.vt323(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blueAccent[700],
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  Icon(Icons.assignment,
-                      color: Colors.blueAccent[700], size: 20),
-                ],
-              ),
-              if (_wellnessPlan!.effectivenessExplanation != null) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.yellow[100],
-                    border: Border.all(color: Colors.black, width: 1),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.auto_awesome,
-                          color: Colors.black, size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _wellnessPlan!.effectivenessExplanation!,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: Colors.black87,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Container(height: 2, color: Colors.grey[200]),
-              const SizedBox(height: 12),
-              ..._wellnessPlan!.actions.asMap().entries.map((entry) {
+              ..._preventivePlan!.actions.asMap().entries.map((entry) {
                 int index = entry.key;
-                WellnessAction action = entry.value;
+                var action = entry.value;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
@@ -1612,7 +1638,7 @@ class _HomePageState extends State<HomePage> {
                         onTap: () {
                           setState(() {
                             // Toggle completion status locally
-                            _wellnessPlan!.actions[index] = action.copyWith(
+                            _preventivePlan!.actions[index] = action.copyWith(
                                 isCompleted: !action.isCompleted);
                           });
                         },
@@ -1633,18 +1659,42 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       Expanded(
-                        child: Text(
-                          action.text,
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: action.isCompleted
-                                ? Colors.grey[500]
-                                : Colors.black87,
-                            decoration: action.isCompleted
-                                ? TextDecoration.lineThrough
-                                : null,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              action.text,
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: action.isCompleted
+                                    ? Colors.grey[500]
+                                    : Colors.black87,
+                                decoration: action.isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
+                            ),
+                            if (action.explanation.isNotEmpty && !action.isCompleted) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.auto_awesome, color: Colors.yellow[800], size: 14),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      action.explanation,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ]
+                          ],
                         ),
                       ),
                     ],

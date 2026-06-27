@@ -17,6 +17,7 @@ import 'presentation/pages/sanitized_storage_tester_page.dart';
 import 'presentation/pages/community_recommendation_tester_page.dart';
 import 'presentation/pages/situation_detection_tester_page.dart';
 import 'presentation/pages/burnout_forecast_tester_page.dart';
+import 'presentation/pages/developer_debug_page.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/journal_repository_impl.dart';
 import 'data/repositories/chat_repository_impl.dart';
@@ -118,6 +119,7 @@ class MindMateApp extends StatelessWidget {
         '/community-recommendation-tester': (context) => const CommunityRecommendationTesterPage(),
         '/situation-detection-tester': (context) => const SituationDetectionTesterPage(),
         '/burnout-forecast-tester': (context) => const BurnoutForecastTesterPage(),
+        '/developer-debug': (context) => const DeveloperDebugPage(),
       },
     );
   }
