@@ -85,42 +85,147 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadData() async {
     try {
-      await NotificationService.instance.requestPermissions();
-      await NotificationService.instance.scheduleDailyMoodReminder();
-    } catch (e) {
-      debugPrint("Error in notification setup: $e");
-    }
-
-    try {
       final isar = IsarDatabase.instance;
       final now = DateTime.now();
       final todayMidnight = DateTime.utc(now.year, now.month, now.day);
 
-      final todayMood = await isar.dailyMoodCheckIns
-          .where()
-          .dateEqualTo(todayMidnight)
-          .findFirst();
-
-      ReflectionFollowUp? activePrompt =
-          await ReflectionFollowUpService.instance.getActiveFollowUp();
-
-      if (todayMood != null && activePrompt == null) {
-        try {
-          final created =
-              await ReflectionFollowUpService.instance.detectAndSaveFollowUp();
-          if (created) {
-            activePrompt =
-                await ReflectionFollowUpService.instance.getActiveFollowUp();
-            await NotificationService.instance.sendSmartMoodReminder();
-            await ReflectionFollowUpService.instance.recordFollowUpShown();
+      // Fetch all independent tasks in parallel
+      final results = await Future.wait<dynamic>([
+        // 0: Setup notifications (non-blocking setup)
+        Future<void>(() async {
+          try {
+            await NotificationService.instance.requestPermissions();
+            await NotificationService.instance.scheduleDailyMoodReminder();
+          } catch (e) {
+            debugPrint("Error in notification setup: $e");
           }
-        } catch (e) {
-          debugPrint("Error in reflection follow-up logic: $e");
-        }
-      }
+        }),
+        // 1: Fetch today's mood and active prompt
+        Future<_MoodAndPrompt>(() async {
+          final todayMood = await isar.dailyMoodCheckIns
+              .where()
+              .dateEqualTo(todayMidnight)
+              .findFirst();
 
-      final reflection = await ReflectionEngine.instance.getLatestReflection();
-      final vector = await FeaturePipeline.instance.getLatestVector();
+          ReflectionFollowUp? activePrompt =
+              await ReflectionFollowUpService.instance.getActiveFollowUp();
+
+          if (todayMood != null && activePrompt == null) {
+            try {
+              final created =
+                  await ReflectionFollowUpService.instance.detectAndSaveFollowUp();
+              if (created) {
+                activePrompt =
+                    await ReflectionFollowUpService.instance.getActiveFollowUp();
+                await NotificationService.instance.sendSmartMoodReminder();
+                await ReflectionFollowUpService.instance.recordFollowUpShown();
+              }
+            } catch (e) {
+              debugPrint("Error in reflection follow-up logic: $e");
+            }
+          }
+          return _MoodAndPrompt(todayMood, activePrompt);
+        }),
+        // 2: Fetch latest reflection
+        ReflectionEngine.instance.getLatestReflection(),
+        // 3: Fetch latest vector
+        FeaturePipeline.instance.getLatestVector(),
+        // 4: Fetch weekly reflection
+        Future<WeeklyReflection?>(() async {
+          try {
+            if (await WeeklyReflectionService.instance.shouldAutoGenerate()) {
+              return await WeeklyReflectionService.instance.generateReflection();
+            } else {
+              return await WeeklyReflectionService.instance.getLatestReflection();
+            }
+          } catch (e) {
+            debugPrint('Error loading weekly reflection: $e');
+            return null;
+          }
+        }),
+        // 5: Fetch monitored communities
+        CommunityWellnessService.instance.getMonitoredCommunities(),
+        // 6: Generate preventive intervention plan
+        Future<PreventiveInterventionPlan?>(() async {
+          try {
+            return await PreventiveInterventionPlanner.instance.generatePlan();
+          } catch (e) {
+            debugPrint('Error generating wellness plan: $e');
+            return null;
+          }
+        }),
+        // 7: Detect situations
+        Future<List<DetectedSituation>>(() async {
+          try {
+            return await SituationDetectionEngine.instance.detectSituations();
+          } catch (e) {
+            debugPrint('Error detecting situations: $e');
+            return [];
+          }
+        }),
+        // 8: Evaluate warning status
+        Future<EarlyWarningAlert?>(() async {
+          try {
+            return await EarlyWarningEngine.instance.evaluateWarningStatus();
+          } catch (e) {
+            debugPrint('Error evaluating early warning: $e');
+            return null;
+          }
+        }),
+        // 9: Fetch burnout forecast
+        Future<BurnoutForecast?>(() async {
+          try {
+            return await BurnoutForecastEngine.instance.getDailyForecast();
+          } catch (e) {
+            debugPrint('Error getting burnout forecast: $e');
+            return null;
+          }
+        }),
+        // 10: Fetch journal status and weekly streak
+        Future<_JournalStatus>(() async {
+          try {
+            final nowLocal = DateTime.now();
+            final startLimit = nowLocal.subtract(const Duration(days: 6));
+            final startLimitMidnight = DateTime(startLimit.year, startLimit.month, startLimit.day);
+            final weeklyJournals = await isar.journalEntrys
+                .filter()
+                .isDeletedEqualTo(false)
+                .and()
+                .journalDateBetween(startLimitMidnight, nowLocal)
+                .findAll();
+
+            final weeklyJournalStreak = List.generate(7, (index) {
+              final dateToCheck = startLimitMidnight.add(Duration(days: index));
+              return weeklyJournals.any((j) =>
+                  j.journalDate.year == dateToCheck.year &&
+                  j.journalDate.month == dateToCheck.month &&
+                  j.journalDate.day == dateToCheck.day &&
+                  (j.content.trim().isNotEmpty || (j.pagesJson != null && j.pagesJson!.contains('"imagePath"'))));
+            });
+
+            return _JournalStatus(weeklyJournalStreak.last, weeklyJournalStreak);
+          } catch (e) {
+            debugPrint('Error loading journal streak/status: $e');
+            return _JournalStatus(false, List.filled(7, false));
+          }
+        }),
+      ]);
+
+      // Assign results
+      final moodAndPrompt = results[1] as _MoodAndPrompt;
+      final todayMood = moodAndPrompt.todayMood;
+      final activePrompt = moodAndPrompt.activePrompt;
+      final reflection = results[2] as ReflectionResult;
+      final vector = results[3]; // Dynamically typed or inferred
+      final weeklyReflection = results[4] as WeeklyReflection?;
+      final monitoredCommunities = results[5] as List<CommunityWellness>;
+      final preventivePlan = results[6] as PreventiveInterventionPlan?;
+      final situations = results[7] as List<DetectedSituation>;
+      final earlyWarning = results[8] as EarlyWarningAlert?;
+      final burnoutForecast = results[9] as BurnoutForecast?;
+      final journalStatus = results[10] as _JournalStatus;
+
+      // Run dependent insight generation
       AiInsightResult? aiInsight;
       if (vector != null) {
         aiInsight = await AiInsightGenerator.instance.generateInsight(
@@ -130,95 +235,21 @@ class _HomePageState extends State<HomePage> {
         );
       }
 
-      // Load weekly reflection (non-blocking, best-effort)
-      WeeklyReflection? weeklyReflection;
-      try {
-        // Auto-generate if conditions are met
-        if (await WeeklyReflectionService.instance.shouldAutoGenerate()) {
-          weeklyReflection =
-              await WeeklyReflectionService.instance.generateReflection();
-        } else {
-          weeklyReflection =
-              await WeeklyReflectionService.instance.getLatestReflection();
-        }
-      } catch (e) {
-        debugPrint('Error loading weekly reflection: $e');
-      }
-
-      final monitoredCommunities =
-          await CommunityWellnessService.instance.getMonitoredCommunities();
-
-      // Generate daily wellness plan dynamically
-      PreventiveInterventionPlan? preventivePlan;
+      // Coping tools setup
       List<CopingTool> recommendedTools = [];
-      List<DetectedSituation> situations = [];
-      try {
-        preventivePlan = await PreventiveInterventionPlanner.instance.generatePlan();
-        situations = await SituationDetectionEngine.instance.detectSituations();
-        if (situations.isNotEmpty) {
-          recommendedTools = CopingToolkitService.instance
-              .getRecommendedTools(situations.first);
-        } else {
-          recommendedTools = CopingToolkitService.instance
-              .getRecommendedTools(DetectedSituation(
-            situationName: "General",
-            confidence: 100,
-            evidenceUsed: [],
-            reason: "",
-            keywordsTriggered: [],
-            generatedAt: DateTime.now(),
-          ));
-        }
-      } catch (e) {
-        debugPrint('Error generating wellness plan: $e');
-      }
-
-      EarlyWarningAlert? earlyWarning;
-      try {
-        earlyWarning =
-            await EarlyWarningEngine.instance.evaluateWarningStatus();
-      } catch (e) {
-        debugPrint('Error evaluating early warning: $e');
-      }
-
-      BurnoutForecast? burnoutForecast;
-      try {
-        burnoutForecast =
-            await BurnoutForecastEngine.instance.getDailyForecast();
-      } catch (e) {
-        debugPrint('Error getting burnout forecast: $e');
-      }
-
-      bool isTodayJournalWritten = false;
-      List<bool> weeklyJournalStreak = List.filled(7, false);
-      try {
-        final now = DateTime.now();
-        final todayMidnight = DateTime(now.year, now.month, now.day);
-        
-        // 1. We will use the weekly journal streak to check if today's journal is written.
-
-        // 2. Fetch weekly journal streak (last 7 days, including today)
-        final startLimit = now.subtract(const Duration(days: 6));
-        final startLimitMidnight = DateTime(startLimit.year, startLimit.month, startLimit.day);
-        final weeklyJournals = await isar.journalEntrys
-            .filter()
-            .isDeletedEqualTo(false)
-            .and()
-            .journalDateBetween(startLimitMidnight, now)
-            .findAll();
-
-        weeklyJournalStreak = List.generate(7, (index) {
-          final dateToCheck = startLimitMidnight.add(Duration(days: index));
-          return weeklyJournals.any((j) =>
-              j.journalDate.year == dateToCheck.year &&
-              j.journalDate.month == dateToCheck.month &&
-              j.journalDate.day == dateToCheck.day &&
-              (j.content.trim().isNotEmpty || (j.pagesJson != null && j.pagesJson!.contains('"imagePath"'))));
-        });
-        
-        isTodayJournalWritten = weeklyJournalStreak.last;
-      } catch (e) {
-        debugPrint('Error loading journal streak/status: $e');
+      if (situations.isNotEmpty) {
+        recommendedTools = CopingToolkitService.instance
+            .getRecommendedTools(situations.first);
+      } else {
+        recommendedTools = CopingToolkitService.instance
+            .getRecommendedTools(DetectedSituation(
+          situationName: "General",
+          confidence: 100,
+          evidenceUsed: [],
+          reason: "",
+          keywordsTriggered: [],
+          generatedAt: DateTime.now(),
+        ));
       }
 
       if (mounted) {
@@ -234,8 +265,8 @@ class _HomePageState extends State<HomePage> {
           _earlyWarning = earlyWarning;
           _burnoutForecast = burnoutForecast;
           _detectedSituations = situations;
-          _isTodayJournalWritten = isTodayJournalWritten;
-          _weeklyJournalStreak = weeklyJournalStreak;
+          _isTodayJournalWritten = journalStatus.isTodayJournalWritten;
+          _weeklyJournalStreak = journalStatus.weeklyJournalStreak;
           _isLoading = false;
 
           if (todayMood != null) {
@@ -2138,3 +2169,16 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+
+class _MoodAndPrompt {
+  final DailyMoodCheckIn? todayMood;
+  final ReflectionFollowUp? activePrompt;
+  _MoodAndPrompt(this.todayMood, this.activePrompt);
+}
+
+class _JournalStatus {
+  final bool isTodayJournalWritten;
+  final List<bool> weeklyJournalStreak;
+  _JournalStatus(this.isTodayJournalWritten, this.weeklyJournalStreak);
+}
+

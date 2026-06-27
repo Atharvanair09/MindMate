@@ -48,10 +48,15 @@ class _InsightsPageState extends State<InsightsPage> {
   }
 
   Future<void> _loadRecommendations() async {
-    final recs = await CommunityRecommendationService.instance.generateRecommendations();
+    final futures = <Future<dynamic>>[
+      CommunityRecommendationService.instance.generateRecommendations(),
+      ...allCommunities.map((c) => CommunityWellnessService.instance.getWellnessForCommunity(c.name)),
+    ];
+    final results = await Future.wait(futures);
+    final recs = results[0] as List<CommunityRecommendation>;
     final Map<String, CommunityWellness> wellnessMap = {};
-    for (var community in allCommunities) {
-      wellnessMap[community.name] = await CommunityWellnessService.instance.getWellnessForCommunity(community.name);
+    for (var i = 0; i < allCommunities.length; i++) {
+      wellnessMap[allCommunities[i].name] = results[i + 1] as CommunityWellness;
     }
     if (mounted) {
       setState(() {

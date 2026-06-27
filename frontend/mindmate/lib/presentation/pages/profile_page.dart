@@ -89,7 +89,7 @@ class ProfilePage extends StatelessWidget {
             color: const Color(0xFFB81D13), // Red footer
             alignment: Alignment.center,
             child: Text(
-              'EMERGENCY HOTLINE: 988 // ALWAYS AVAILABLE',
+              'EMERGENCY HOTLINE: 100 // ALWAYS AVAILABLE',
               style: GoogleFonts.anton(
                 fontSize: 12,
                 color: Colors.white,
@@ -154,7 +154,7 @@ class ProfilePage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'CORE IDENTITY // UNIT 042',
+                    'CORE IDENTITY // UNIT 001',
                     style: GoogleFonts.anton(
                       color: const Color(0xFFFDEB00),
                       fontSize: 14,
@@ -215,7 +215,7 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 4),
               // Enrolled
               Text(
-                'ENROLLED: SEPT 2024',
+                'ENROLLED: June 2025',
                 style: GoogleFonts.spaceGrotesk(
                   color: const Color(0xFFFDEB00),
                   fontSize: 12,
@@ -239,7 +239,7 @@ class ProfilePage extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'LEVEL 03 - VETERAN',
+                        'LEVEL 01 - PILOT',
                         style: GoogleFonts.spaceGrotesk(
                           color: Colors.white,
                           fontSize: 12,
