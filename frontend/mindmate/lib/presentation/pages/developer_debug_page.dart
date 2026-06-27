@@ -28,6 +28,9 @@ import '../../services/timeline/timeline_service.dart';
 import '../../services/notifications/notification_scheduler_service.dart';
 import '../../domain/models/preventive_intervention_plan.dart';
 import '../../services/wellness/preventive_intervention_planner.dart';
+import '../../services/community/community_membership_service.dart';
+import '../../domain/models/community_membership.dart';
+import '../../domain/models/anonymous_post.dart';
 
 class DeveloperDebugPage extends StatefulWidget {
   const DeveloperDebugPage({super.key});
@@ -97,6 +100,12 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
   int _timelineRecoveryEvents = 0;
   int _timelineConflictEvents = 0;
   int _timelineWeeklyEvents = 0;
+
+  // Anonymous Community Engine debug
+  List<String> _joinedCommunitiesList = [];
+  int _communityPostsCount = 0;
+  int _communityRepliesCount = 0;
+  int _communityReactionsCount = 0;
 
   @override
   void initState() {
@@ -254,6 +263,24 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
       _timelineRecoveryEvents = timelineEvents.where((e) => e.eventType == 'Recovery Milestone').length;
       _timelineConflictEvents = timelineEvents.where((e) => e.eventType == 'Check-In Mismatch Detected' || e.eventType == 'Mood Clarified').length;
       _timelineWeeklyEvents = timelineEvents.where((e) => e.eventType == 'Weekly Reflection Generated').length;
+    });
+
+    final memberships = await isar.communityMemberships.where().findAll();
+    final allAnonPosts = await isar.anonymousPosts.where().findAll();
+    int replies = 0;
+    int upvotes = 0;
+    for (var p in allAnonPosts) {
+      upvotes += p.upvotes;
+      if (p.parentPostId != null) {
+        replies++;
+      }
+    }
+
+    setState(() {
+      _joinedCommunitiesList = memberships.map((m) => m.communityName).toList();
+      _communityPostsCount = allAnonPosts.length - replies;
+      _communityRepliesCount = replies;
+      _communityReactionsCount = upvotes;
     });
   }
 
@@ -949,6 +976,30 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
                   ),
                 ),
               ),
+            ]),
+            _buildDashedLine(),
+            const SizedBox(height: 20),
+
+            // ── Phase 9 Anonymous Community Platform ────────────────────
+            _buildSection("Anonymous Community Platform (Phase 9)", [
+              _buildValueRow("Joined Communities: ${_joinedCommunitiesList.isEmpty ? 'None' : _joinedCommunitiesList.join(', ')}", isCyan: true),
+              _buildValueRow("Total Joined Count: ${_joinedCommunitiesList.length}"),
+              _buildDivider(),
+              _buildValueRow("Community Storage Engine Status:", isCyan: true),
+              _buildValueRow("  Posts Stored: $_communityPostsCount"),
+              _buildValueRow("  Replies Stored: $_communityRepliesCount"),
+              _buildValueRow("  Reactions Stored: $_communityReactionsCount"),
+              _buildDivider(),
+              _buildValueRow("Privacy System Integration Status:", isCyan: true),
+              _buildValueRow("  Community Recommendation Status: Active (Filtered out joined communities)"),
+              _buildValueRow("  Pseudonymization Status: Active (Phase 5 Integrated on Client)"),
+              _buildValueRow("  Sanitization Status: Active (Phase 6 Integrated on Client)"),
+              _buildValueRow("  Message Persistence Status: Active (MongoDB Atlas via Socket.IO)"),
+              _buildValueRow("  Realtime Broadcast Status: Active (Socket.IO)"),
+              _buildDivider(),
+              _buildValueRow("Notification System:", isCyan: true),
+              _buildValueRow("  Notification Queue: Active"),
+              _buildValueRow("  Notification History: Active (Via Debug Page)"),
             ]),
             _buildDashedLine(),
             const SizedBox(height: 20),

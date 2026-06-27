@@ -11,6 +11,7 @@ import '../../domain/models/community_recommendation.dart';
 import '../ml/reflection_engine.dart';
 import '../weekly_reflection/weekly_reflection_service.dart';
 import '../pattern/pattern_discovery_service.dart';
+import 'community_membership_service.dart';
 
 class CommunityRecommendationService {
   CommunityRecommendationService._privateConstructor();
@@ -145,8 +146,11 @@ class CommunityRecommendationService {
 
     // Create and sort recommendations
     List<CommunityRecommendation> recommendations = [];
+    final joinedCommunities = await CommunityMembershipService.instance.getJoinedCommunities();
+    final joinedNames = joinedCommunities.map((c) => c.communityName).toSet();
+
     for (var community in scores.keys) {
-      if (lastConfidenceScores[community]! > 0) {
+      if (lastConfidenceScores[community]! > 0 && !joinedNames.contains(community)) {
         recommendations.add(CommunityRecommendation(
           communityName: community,
           matchReason: reasons[community] ?? "Recommended based on your profile.",

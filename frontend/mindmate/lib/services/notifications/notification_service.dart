@@ -797,6 +797,35 @@ class NotificationService {
     }
   }
 
+  Future<void> sendCommunityNotification(String title, String body) async {
+    await saveNotification(title, body, 'community_notification');
+    if (AppStateObserver.instance.isForeground) {
+      AppStateObserver.instance.suppressedCount++;
+      showInAppBanner(title, body);
+    } else {
+      AppStateObserver.instance.backgroundCount++;
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'community_channel_id',
+        'Community Notifications',
+        channelDescription: 'Notifications for anonymous community activity',
+        importance: Importance.max,
+        priority: Priority.high,
+      );
+      
+      const NotificationDetails platformDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: DarwinNotificationDetails(),
+      );
+      
+      await flutterLocalNotificationsPlugin.show(
+        id: DateTime.now().millisecondsSinceEpoch % 100000,
+        title: title,
+        body: body,
+        notificationDetails: platformDetails,
+      );
+    }
+  }
+
   Future<void> sendRecoveryEvent(String body) async {
     const title = 'Recovery Event';
     await saveNotification(title, body, 'recovery_event');

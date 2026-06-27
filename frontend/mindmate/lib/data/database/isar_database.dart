@@ -20,6 +20,7 @@ import '../../domain/models/anonymous_post.dart';
 import '../../domain/models/burnout_forecast.dart';
 import '../../domain/models/early_warning.dart';
 import '../../domain/models/wellness_journey_summary.dart';
+import '../../domain/models/community_membership.dart';
 
 class IsarDatabase {
   static late Isar instance;
@@ -60,6 +61,7 @@ class IsarDatabase {
         BurnoutForecastSchema,
         EarlyWarningAlertSchema,
         WellnessJourneySummarySchema,
+        CommunityMembershipSchema,
       ],
       directory: dir.path,
       name: uuid,

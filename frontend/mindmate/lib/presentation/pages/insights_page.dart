@@ -7,6 +7,8 @@ import 'community_chat_page.dart';
 import '../../domain/models/community_wellness.dart';
 import '../../services/community/community_wellness_service.dart';
 import '../widgets/global_background.dart';
+import '../../services/community/community_membership_service.dart';
+import '../../services/community/community_activity_engine.dart';
 
 class CommunityInfo {
   final String name;
@@ -39,6 +41,8 @@ class InsightsPage extends StatefulWidget {
 class _InsightsPageState extends State<InsightsPage> {
   List<CommunityRecommendation> _recommendations = [];
   Map<String, CommunityWellness> _wellnessMap = {};
+  Map<String, CommunityMetrics> _metricsMap = {};
+  Set<String> _joinedCommunities = {};
   bool _isLoading = true;
 
   @override
@@ -48,20 +52,31 @@ class _InsightsPageState extends State<InsightsPage> {
   }
 
   Future<void> _loadRecommendations() async {
+    final joined = await CommunityMembershipService.instance.getJoinedCommunities();
+    final joinedNames = joined.map((c) => c.communityName).toSet();
+
     final futures = <Future<dynamic>>[
       CommunityRecommendationService.instance.generateRecommendations(),
       ...allCommunities.map((c) => CommunityWellnessService.instance.getWellnessForCommunity(c.name)),
+      ...allCommunities.map((c) => CommunityActivityEngine.instance.getMetrics(c.name)),
     ];
     final results = await Future.wait(futures);
     final recs = results[0] as List<CommunityRecommendation>;
+    
     final Map<String, CommunityWellness> wellnessMap = {};
+    final Map<String, CommunityMetrics> metricsMap = {};
+    
     for (var i = 0; i < allCommunities.length; i++) {
       wellnessMap[allCommunities[i].name] = results[i + 1] as CommunityWellness;
+      metricsMap[allCommunities[i].name] = results[i + 1 + allCommunities.length] as CommunityMetrics;
     }
+    
     if (mounted) {
       setState(() {
         _recommendations = recs;
         _wellnessMap = wellnessMap;
+        _metricsMap = metricsMap;
+        _joinedCommunities = joinedNames;
         _isLoading = false;
       });
     }
@@ -100,16 +115,42 @@ class _InsightsPageState extends State<InsightsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (_recommendations.isNotEmpty) ...[
+                  if (_joinedCommunities.isNotEmpty) ...[
+                    Text(
+                      "JOINED COMMUNITIES",
+                      style: GoogleFonts.anton(
+                        color: Colors.black,
+                        fontSize: 36,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ...allCommunities.where((info) => _joinedCommunities.contains(info.name)).map((info) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: _buildCommunityCard(
+                          title: info.name,
+                          description: info.description,
+                          members: info.members,
+                          activity: info.activity,
+                          backgroundColor: info.color,
+                          wellness: _wellnessMap[info.name],
+                          metrics: _metricsMap[info.name],
+                          isJoined: true,
+                        ),
+                      );
+                    }).toList(),
+                    const SizedBox(height: 20),
+                  ],
+                  if (_recommendations.where((rec) => !_joinedCommunities.contains(rec.communityName)).isNotEmpty) ...[
                     Text(
                       "RECOMMENDED FOR YOU",
                       style: GoogleFonts.anton(
                         color: Colors.black,
-                        fontSize: 20,
+                        fontSize: 36,
                       ),
                     ),
                     const SizedBox(height: 16),
-                    ..._recommendations.map((rec) {
+                    ..._recommendations.where((rec) => !_joinedCommunities.contains(rec.communityName)).map((rec) {
                       final info = allCommunities.firstWhere(
                         (c) => c.name == rec.communityName,
                         orElse: () => allCommunities.last,
@@ -123,20 +164,25 @@ class _InsightsPageState extends State<InsightsPage> {
                           activity: info.activity,
                           backgroundColor: info.color,
                           wellness: _wellnessMap[info.name],
+                          metrics: _metricsMap[info.name],
+                          isJoined: false,
                         ),
                       );
                     }).toList(),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 20),
                   ],
                   Text(
-                    "BROWSE ALL COMMUNITIES",
+                    "BROWSE COMMUNITIES",
                     style: GoogleFonts.anton(
                       color: Colors.black,
-                      fontSize: 20,
+                      fontSize: 36,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  ...allCommunities.map((info) {
+                  ...allCommunities.where((info) {
+                    return !_joinedCommunities.contains(info.name) &&
+                        !_recommendations.any((rec) => rec.communityName == info.name);
+                  }).map((info) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: _buildCommunityCard(
@@ -146,6 +192,8 @@ class _InsightsPageState extends State<InsightsPage> {
                         activity: info.activity,
                         backgroundColor: info.color,
                         wellness: _wellnessMap[info.name],
+                        metrics: _metricsMap[info.name],
+                        isJoined: false,
                       ),
                     );
                   }).toList(),
@@ -165,6 +213,8 @@ class _InsightsPageState extends State<InsightsPage> {
     required String activity,
     required Color backgroundColor,
     CommunityWellness? wellness,
+    CommunityMetrics? metrics,
+    bool isJoined = false,
   }) {
     final isDarkBackground = backgroundColor.computeLuminance() < 0.5;
     final textColor = isDarkBackground ? Colors.white : Colors.black;
@@ -226,19 +276,73 @@ class _InsightsPageState extends State<InsightsPage> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  color: Colors.black,
-                  child: Text(
-                    "JOIN",
-                    style: GoogleFonts.spaceGrotesk(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                if (isJoined) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.check, color: Colors.green, size: 16),
+                            const SizedBox(width: 4),
+                            Text(
+                              "Joined",
+                              style: GoogleFonts.spaceGrotesk(
+                                color: textColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () async {
+                            await CommunityMembershipService.instance.leaveCommunity(title);
+                            _loadRecommendations();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.transparent,
+                              border: Border.all(color: textColor, width: 1.5),
+                            ),
+                            child: Text(
+                              "Leave Community",
+                              style: GoogleFonts.spaceGrotesk(
+                                color: textColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
+                ] else ...[
+                  const SizedBox(width: 16),
+                  GestureDetector(
+                    onTap: () async {
+                      await CommunityMembershipService.instance.joinCommunity(title);
+                      _loadRecommendations();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      color: Colors.black,
+                      child: Text(
+                        "JOIN",
+                        style: GoogleFonts.spaceGrotesk(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 16),
@@ -248,48 +352,62 @@ class _InsightsPageState extends State<InsightsPage> {
                 color: isDarkBackground ? Colors.black.withOpacity(0.2) : Colors.white.withOpacity(0.5),
                 border: Border.all(color: textColor.withOpacity(0.5), width: 1),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Icon(Icons.people, size: 14, color: textColor),
-                  const SizedBox(width: 6),
-                  Text(
-                    members,
-                    style: GoogleFonts.spaceGrotesk(
-                      color: textColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Icon(Icons.local_fire_department, size: 14, color: textColor),
-                  const SizedBox(width: 6),
-                  Text(
-                    activity,
-                    style: GoogleFonts.spaceGrotesk(
-                      color: textColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (wellness != null) ...[
-                    const SizedBox(width: 12),
-                    Icon(
-                      wellness.overallTrend == 'Healthy' ? Icons.check_circle :
-                      wellness.overallTrend == 'Needs Attention' ? Icons.warning : Icons.trending_up,
-                      size: 14,
-                      color: textColor,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      wellness.overallTrend,
-                      style: GoogleFonts.spaceGrotesk(
-                        color: textColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.people, size: 14, color: textColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        metrics != null ? '${metrics.totalMembers} Members' : members,
+                        style: GoogleFonts.spaceGrotesk(
+                          color: textColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.local_fire_department, size: 14, color: textColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        metrics != null ? '${metrics.postsToday} Posts Today' : activity,
+                        style: GoogleFonts.spaceGrotesk(
+                          color: textColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (wellness != null)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          wellness.overallTrend == 'Healthy' ? Icons.check_circle :
+                          wellness.overallTrend == 'Needs Attention' ? Icons.warning : Icons.trending_up,
+                          size: 14,
+                          color: textColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          wellness.overallTrend,
+                          style: GoogleFonts.spaceGrotesk(
+                            color: textColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
                 ],
               ),
             )

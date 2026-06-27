@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const User = require('./models/User');
 const Otp = require('./models/Otp');
@@ -13,10 +15,22 @@ const dns = require("dns");
 dns.setDefaultResultOrder("ipv4first");
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Adjust in production
+    methods: ["GET", "POST"]
+  }
+});
+
 app.set("trust proxy",1);
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Initialize Community Chat Socket Service
+const { initCommunityChatService } = require('./services/communityChatService');
+initCommunityChatService(io);
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-mindmate';
@@ -465,7 +479,6 @@ app.use('/api/v1/journal', journalRoutes);
 app.use('/api/v1/chat', chatRoutes);
 app.use('/api/v1/voice', voiceRoutes);
 
-app.listen(PORT, () => {
-
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

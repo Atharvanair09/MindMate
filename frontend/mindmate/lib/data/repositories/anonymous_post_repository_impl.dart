@@ -20,6 +20,13 @@ class AnonymousPostRepositoryImpl implements AnonymousPostRepository {
   }
 
   @override
+  Future<void> update(AnonymousPost post) async {
+    await _isar.writeTxn(() async {
+      await _collection.put(post);
+    });
+  }
+
+  @override
   Future<bool> delete(int id) async {
     return await _isar.writeTxn(() async {
       return await _collection.delete(id);

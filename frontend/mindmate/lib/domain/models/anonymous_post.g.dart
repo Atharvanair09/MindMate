@@ -27,20 +27,40 @@ const AnonymousPostSchema = CollectionSchema(
       name: r'conversationId',
       type: IsarType.string,
     ),
-    r'originalText': PropertySchema(
+    r'isMock': PropertySchema(
       id: 2,
+      name: r'isMock',
+      type: IsarType.bool,
+    ),
+    r'originalText': PropertySchema(
+      id: 3,
       name: r'originalText',
       type: IsarType.string,
     ),
+    r'parentPostId': PropertySchema(
+      id: 4,
+      name: r'parentPostId',
+      type: IsarType.long,
+    ),
+    r'replyCount': PropertySchema(
+      id: 5,
+      name: r'replyCount',
+      type: IsarType.long,
+    ),
     r'sanitizedText': PropertySchema(
-      id: 3,
+      id: 6,
       name: r'sanitizedText',
       type: IsarType.string,
     ),
     r'timestamp': PropertySchema(
-      id: 4,
+      id: 7,
       name: r'timestamp',
       type: IsarType.dateTime,
+    ),
+    r'upvotes': PropertySchema(
+      id: 8,
+      name: r'upvotes',
+      type: IsarType.long,
     )
   },
   estimateSize: _anonymousPostEstimateSize,
@@ -78,9 +98,13 @@ void _anonymousPostSerialize(
 ) {
   writer.writeString(offsets[0], object.aliasMappingMetadata);
   writer.writeString(offsets[1], object.conversationId);
-  writer.writeString(offsets[2], object.originalText);
-  writer.writeString(offsets[3], object.sanitizedText);
-  writer.writeDateTime(offsets[4], object.timestamp);
+  writer.writeBool(offsets[2], object.isMock);
+  writer.writeString(offsets[3], object.originalText);
+  writer.writeLong(offsets[4], object.parentPostId);
+  writer.writeLong(offsets[5], object.replyCount);
+  writer.writeString(offsets[6], object.sanitizedText);
+  writer.writeDateTime(offsets[7], object.timestamp);
+  writer.writeLong(offsets[8], object.upvotes);
 }
 
 AnonymousPost _anonymousPostDeserialize(
@@ -93,9 +117,13 @@ AnonymousPost _anonymousPostDeserialize(
   object.aliasMappingMetadata = reader.readString(offsets[0]);
   object.conversationId = reader.readString(offsets[1]);
   object.id = id;
-  object.originalText = reader.readString(offsets[2]);
-  object.sanitizedText = reader.readString(offsets[3]);
-  object.timestamp = reader.readDateTime(offsets[4]);
+  object.isMock = reader.readBool(offsets[2]);
+  object.originalText = reader.readString(offsets[3]);
+  object.parentPostId = reader.readLongOrNull(offsets[4]);
+  object.replyCount = reader.readLong(offsets[5]);
+  object.sanitizedText = reader.readString(offsets[6]);
+  object.timestamp = reader.readDateTime(offsets[7]);
+  object.upvotes = reader.readLong(offsets[8]);
   return object;
 }
 
@@ -111,11 +139,19 @@ P _anonymousPostDeserializeProp<P>(
     case 1:
       return (reader.readString(offset)) as P;
     case 2:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 3:
       return (reader.readString(offset)) as P;
     case 4:
+      return (reader.readLongOrNull(offset)) as P;
+    case 5:
+      return (reader.readLong(offset)) as P;
+    case 6:
+      return (reader.readString(offset)) as P;
+    case 7:
       return (reader.readDateTime(offset)) as P;
+    case 8:
+      return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -544,6 +580,16 @@ extension AnonymousPostQueryFilter
   }
 
   QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
+      isMockEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isMock',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
       originalTextEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -675,6 +721,136 @@ extension AnonymousPostQueryFilter
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'originalText',
         value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
+      parentPostIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'parentPostId',
+      ));
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
+      parentPostIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'parentPostId',
+      ));
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
+      parentPostIdEqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'parentPostId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
+      parentPostIdGreaterThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'parentPostId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
+      parentPostIdLessThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'parentPostId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
+      parentPostIdBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'parentPostId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
+      replyCountEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'replyCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
+      replyCountGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'replyCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
+      replyCountLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'replyCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
+      replyCountBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'replyCount',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
       ));
     });
   }
@@ -870,6 +1046,62 @@ extension AnonymousPostQueryFilter
       ));
     });
   }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
+      upvotesEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'upvotes',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
+      upvotesGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'upvotes',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
+      upvotesLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'upvotes',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterFilterCondition>
+      upvotesBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'upvotes',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
 }
 
 extension AnonymousPostQueryObject
@@ -908,6 +1140,18 @@ extension AnonymousPostQuerySortBy
     });
   }
 
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy> sortByIsMock() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isMock', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy> sortByIsMockDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isMock', Sort.desc);
+    });
+  }
+
   QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy>
       sortByOriginalText() {
     return QueryBuilder.apply(this, (query) {
@@ -919,6 +1163,33 @@ extension AnonymousPostQuerySortBy
       sortByOriginalTextDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'originalText', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy>
+      sortByParentPostId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'parentPostId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy>
+      sortByParentPostIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'parentPostId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy> sortByReplyCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'replyCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy>
+      sortByReplyCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'replyCount', Sort.desc);
     });
   }
 
@@ -946,6 +1217,18 @@ extension AnonymousPostQuerySortBy
       sortByTimestampDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'timestamp', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy> sortByUpvotes() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'upvotes', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy> sortByUpvotesDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'upvotes', Sort.desc);
     });
   }
 }
@@ -992,6 +1275,18 @@ extension AnonymousPostQuerySortThenBy
     });
   }
 
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy> thenByIsMock() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isMock', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy> thenByIsMockDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isMock', Sort.desc);
+    });
+  }
+
   QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy>
       thenByOriginalText() {
     return QueryBuilder.apply(this, (query) {
@@ -1003,6 +1298,33 @@ extension AnonymousPostQuerySortThenBy
       thenByOriginalTextDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'originalText', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy>
+      thenByParentPostId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'parentPostId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy>
+      thenByParentPostIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'parentPostId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy> thenByReplyCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'replyCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy>
+      thenByReplyCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'replyCount', Sort.desc);
     });
   }
 
@@ -1032,6 +1354,18 @@ extension AnonymousPostQuerySortThenBy
       return query.addSortBy(r'timestamp', Sort.desc);
     });
   }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy> thenByUpvotes() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'upvotes', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QAfterSortBy> thenByUpvotesDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'upvotes', Sort.desc);
+    });
+  }
 }
 
 extension AnonymousPostQueryWhereDistinct
@@ -1052,10 +1386,29 @@ extension AnonymousPostQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AnonymousPost, AnonymousPost, QDistinct> distinctByIsMock() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isMock');
+    });
+  }
+
   QueryBuilder<AnonymousPost, AnonymousPost, QDistinct> distinctByOriginalText(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'originalText', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QDistinct>
+      distinctByParentPostId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'parentPostId');
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QDistinct> distinctByReplyCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'replyCount');
     });
   }
 
@@ -1070,6 +1423,12 @@ extension AnonymousPostQueryWhereDistinct
   QueryBuilder<AnonymousPost, AnonymousPost, QDistinct> distinctByTimestamp() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'timestamp');
+    });
+  }
+
+  QueryBuilder<AnonymousPost, AnonymousPost, QDistinct> distinctByUpvotes() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'upvotes');
     });
   }
 }
@@ -1096,9 +1455,27 @@ extension AnonymousPostQueryProperty
     });
   }
 
+  QueryBuilder<AnonymousPost, bool, QQueryOperations> isMockProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isMock');
+    });
+  }
+
   QueryBuilder<AnonymousPost, String, QQueryOperations> originalTextProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'originalText');
+    });
+  }
+
+  QueryBuilder<AnonymousPost, int?, QQueryOperations> parentPostIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'parentPostId');
+    });
+  }
+
+  QueryBuilder<AnonymousPost, int, QQueryOperations> replyCountProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'replyCount');
     });
   }
 
@@ -1112,6 +1489,12 @@ extension AnonymousPostQueryProperty
   QueryBuilder<AnonymousPost, DateTime, QQueryOperations> timestampProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'timestamp');
+    });
+  }
+
+  QueryBuilder<AnonymousPost, int, QQueryOperations> upvotesProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'upvotes');
     });
   }
 }

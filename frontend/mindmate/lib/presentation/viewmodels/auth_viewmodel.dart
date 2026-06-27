@@ -7,9 +7,20 @@ enum AuthState { emailInput, otpInput, recoveryPhrase, recoverAccount }
 
 class AuthViewModel extends ChangeNotifier {
   final AuthRepository _repository;
+  String? _uuid;
+  String? get uuid => _uuid;
 
   AuthViewModel({AuthRepository? repository}) 
-      : _repository = repository ?? AuthRepository();
+      : _repository = repository ?? AuthRepository() {
+    _loadUuid();
+  }
+
+  Future<void> _loadUuid() async {
+    try {
+      _uuid = await _repository.getDeviceUuid();
+      notifyListeners();
+    } catch (_) {}
+  }
 
   AuthState _currentState = AuthState.emailInput;
   AuthState get currentState => _currentState;
@@ -123,6 +134,7 @@ class AuthViewModel extends ChangeNotifier {
       await _repository.registerWithPhrase(_recoveryPhrase!);
       final uuid = await _repository.getDeviceUuid();
       if (uuid != null) {
+        _uuid = uuid;
         await SessionInitializer.initializeUserSession(uuid);
       }
     } catch (e) {
@@ -139,6 +151,7 @@ class AuthViewModel extends ChangeNotifier {
       await _repository.recoverAccount(phrase);
       final uuid = await _repository.getDeviceUuid();
       if (uuid != null) {
+        _uuid = uuid;
         await SessionInitializer.initializeUserSession(uuid);
       }
       return true; // recovery successful

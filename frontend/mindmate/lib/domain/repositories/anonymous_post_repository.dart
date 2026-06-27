@@ -4,4 +4,5 @@ abstract class AnonymousPostRepository {
   Future<int> create(AnonymousPost post);
   Future<List<AnonymousPost>> getAll();
   Future<bool> delete(int id);
+  Future<void> update(AnonymousPost post);
 }
