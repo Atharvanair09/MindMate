@@ -9,23 +9,68 @@ import '../../domain/models/reflection_follow_up.dart';
 import '../../domain/models/recovery_event.dart';
 import 'reflection_engine.dart';
 
+enum RecoveryStatus {
+  generated,
+  rejected,
+  notRun,
+}
+
+class RecoveryDetectionResult {
+  final RecoveryStatus status;
+  final String? failureReason;
+  final bool moodImproved;
+  final bool burnoutImproved;
+  final double startMood;
+  final double endMood;
+  final double startBurnout;
+  final double endBurnout;
+  final List<String> triggers;
+  final RecoveryEvent? event;
+  final int deletedDemoEventsCount;
+  final bool isUpserted;
+  final bool duplicatePrevented;
+
+  RecoveryDetectionResult({
+    required this.status,
+    this.failureReason,
+    this.moodImproved = false,
+    this.burnoutImproved = false,
+    this.startMood = -1,
+    this.endMood = -1,
+    this.startBurnout = -1,
+    this.endBurnout = -1,
+    this.triggers = const [],
+    this.event,
+    this.deletedDemoEventsCount = 0,
+    this.isUpserted = false,
+    this.duplicatePrevented = false,
+  });
+}
+
 class RecoveryDetectionService {
   static final RecoveryDetectionService instance = RecoveryDetectionService._internal();
   RecoveryDetectionService._internal();
 
   Isar get isar => IsarDatabase.instance;
 
-  Future<RecoveryEvent?> detectRecoveryEvents() async {
+  Future<RecoveryDetectionResult> detectRecoveryEvents({bool isDemoMode = false}) async {
     final now = DateTime.now();
     final endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
     final startDate = endDate.subtract(const Duration(days: 3));
     
-    return await detectForWindow(startDate, endDate);
+    return await detectForWindow(startDate, endDate, isDemoMode: isDemoMode);
   }
 
-  Future<RecoveryEvent?> detectForWindow(DateTime startDate, DateTime endDate) async {
+  Future<RecoveryDetectionResult> detectForWindow(DateTime startDate, DateTime endDate, {bool isDemoMode = false}) async {
     final utcStart = DateTime.utc(startDate.year, startDate.month, startDate.day);
     final utcEnd = DateTime.utc(endDate.year, endDate.month, endDate.day);
+
+    int deletedDemoCount = 0;
+    if (isDemoMode) {
+      await isar.writeTxn(() async {
+        deletedDemoCount = await isar.recoveryEvents.filter().isDemoDataEqualTo(true).deleteAll();
+      });
+    }
 
     // 1. Get Moods
     final moodCheckIns = await isar.dailyMoodCheckIns
@@ -74,8 +119,36 @@ class RecoveryDetectionService {
       burnoutImproved = true;
     }
 
+    List<String> triggers = await _identifyTriggers(startDate, endDate);
+
     if (!moodImproved && !burnoutImproved) {
-      return null; // No recovery detected
+      List<String> reasons = [];
+      if (!moodImproved) {
+        if (startMood == -1 || endMood == -1) {
+          reasons.add("Insufficient mood data");
+        } else {
+          reasons.add("Mood did not improve by at least 1.0 (Start: $startMood, End: $endMood)");
+        }
+      }
+      if (!burnoutImproved) {
+        if (startBurnout == -1 || endBurnout == -1) {
+          reasons.add("Insufficient burnout data");
+        } else {
+          reasons.add("Burnout did not improve by at least 10.0 (Start: $startBurnout, End: $endBurnout)");
+        }
+      }
+      return RecoveryDetectionResult(
+        status: RecoveryStatus.rejected,
+        failureReason: reasons.join(" AND "),
+        moodImproved: moodImproved,
+        burnoutImproved: burnoutImproved,
+        startMood: startMood,
+        endMood: endMood,
+        startBurnout: startBurnout,
+        endBurnout: endBurnout,
+        triggers: triggers,
+        deletedDemoEventsCount: deletedDemoCount,
+      );
     }
 
     // Determine strength
@@ -85,9 +158,6 @@ class RecoveryDetectionService {
       strength = "Strong";
     }
 
-    // Identify Triggers
-    List<String> triggers = await _identifyTriggers(startDate, endDate);
-
     // Avoid duplicate events in same day
     final todayMidnight = DateTime(endDate.year, endDate.month, endDate.day);
     final existingEvent = await isar.recoveryEvents
@@ -95,8 +165,21 @@ class RecoveryDetectionService {
         .endDateGreaterThan(todayMidnight)
         .findFirst();
 
-    if (existingEvent != null) {
-      return existingEvent; // Already logged
+    if (existingEvent != null && !isDemoMode) {
+      return RecoveryDetectionResult(
+        status: RecoveryStatus.rejected,
+        failureReason: "Recovery event already logged for today",
+        moodImproved: moodImproved,
+        burnoutImproved: burnoutImproved,
+        startMood: startMood,
+        endMood: endMood,
+        startBurnout: startBurnout,
+        endBurnout: endBurnout,
+        triggers: triggers,
+        event: existingEvent,
+        duplicatePrevented: true,
+        deletedDemoEventsCount: deletedDemoCount,
+      );
     }
 
     String summary = "Recovery detected";
@@ -108,7 +191,10 @@ class RecoveryDetectionService {
       summary = "Burnout risk decreased notably over the last 3 days.";
     }
 
-    final event = RecoveryEvent()
+    final event = existingEvent ?? RecoveryEvent();
+    bool isUpsert = existingEvent != null;
+
+    event
       ..startDate = startDate
       ..endDate = endDate
       ..startMood = startMood
@@ -120,12 +206,29 @@ class RecoveryDetectionService {
       ..summary = summary
       ..generatedAt = DateTime.now();
 
+    if (isDemoMode) {
+      event.isDemoData = true;
+    }
+
     await isar.writeTxn(() async {
       await isar.recoveryEvents.put(event);
     });
 
     debugPrint('[RecoveryDetectionService] Recovery Event Detected. Strength: $strength');
-    return event;
+    
+    return RecoveryDetectionResult(
+      status: RecoveryStatus.generated,
+      moodImproved: moodImproved,
+      burnoutImproved: burnoutImproved,
+      startMood: startMood,
+      endMood: endMood,
+      startBurnout: startBurnout,
+      endBurnout: endBurnout,
+      triggers: triggers,
+      event: event,
+      deletedDemoEventsCount: deletedDemoCount,
+      isUpserted: isUpsert,
+    );
   }
 
   Future<List<String>> _identifyTriggers(DateTime start, DateTime end) async {
@@ -206,3 +309,4 @@ class RecoveryDetectionService {
     return 'UNKNOWN';
   }
 }
+

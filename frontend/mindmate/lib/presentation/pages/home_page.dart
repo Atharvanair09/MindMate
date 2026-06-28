@@ -347,6 +347,9 @@ class _HomePageState extends State<HomePage> {
     // We've logged a mood today, so we can cancel the daily reminder
     await NotificationService.instance.cancelDailyMoodReminder();
 
+    // Fetch the updated forecast
+    final burnoutForecast = await BurnoutForecastEngine.instance.getDailyForecast(forceRefresh: true);
+
     if (mounted) {
       setState(() {
         _todayMood = moodToSave;
@@ -355,6 +358,7 @@ class _HomePageState extends State<HomePage> {
         _aiInsight = aiInsight;
         _activeFollowUp =
             activeFollowUp; // Update with the new follow-up state (can be null or a newly triggered one)
+        _burnoutForecast = burnoutForecast;
         _showReflectionInput = false;
       });
     }

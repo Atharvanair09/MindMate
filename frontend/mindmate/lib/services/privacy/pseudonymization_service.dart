@@ -9,6 +9,7 @@ class PseudonymizationService {
 
   static const Set<String> _knownNames = {
     'rahul', 'kartik', 'atharva', 'nair', 'sharma', 'john', 'smith', 'priya', 'patel',
+    'arya', 'nirmala',
     'james', 'mary', 'robert', 'patricia', 'michael', 'linda',
     'william', 'elizabeth', 'david', 'barbara', 'richard', 'susan',
     'joseph', 'jessica', 'thomas', 'sarah', 'charles', 'karen',
@@ -40,9 +41,14 @@ class PseudonymizationService {
 
   // conversationId -> mapping (name -> alias)
   final Map<String, Map<String, String>> _conversationMappings = {};
-  
-  // conversationId -> number of aliases used
-  final Map<String, int> _conversationAliasIndex = {};
+
+  int _generateConsistentHash(String input) {
+    int hash = 0;
+    for (int i = 0; i < input.length; i++) {
+      hash = (hash * 31 + input.codeUnitAt(i)) & 0x7FFFFFFF;
+    }
+    return hash;
+  }
 
   bool isKnownName(String name) {
     return _knownNames.contains(name.toLowerCase());
@@ -54,7 +60,6 @@ class PseudonymizationService {
 
   String sanitizeText(String text, String conversationId) {
     _conversationMappings.putIfAbsent(conversationId, () => {});
-    _conversationAliasIndex.putIfAbsent(conversationId, () => 0);
 
     final mapping = _conversationMappings[conversationId]!;
     
@@ -70,10 +75,9 @@ class PseudonymizationService {
 
       if (_knownNames.contains(lowerName)) {
         if (!mapping.containsKey(lowerName)) {
-          int index = _conversationAliasIndex[conversationId]!;
+          int index = _generateConsistentHash(lowerName + conversationId);
           String alias = _aliasPool[index % _aliasPool.length];
           mapping[lowerName] = alias;
-          _conversationAliasIndex[conversationId] = index + 1;
         }
         
         String capRel = relationship[0].toUpperCase() + relationship.substring(1).toLowerCase();
@@ -89,10 +93,9 @@ class PseudonymizationService {
       
       if (_knownNames.contains(lowerWord)) {
         if (!mapping.containsKey(lowerWord)) {
-          int index = _conversationAliasIndex[conversationId]!;
+          int index = _generateConsistentHash(lowerWord + conversationId);
           String alias = _aliasPool[index % _aliasPool.length];
           mapping[lowerWord] = alias;
-          _conversationAliasIndex[conversationId] = index + 1;
         }
         return mapping[lowerWord]!;
       }

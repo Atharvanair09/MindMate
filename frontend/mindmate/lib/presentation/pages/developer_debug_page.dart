@@ -31,6 +31,7 @@ import '../../services/wellness/preventive_intervention_planner.dart';
 import '../../services/community/community_membership_service.dart';
 import '../../domain/models/community_membership.dart';
 import '../../domain/models/anonymous_post.dart';
+import '../../services/demo_mode/demo_mode_service.dart';
 
 class DeveloperDebugPage extends StatefulWidget {
   const DeveloperDebugPage({super.key});
@@ -89,6 +90,8 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
   // Recovery Detection debug
   List<RecoveryEvent> _recoveryEvents = [];
   bool _isDetectingRecovery = false;
+  RecoveryDetectionResult? _lastRecoveryResult;
+  Map<String, dynamic>? _demoValidationResult;
 
   // Pattern Discovery debug
   List<PatternInsight> _patternInsights = [];
@@ -643,21 +646,56 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
             const SizedBox(height: 20),
 
             // ── Phase 3.2A Recovery Detection Engine ─────────────
-            _buildSection("Recovery Detection Engine", [
-              _buildValueRow("Detected Events: ${_recoveryEvents.length}"),
+            _buildSection("Recovery Detection Engine (DEBUG)", [
+              if (_lastRecoveryResult != null) ...[
+                _buildValueRow("Recovery Status: ${_lastRecoveryResult!.status.toString().split('.').last.toUpperCase()}", isCyan: true),
+                const SizedBox(height: 8),
+                _buildValueRow("--- RULES EVALUATION ---", isCyan: true),
+                _buildValueRow("Burnout Decreasing (>= 10.0):"),
+                _buildValueRow("  Required: TRUE"),
+                _buildValueRow("  Actual: ${_lastRecoveryResult!.burnoutImproved.toString().toUpperCase()}"),
+                _buildValueRow("  Values: Start: ${_lastRecoveryResult!.startBurnout.toStringAsFixed(1)} | End: ${_lastRecoveryResult!.endBurnout.toStringAsFixed(1)}"),
+                const SizedBox(height: 4),
+                _buildValueRow("Average Mood Increasing (>= 1.0):"),
+                _buildValueRow("  Required: TRUE"),
+                _buildValueRow("  Actual: ${_lastRecoveryResult!.moodImproved.toString().toUpperCase()}"),
+                _buildValueRow("  Values: Start: ${_lastRecoveryResult!.startMood.toStringAsFixed(1)} | End: ${_lastRecoveryResult!.endMood.toStringAsFixed(1)}"),
+                const SizedBox(height: 4),
+                _buildValueRow("Positive Triggers Detected:"),
+                _buildValueRow("  Found: ${_lastRecoveryResult!.triggers.isNotEmpty ? 'TRUE' : 'FALSE'}"),
+                _buildValueRow("  List: ${_lastRecoveryResult!.triggers.isEmpty ? 'None' : _lastRecoveryResult!.triggers.join(', ')}"),
+                const SizedBox(height: 8),
+                _buildValueRow("--- PIPELINE DECISION ---", isCyan: true),
+                if (_lastRecoveryResult!.status == RecoveryStatus.rejected) ...[
+                  _buildValueRow("Decision: REJECTED", isCyan: true),
+                  _buildValueRow("Failure Reason: ${_lastRecoveryResult!.failureReason ?? 'Unknown'}"),
+                ] else if (_lastRecoveryResult!.status == RecoveryStatus.generated) ...[
+                  _buildValueRow("Decision: GENERATED", isCyan: true),
+                  _buildValueRow("Strength: ${_lastRecoveryResult!.event?.recoveryStrength ?? 'Unknown'}"),
+                  _buildValueRow("Summary: ${_lastRecoveryResult!.event?.summary ?? 'Unknown'}"),
+                  _buildValueRow("Confidence: 90.0% (Simulated)"),
+                ],
+                const SizedBox(height: 8),
+                _buildValueRow("--- STORAGE & PERSISTENCE ---", isCyan: true),
+                _buildValueRow("Existing Recovery Events Deleted: ${_lastRecoveryResult!.deletedDemoEventsCount}"),
+                _buildValueRow("Recovery Events Generated: ${_lastRecoveryResult!.status == RecoveryStatus.generated ? '1' : '0'}"),
+                _buildValueRow("Recovery Events Stored: ${_lastRecoveryResult!.status == RecoveryStatus.generated && !_lastRecoveryResult!.isUpserted ? '1' : '0'}"),
+                _buildValueRow("Recovery Events Updated: ${_lastRecoveryResult!.isUpserted ? '1' : '0'}"),
+                _buildValueRow("Duplicate Events Prevented: ${_lastRecoveryResult!.duplicatePrevented ? '1' : '0'}"),
+                _buildValueRow("Storage Result: ${_lastRecoveryResult!.status == RecoveryStatus.generated ? (_lastRecoveryResult!.isUpserted ? 'UPSERT SUCCESS' : 'INSERT SUCCESS') : 'REJECTED'}"),
+                const SizedBox(height: 12),
+              ],
+              _buildValueRow("Historical Detected Events: ${_recoveryEvents.length}"),
               if (_recoveryEvents.isEmpty)
-                _buildValueRow("No recovery events detected", isCyan: true)
+                _buildValueRow("No past recovery events", isCyan: true)
               else ...[
-                ..._recoveryEvents.take(3).map((event) => Padding(
+                ..._recoveryEvents.take(1).map((event) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildValueRow("Recovery Event: ${event.summary}", isCyan: true),
+                      _buildValueRow("Latest Recovery Event: ${event.summary}", isCyan: true),
                       _buildValueRow("  Strength: ${event.recoveryStrength}"),
-                      _buildValueRow("  Triggers: ${event.possibleTriggers.join(', ')}"),
-                      _buildValueRow("  Mood Improvement: ${_moodValueToLevelString(event.startMood)} → ${_moodValueToLevelString(event.endMood)}"),
-                      _buildValueRow("  Burnout Improvement: ${event.startBurnout.toStringAsFixed(0)} → ${event.endBurnout.toStringAsFixed(0)}"),
                       _buildValueRow("  Date: ${DateFormat('MMM d').format(event.startDate.toLocal())} to ${DateFormat('MMM d').format(event.endDate.toLocal())}"),
                     ],
                   ),
@@ -670,7 +708,10 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
                     : () async {
                         setState(() => _isDetectingRecovery = true);
                         try {
-                          await RecoveryDetectionService.instance.detectRecoveryEvents();
+                          final result = await RecoveryDetectionService.instance.detectRecoveryEvents();
+                          setState(() {
+                            _lastRecoveryResult = result;
+                          });
                           await _loadData();
                         } finally {
                           if (mounted) {
@@ -690,13 +731,56 @@ class _DeveloperDebugPageState extends State<DeveloperDebugPage> {
                           width: 18,
                           child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
                       : Text(
-                          "TRIGGER RECOVERY DETECTION",
+                          "TRIGGER RECOVERY PIPELINE",
                           style: GoogleFonts.vt323(
                             color: Colors.black,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Demo Data Pipeline Validation UI
+              if (_demoValidationResult != null) ...[
+                _buildDashedLine(),
+                const SizedBox(height: 12),
+                _buildValueRow("DEMO DATA VALIDATION (PIPELINE)", isCyan: true),
+                _buildValueRow("Demo Data Generated: ${_demoValidationResult!['demoDataGenerated'] == true ? 'YES' : 'NO'}"),
+                _buildValueRow("Pattern Discovery Executed: ${_demoValidationResult!['patternDiscoveryExecuted'] == true ? 'YES' : 'NO'}"),
+                _buildValueRow("Weekly Reflection Executed: ${_demoValidationResult!['weeklyReflectionExecuted'] == true ? 'YES' : 'NO'}"),
+                _buildValueRow("Situation Detection Executed: ${_demoValidationResult!['situationDetectionExecuted'] == true ? 'YES' : 'NO'}"),
+                _buildValueRow("Recovery Detection Executed: ${_demoValidationResult!['recoveryDetectionExecuted'] == true ? 'YES' : 'NO'}"),
+                _buildValueRow("Recovery Detection Stored: ${_demoValidationResult!['recoveryDetectionStored'] == true ? 'YES' : 'NO'}"),
+                _buildValueRow("Recovery Detection Displayed: ${_demoValidationResult!['recoveryDetectionDisplayed'] == true ? 'YES' : 'NO'}"),
+                const SizedBox(height: 8),
+                if (_demoValidationResult!['validationPassed'] != true)
+                  _buildValueRow("Validation Failed: ${_demoValidationResult!['failureReason'] ?? 'Unknown error'}", isCyan: true)
+                else
+                  _buildValueRow("All Validation Passed Successfully", isCyan: true),
+              ],
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () async {
+                  final res = await DemoModeService.instance.validateDemoData();
+                  setState(() {
+                    _demoValidationResult = res;
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    border: Border.all(color: Colors.orangeAccent, width: 2),
+                  ),
+                  child: Text(
+                    "RUN DEMO DATA VALIDATION",
+                    style: GoogleFonts.vt323(
+                      color: Colors.orangeAccent,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ]),

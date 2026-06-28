@@ -52,20 +52,38 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
   void _subscribeToMessages() {
     _messageSubscription = CommunitySocketService.instance.messageStream.listen((data) {
       if (data['communityId'] == widget.communityName) {
-        final newPostId = data['messageId'].hashCode;
+        final newPostId = data['messageId']?.hashCode ?? 0;
+        final authVm = Provider.of<AuthViewModel>(context, listen: false);
+        final isMine = data['senderId'] == authVm.uuid;
+        
+        final serverTime = DateTime.parse(data['timestamp']).toLocal();
           
         if (mounted) {
           setState(() {
-            if (!_posts.any((p) => p.id == newPostId)) {
+            // Check if we already have this message (deduplication by text and time for optimistic updates)
+            final optimisticIndex = _posts.indexWhere((p) => 
+                p.id != newPostId && 
+                p.sanitizedText == data['sanitizedMessage'] && 
+                p.aliasMappingMetadata.contains('"isMine": true') &&
+                serverTime.difference(p.timestamp).abs().inSeconds < 15
+            );
+
+            if (optimisticIndex != -1) {
+              // Update the optimistic message with real ID and data
+              _posts[optimisticIndex].id = newPostId;
+              _posts[optimisticIndex].timestamp = serverTime;
+              _posts[optimisticIndex].aliasMappingMetadata = '{"alias": "${data['anonymousAlias']}", "isMine": true}';
+              _sortPosts();
+            } else if (!_posts.any((p) => p.id == newPostId)) {
               final post = AnonymousPost()
-                ..id = newPostId // mock isar id
+                ..id = newPostId
                 ..conversationId = data['communityId']
                 ..sanitizedText = data['sanitizedMessage']
-                ..originalText = '' // don't need original text for others
-                ..timestamp = DateTime.parse(data['timestamp'])
+                ..originalText = '' 
+                ..timestamp = serverTime
                 ..upvotes = 0
                 ..parentPostId = data['replyTarget'] != null ? data['replyTarget'].hashCode : null
-                ..aliasMappingMetadata = '{"alias": "${data['anonymousAlias']}"}';
+                ..aliasMappingMetadata = '{"alias": "${data['anonymousAlias']}", "isMine": $isMine}';
               
               _posts.add(post);
               _sortPosts();
@@ -105,16 +123,20 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
   Future<void> _loadPosts() async {
     final history = await CommunitySocketService.instance.getHistory(widget.communityName);
     
+    final authVm = Provider.of<AuthViewModel>(context, listen: false);
+    final myUuid = authVm.uuid;
+
     final mappedPosts = history.map((data) {
+      final isMine = data['senderId'] == myUuid;
       return AnonymousPost()
         ..id = data['messageId']?.hashCode ?? 0
         ..conversationId = data['communityId'] ?? widget.communityName
         ..sanitizedText = data['sanitizedMessage'] ?? ''
         ..originalText = ''
-        ..timestamp = data['timestamp'] != null ? DateTime.parse(data['timestamp']) : DateTime.now()
+        ..timestamp = data['timestamp'] != null ? DateTime.parse(data['timestamp']).toLocal() : DateTime.now()
         ..upvotes = data['reactionCounts']?['upvote'] ?? 0
         ..parentPostId = data['replyTarget'] != null ? data['replyTarget'].hashCode : null
-        ..aliasMappingMetadata = '{"alias": "${data['anonymousAlias'] ?? 'Member'}"}';
+        ..aliasMappingMetadata = '{"alias": "${data['anonymousAlias'] ?? 'Member'}", "isMine": $isMine}';
     }).toList();
 
     if (mounted) {
@@ -141,6 +163,24 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
 
     final authVm = Provider.of<AuthViewModel>(context, listen: false);
     final senderId = authVm.uuid ?? const Uuid().v4();
+    final optimisticId = DateTime.now().millisecondsSinceEpoch;
+
+    // Optimistically add the message to the list immediately
+    setState(() {
+      final post = AnonymousPost()
+        ..id = optimisticId
+        ..conversationId = widget.communityName
+        ..sanitizedText = PseudonymizationService.instance.sanitizeText(text, widget.communityName)
+        ..originalText = text
+        ..timestamp = DateTime.now()
+        ..upvotes = 0
+        ..parentPostId = parentId?.hashCode
+        ..aliasMappingMetadata = '{"alias": "Member", "isMine": true}';
+        
+      _posts.add(post);
+      _sortPosts();
+    });
+    _scrollToBottom();
 
     final response = await CommunitySocketService.instance.sendMessage(
       communityId: widget.communityName,
@@ -150,25 +190,11 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
     );
 
     if (mounted) {
-      if (response['success'] == true) {
-        final messageId = response['messageId'];
-        // Optimistically add the message to the list
+      if (response['success'] != true) {
+        // Failed to send, remove optimistic post
         setState(() {
-          final post = AnonymousPost()
-            ..id = messageId.hashCode
-            ..conversationId = widget.communityName
-            ..sanitizedText = PseudonymizationService.instance.sanitizeText(text, widget.communityName)
-            ..originalText = text
-            ..timestamp = DateTime.now()
-            ..upvotes = 0
-            ..parentPostId = parentId?.hashCode
-            ..aliasMappingMetadata = '{"alias": "Member"}';
-            
-          _posts.add(post);
-          _sortPosts();
+          _posts.removeWhere((p) => p.id == optimisticId);
         });
-        _scrollToBottom();
-      } else {
         final errorMsg = response['error'] ?? 'Unknown error';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed: $errorMsg')),
@@ -376,33 +402,45 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
   Widget _buildMessageBubble(AnonymousPost post) {
     final timeFormatted = DateFormat('MMM d, h:mm a').format(post.timestamp);
     final isReply = post.parentPostId != null;
+    
+    bool isMine = false;
+    try {
+      final meta = jsonDecode(post.aliasMappingMetadata);
+      isMine = meta['isMine'] == true;
+    } catch (_) {}
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
-          CircleAvatar(
-            backgroundColor: widget.communityColor.withOpacity(0.2),
-            child: const Icon(Icons.person, color: Colors.black87),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
+          if (!isMine)
+            CircleAvatar(
+              backgroundColor: widget.communityColor.withOpacity(0.2),
+              child: const Icon(Icons.person, color: Colors.black87),
+            ),
+          if (!isMine) const SizedBox(width: 12),
+          
+          Flexible(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      post.aliasMappingMetadata.contains('alias') ? (jsonDecode(post.aliasMappingMetadata)['alias'] ?? "Member") : "Member",
-                      style: GoogleFonts.spaceGrotesk(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.black87,
+                    if (!isMine) ...[
+                      Text(
+                        post.aliasMappingMetadata.contains('alias') ? (jsonDecode(post.aliasMappingMetadata)['alias'] ?? "Member") : "Member",
+                        style: GoogleFonts.spaceGrotesk(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Colors.black87,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
+                      const SizedBox(width: 8),
+                    ],
                     Text(
                       timeFormatted,
                       style: GoogleFonts.spaceGrotesk(
@@ -410,13 +448,25 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
                         color: Colors.black54,
                       ),
                     ),
+                    if (isMine) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        "You",
+                        style: GoogleFonts.spaceGrotesk(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 if (isReply) ...[
                   const SizedBox(height: 4),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.subdirectory_arrow_right, size: 14, color: Colors.black45),
+                      Icon(isMine ? Icons.subdirectory_arrow_left : Icons.subdirectory_arrow_right, size: 14, color: Colors.black45),
                       const SizedBox(width: 4),
                       Text(
                         "Replied to a post",
@@ -429,12 +479,13 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isMine ? widget.communityColor.withOpacity(0.9) : Colors.white,
                     border: Border.all(color: Colors.black, width: 1.5),
-                    borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(12),
-                      bottomLeft: Radius.circular(12),
-                      bottomRight: Radius.circular(12),
+                    borderRadius: BorderRadius.only(
+                      topLeft: isMine ? const Radius.circular(12) : Radius.zero,
+                      topRight: isMine ? Radius.zero : const Radius.circular(12),
+                      bottomLeft: const Radius.circular(12),
+                      bottomRight: const Radius.circular(12),
                     ),
                     boxShadow: const [
                       BoxShadow(
@@ -448,12 +499,13 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
                     post.sanitizedText,
                     style: GoogleFonts.spaceGrotesk(
                       fontSize: 15,
-                      color: Colors.black,
+                      color: isMine ? (widget.communityColor.computeLuminance() > 0.5 ? Colors.black : Colors.white) : Colors.black,
                     ),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     GestureDetector(
                       onTap: () => _reactToPost(post),
@@ -487,6 +539,13 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
               ],
             ),
           ),
+          
+          if (isMine) const SizedBox(width: 12),
+          if (isMine)
+            CircleAvatar(
+              backgroundColor: widget.communityColor.withOpacity(0.2),
+              child: const Icon(Icons.person, color: Colors.black87),
+            ),
         ],
       ),
     );

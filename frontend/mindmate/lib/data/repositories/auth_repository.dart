@@ -40,9 +40,18 @@ class AuthRepository {
     return digest.toString();
   }
 
+  Future<String> getOrCreateDeviceUuid() async {
+    var uuid = await _secureStorage.read(key: _uuidKey);
+    if (uuid == null) {
+      uuid = const Uuid().v4();
+      await _secureStorage.write(key: _uuidKey, value: uuid);
+    }
+    return uuid;
+  }
+
   Future<void> registerWithPhrase(String phrase) async {
-    // Generate UUID for the device
-    final uuid = const Uuid().v4();
+    // Reuse existing device UUID or create a new one
+    final uuid = await getOrCreateDeviceUuid();
     final hash = _hashPhrase(phrase);
 
     final token = await _authService.register(uuid, hash);

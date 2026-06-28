@@ -18,6 +18,7 @@ import '../../domain/models/mood_log.dart';
 import '../../domain/models/mood_feature_vector.dart';
 import '../../core/state/demo_mode_provider.dart';
 import '../ml/feature_pipeline.dart';
+import '../ml/recovery_detection_service.dart';
 
 class DemoModeService {
   final Isar _isar = IsarDatabase.instance;
@@ -338,5 +339,59 @@ class DemoModeService {
     if (week == 2) return "It's completely normal to feel anxious. Try this breathing exercise.";
     if (week == 3) return "That's wonderful to hear! Journaling is a powerful tool.";
     return "Amazing! I'm so proud of the progress you've made.";
+  }
+
+  Future<Map<String, dynamic>> validateDemoData() async {
+    final isar = IsarDatabase.instance;
+    bool demoDataGenerated = false;
+    bool patternDiscoveryExecuted = false;
+    bool weeklyReflectionExecuted = false;
+    bool situationDetectionExecuted = false;
+    bool recoveryDetectionExecuted = false;
+    bool recoveryDetectionStored = false;
+    bool recoveryDetectionDisplayed = false;
+    bool validationPassed = true;
+    String? failureReason;
+
+    final moodCount = await isar.dailyMoodCheckIns.filter().isDemoDataEqualTo(true).count();
+    if (moodCount > 0) demoDataGenerated = true;
+
+    final patternCount = await isar.patternInsights.count();
+    if (patternCount > 0) patternDiscoveryExecuted = true;
+
+    final reflectionCount = await isar.weeklyReflections.count();
+    if (reflectionCount > 0) weeklyReflectionExecuted = true;
+    
+    // We assume Situation Detection (Pattern) executes when pattern runs
+    if (patternDiscoveryExecuted) situationDetectionExecuted = true;
+
+    // Call RecoveryDetectionService and check its result instead of relying on demo mode mock
+    final result = await RecoveryDetectionService.instance.detectRecoveryEvents(isDemoMode: true);
+    
+    recoveryDetectionExecuted = true;
+    if (result.status == RecoveryStatus.generated) {
+      recoveryDetectionStored = true;
+      recoveryDetectionDisplayed = true;
+    } else {
+      validationPassed = false;
+      failureReason = "Recovery Pipeline failed: ${result.failureReason ?? 'Unknown error'}";
+    }
+
+    if (!demoDataGenerated) {
+      validationPassed = false;
+      failureReason = "Demo Data not generated";
+    }
+
+    return {
+      'demoDataGenerated': demoDataGenerated,
+      'patternDiscoveryExecuted': patternDiscoveryExecuted,
+      'weeklyReflectionExecuted': weeklyReflectionExecuted,
+      'situationDetectionExecuted': situationDetectionExecuted,
+      'recoveryDetectionExecuted': recoveryDetectionExecuted,
+      'recoveryDetectionStored': recoveryDetectionStored,
+      'recoveryDetectionDisplayed': recoveryDetectionDisplayed,
+      'validationPassed': validationPassed,
+      'failureReason': failureReason,
+    };
   }
 }

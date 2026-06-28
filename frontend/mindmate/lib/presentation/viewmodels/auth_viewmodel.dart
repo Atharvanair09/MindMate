@@ -17,7 +17,7 @@ class AuthViewModel extends ChangeNotifier {
 
   Future<void> _loadUuid() async {
     try {
-      _uuid = await _repository.getDeviceUuid();
+      _uuid = await _repository.getOrCreateDeviceUuid();
       notifyListeners();
     } catch (_) {}
   }
@@ -90,6 +90,7 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   Future<void> sendOtp(String email) async {
+    if (_isLoading) return;
     _setLoading(true);
     _setError(null);
     try {
@@ -111,6 +112,7 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   Future<void> verifyOtp(String otp) async {
+    if (_isLoading) return;
     _setLoading(true);
     _setError(null);
     try {
@@ -127,6 +129,7 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   Future<void> completeAuth() async {
+    if (_isLoading) return;
     if (_recoveryPhrase == null) return;
     _setLoading(true);
     _setError(null);
@@ -145,6 +148,7 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   Future<bool> recoverAccount(String phrase) async {
+    if (_isLoading) return false;
     _setLoading(true);
     _setError(null);
     try {

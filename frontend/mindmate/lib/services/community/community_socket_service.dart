@@ -35,7 +35,8 @@ class CommunitySocketService {
       settings: initializationSettings,
     );
 
-    String url = Platform.isAndroid ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+    // Connect to the Render backend
+    String url = 'https://mindmate-9jyw.onrender.com';
 
     _socket = IO.io(url, IO.OptionBuilder()
       .setTransports(['websocket']) // for Flutter or Web

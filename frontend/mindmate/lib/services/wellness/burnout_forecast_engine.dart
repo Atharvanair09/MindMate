@@ -11,14 +11,16 @@ class BurnoutForecastEngine {
 
   Isar get isar => IsarDatabase.instance;
 
-  Future<BurnoutForecast> getDailyForecast() async {
+  Future<BurnoutForecast> getDailyForecast({bool forceRefresh = false}) async {
     final today = DateTime.now();
     final todayMidnight = DateTime.utc(today.year, today.month, today.day);
 
-    // Try to get cached forecast for today
-    final cached = await isar.burnoutForecasts.where().dateEqualTo(todayMidnight).findFirst();
-    if (cached != null) {
-      return cached;
+    if (!forceRefresh) {
+      // Try to get cached forecast for today
+      final cached = await isar.burnoutForecasts.where().dateEqualTo(todayMidnight).findFirst();
+      if (cached != null) {
+        return cached;
+      }
     }
 
     // Compute new forecast
