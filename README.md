@@ -1,6 +1,6 @@
-# ![MindMate Logo](assets/logo.png) MindMate
+# <img src="assets/logo.png" alt="MindMate Logo" width="36" valign="middle" /> MindMate
 
-![Hero Banner / App Mockup](assets/hero_banner.png)
+![Hero Banner / App Mockup](assets/banner.png)
 
 > **MINDMATE // NO PRETENDING, NO DATA MINING.**  
 > A privacy-first, secure, and resilient mental wellness companion. MindMate empowers users to track their thoughts, engage in safe community chats, and interact with AI-driven insights, all while ensuring complete data privacy and security.
@@ -66,7 +66,7 @@ MindMate architecture is built for resilience. This is the first and last time w
 
 | Home Dashboard | Journaling Experience | Community Chat |
 | :---: | :---: | :---: |
-| ![Home Screenshot](assets/home.png) | ![Journal Screenshot](assets/journal.png) | ![Chat Screenshot](assets/chat.png) |
+| ![Home Screenshot](assets/home_screen.png) | ![Journal Screenshot](assets/journal_screen.png) | ![Chat Screenshot](assets/community_screen.png) |
 
 ---
 
